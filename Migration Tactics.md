@@ -100,9 +100,9 @@ If this works, the core migration workflow is possible.
 
 ### Step 2: build a small compatibility layer
 
-Create a small Python package, for example:
+Create a small standalone Python module, for example:
 
-`matlab_compat/`
+`matlab_compat.py`
 
 This should hold repeated MATLAB-like behavior such as:
 
@@ -241,8 +241,8 @@ Rule:
 ```text
 project/
 ├── matlab_src/
+├── matlab_compat.py
 ├── python_src/
-│   ├── matlab_compat/
 │   ├── spm12/
 │   └── toolbox/
 ├── tests/

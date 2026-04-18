@@ -34,6 +34,12 @@ Do **not** optimize, redesign, refactor for style, or add speculative abstractio
 2. **Do not add code that is not strictly needed for faithful translation or testing.**
 3. **Minimize edits to shared files.**
 4. **Each translated Python file must have an oracle test.**
+5. **Read `Python Matlab Translation Issues.md` before translating or changing tests.**
+
+If a new MATLAB/Python corner case appears, ask the user before choosing a
+policy. After the decision is settled, record it in
+`Python Matlab Translation Issues.md` so future translations handle it
+consistently.
 
 ---
 
@@ -61,8 +67,10 @@ Default outputs for one file:
 
 To reduce git conflicts:
 
-- do not create shared runtime translation helper modules
-- do not create `python_src/matlab_compat/`
+- do not create shared runtime translation helper modules except the approved
+  repo-root `matlab_compat.py`
+- keep `matlab_compat.py` limited to mechanical MATLAB compatibility
+  primitives used by multiple translated files
 - keep translation-specific helper logic inside the translated Python file
 - if the MATLAB file has local subfunctions, keep them in the same Python file as private helpers
 - only edit shared test helpers in `tests/helpers/` if strictly necessary
