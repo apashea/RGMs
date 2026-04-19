@@ -1,8 +1,10 @@
 import numpy as np
 
+from matlab_compat import as_matlab_array
+
 
 def spm_log(A):
-    A = np.asarray(A)
+    A = as_matlab_array(A)
 
     if np.issubdtype(A.dtype, np.bool_):
         A = -32.0 * (~A)

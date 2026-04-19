@@ -23,3 +23,41 @@ def test_spm_log_logical_oracle(eng):
     A_python = spm_log(A)
 
     assert_matlab_match(A_matlab, A_python)
+
+
+def test_spm_log_scalar_oracle(eng):
+    A = 0.5
+
+    A_matlab = eng.spm_log(A)
+    A_python = spm_log(A)
+
+    assert_matlab_match(A_matlab, A_python)
+
+
+def test_spm_log_all_zeros_oracle(eng):
+    A = np.zeros((2, 3))
+    A_matlab = matlab.double(A.tolist())
+
+    A_matlab = eng.spm_log(A_matlab)
+    A_python = spm_log(A)
+
+    assert_matlab_match(A_matlab, A_python)
+
+
+def test_spm_log_column_oracle(eng):
+    A = np.array([[0.5], [1.0], [2.0]])
+    A_matlab = matlab.double(A.tolist())
+
+    A_matlab = eng.spm_log(A_matlab)
+    A_python = spm_log(A)
+
+    assert_matlab_match(A_matlab, A_python)
+
+
+def test_spm_log_raw_1d_is_row_oracle(eng):
+    A = np.array([0.5, 1.0, 2.0])
+
+    A_matlab = eng.eval("spm_log([0.5 1 2])")
+    A_python = spm_log(A)
+
+    assert_matlab_match(A_matlab, A_python)
