@@ -1,0 +1,367 @@
+---
+description: RGMs local always-apply rules for MATLAB→Python translation, oracle testing, and path-specific workflow on Windows PowerShell.
+globs:
+alwaysApply: true
+---
+
+# RGMs local project rule
+
+## Startup
+
+- Use **PowerShell** commands unless the user explicitly asks for another shell.
+- For any repo work, assume the project root:
+  - `C:\Users\andre\.cursor\RGMs`
+- Before running Python scripts, tests, or tools for this repo:
+  - `conda activate rgms`
+- Do not assume the env or cwd is already correct; orient work around this setup.
+- For git operations in this repo, ENSURE all work happens on branch `andrew` using `git branch --show-current`. Do not switch to or edit other branches unless the user explicitly instructs you to (which will generally never happen).
+
+## Authoritative project docs
+
+Treat these as the canonical project guides:
+
+- `C:\Users\andre\.cursor\RGMs\AGENTS.md`
+- `C:\Users\andre\.cursor\RGMs\Migration Plan.md`
+- `C:\Users\andre\.cursor\RGMs\Migration Tactics.md`
+- `C:\Users\andre\.cursor\RGMs\Python Matlab Translation Issues.md`
+- `C:\Users\andre\.cursor\RGMs\notes\andrew Python Matlab Translation Issues.md`
+
+Priority for interpretation:
+
+1. Explicit user instructions.
+2. This local rules file.
+3. The four project docs above.
+
+On conflicts, preserve the MATLAB-faithful workflow and ask the user before proceeding.
+
+## Core project rules
+
+- MATLAB is the source of truth.
+- Only add code needed for faithful translation or testing.
+- Minimize edits to shared files.
+- Every translated Python file must have an oracle test.
+- Read `Python Matlab Translation Issues.md` and `notes\andrew Python Matlab Translation Issues.md` before translation or test changes.
+- When a new MATLAB/Python corner case appears:
+  - ask the user first,
+  - once decided, record it in `notes\andrew Python Matlab Translation Issues.md`.
+
+## Paths and directory responsibilities
+
+### Key paths
+
+- Project root: `C:\Users\andre\.cursor\RGMs\`
+- External SPM source (read-only): `C:\Users\andre\Documents\MATLAB\spm12\`
+- Logs: `C:\Users\andre\.cursor\RGMs\logs\`
+- Misc (user-only): `C:\Users\andre\.cursor\RGMs\misc\`
+- Custom MATLAB: `C:\Users\andre\.cursor\RGMs\matlab_custom\`
+
+### Project root
+
+- Use `C:\Users\andre\.cursor\RGMs\` as the base for all paths.
+- Important top-level files:
+  - `AGENTS.md`, `Migration Plan.md`, `Migration Tactics.md`,
+    `Python Matlab Translation Issues.md`, `matlab_compat.py`.
+- Do not casually modify these; only change them when clearly required, and keep changes minimal.
+
+### MATLAB source staging
+
+- `C:\Users\andre\.cursor\RGMs\matlab_src\`
+- `C:\Users\andre\.cursor\RGMs\matlab_src\toolbox\`
+- `C:\Users\andre\.cursor\RGMs\matlab_src\toolbox\DEM\`
+
+Use as the local MATLAB source mirror:
+
+- Copy target MATLAB files here as part of the one-file workflow.
+- Read freely for analysis.
+- Do not casually rewrite existing `.m` files here.
+- Only edit/create MATLAB files when the task or the user explicitly requires it.
+- Avoid introducing custom logic here unless explicitly requested.
+
+### Python translations
+
+- `C:\Users\andre\.cursor\RGMs\python_src\`
+- `C:\Users\andre\.cursor\RGMs\python_src\toolbox\`
+- `C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\`
+
+Use for translated Python code:
+
+- Create and edit translated modules here.
+- Keep Python close to MATLAB: variable names, order of operations, control flow, and shape behavior.
+- Prefer auditability and fidelity over elegance or abstraction.
+- Keep local MATLAB subfunctions as private helpers in the same Python module in the first pass.
+
+### Tests
+
+- `C:\Users\andre\.cursor\RGMs\tests\`
+- `C:\Users\andre\.cursor\RGMs\tests\helpers\`
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\`
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\`
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\`
+
+Use for:
+
+- Oracle tests (default): per-file MATLAB vs Python comparisons.
+- Demo tests: milestone/system-level checks when the migration stage calls for them.
+- Checkpoint comparisons: only for very large/tricky functions.
+- Regression tests: keep failing cases when useful.
+
+Constraints:
+
+- Keep shared helpers in `tests\helpers\` minimal.
+- Only edit shared helpers when strictly necessary.
+- Prefer file-specific logic in `tests\oracle\test_<name>.py` over expanding helpers.
+
+### Notes
+
+- `C:\Users\andre\.cursor\RGMs\notes\`
+
+Use for notes, snapshots, inventories, and local documentation. Do not treat notes as policy unless the user explicitly says so.
+
+### Logs
+
+- `C:\Users\andre\.cursor\RGMs\logs\`
+
+At each iteration:
+
+- append to the active log file (initially `log_0.md`):
+  - what was inspected,
+  - what files were created/modified,
+  - why those changes were made,
+  - whether shared files were touched,
+  - blockers or uncertainties.
+- Do not advance to `log_1.md`, `log_2.md`, etc. unless the user explicitly instructs you.
+
+### Misc
+
+- `C:\Users\andre\.cursor\RGMs\misc\`
+
+Do not read or modify anything here unless explicitly asked.
+
+### Custom MATLAB
+
+- `C:\Users\andre\.cursor\RGMs\matlab_custom\`
+
+- May be read and executed when needed.
+- Create/edit files here only when a user request clearly justifies it.
+- Do not use as a dumping ground for speculative helpers or general utilities.
+
+## External SPM tree (read-only)
+
+- `C:\Users\andre\Documents\MATLAB\spm12\` is the installed SPM tree.
+
+Rules:
+
+- Allowed: inspect and read files; copy into `matlab_src\` when needed.
+- Forbidden: editing, deleting, renaming, overwriting, or treating this tree as writable.
+
+## Environment and execution
+
+- Always use `rgms` conda env for Python in this repo.
+- Standard oracle test pattern:
+  1. start or reuse MATLAB Engine from Python,
+  2. call the MATLAB function,
+  3. call the Python function,
+  4. compare outputs.
+- Do not introduce alternative “trust” mechanisms when MATLAB vs Python comparisons are feasible.
+
+### Environment mutation rule
+
+Do not install packages, update dependencies, modify the conda environment, change interpreter settings, or alter external tooling unless the user explicitly authorizes it first.
+
+If work is blocked by a missing package or environment issue, stop and report the exact blocker instead of changing the environment silently.
+
+## Migration order
+
+- Use `Migration Plan.md` to decide what to port next and which files are “Do Not Port.”
+- Prefer work that respects the phase/tier order unless the user overrides it.
+- Bias toward small helpers before large solvers.
+- Follow the plan’s milestones (helpers → structure learning → conversion → inference → updates/merge/compression → viz).
+
+## Two-pass policy
+
+Follow `Migration Tactics.md`:
+
+- **Pass 1: faithful transliteration**
+  - preserve names, order, control flow, and comments where useful;
+  - keep Python very MATLAB-like; do not optimize.
+- **Pass 2: cleanup/optimization**
+  - only after equivalence is proven and only when requested (more Pythonic structure, simplification, speed).
+
+Default to Pass 1 behavior unless the user explicitly moves you into Pass 2.
+
+## Workspace model
+
+One MATLAB file at a time:
+
+1. Read the MATLAB file and understand inputs/outputs/dependencies and risky features.
+2. Copy it into `matlab_src\` if needed.
+3. Translate it into `python_src\` conservatively.
+4. Create `tests\oracle\test_<name>.py`.
+5. Compare MATLAB vs Python.
+6. Fix mismatches.
+7. Mark done only when the oracle test passes.
+
+Expected outputs for one file:
+
+- `matlab_src\<name>.m`
+- `python_src\<name>.py`
+- `tests\oracle\test_<name>.py`
+
+## Shared-file minimization
+
+- The only shared runtime helper module is:
+  - `C:\Users\andre\.cursor\RGMs\matlab_compat.py`
+- `matlab_compat.py` may contain only mechanical MATLAB-compat primitives used across multiple translations.
+- Do not move file-specific logic into `matlab_compat.py`.
+- Keep translation-specific helpers inside each Python translation.
+- Keep local subfunctions in the same file as private helpers.
+- Only touch `tests\helpers\` when strictly necessary; otherwise, keep special-case logic in the corresponding `test_<name>.py`.
+- Do not rewrite shared files for style.
+
+## Translation rules
+
+When translating:
+
+- preserve semantics over style,
+- keep names close to MATLAB,
+- keep order of operations and control flow,
+- keep shapes explicit,
+- avoid clever rewrites and silent behavior changes,
+- add only small comments for auditability,
+- prefer compatibility helpers over one-off cleverness,
+- keep the Python code MATLAB-looking enough to audit.
+
+Strict fidelity:
+
+- no extra logic, wrappers, validation layers, helper classes, or cleanup code unless truly required for faithful behavior.
+
+## Settled corner cases
+
+Before translation or test changes, read `Python Matlab Translation Issues.md` and `notes\andrew Python Matlab Translation Issues.md`.
+
+Honor these policies:
+
+- raw 1-D NumPy arrays represent MATLAB row vectors unless explicitly shaped otherwise;
+- `matlab_compat.py` is a narrow shared helper for repeated mechanical behavior only;
+- for `spm_cat`, follow the `.m` source behavior for scalar zero partitions, not the docstring, unless the oracle source changes.
+
+Do not introduce new behavior policies without confirming with the user and recording them there.
+
+Branch-specific translation issues file:
+C:\Users\andre\.cursor\RGMs\notes\andrew Python Matlab Translation Issues.md
+
+Before translating or changing tests, always read:
+C:\Users\andre\.cursor\RGMs\notes\andrew Python Matlab Translation Issues.md
+
+If a new MATLAB/Python corner case appears, ask the user first.
+After the decision is settled, record it in:
+C:\Users\andre\.cursor\RGMs\notes\andrew Python Matlab Translation Issues.md
+
+## Testing model
+
+Use:
+
+- oracle tests by default,
+- demo tests for milestones and system-level checks,
+- checkpoint comparisons only when full-output equality is not sufficient for large files,
+- regression tests to guard against reintroduced mismatches.
+
+Compare:
+
+- structure, shape, sparsity/density, numeric values, and important nested fields.
+
+Floating point can use small tolerances; indexing/logic should usually match exactly. Prefer automated comparisons over manual inspection.
+
+## Risky MATLAB features
+
+Be extra careful with:
+
+- 1-based indexing,
+- row vs column vectors,
+- reshape/flatten,
+- column-major vs row-major expectations,
+- broadcasting,
+- transpose of 1-D arrays,
+- sparse matrices,
+- cells and structs,
+- local subfunctions,
+- recursion and nested models.
+
+When in doubt, preserve the original behavior.
+
+## Definition of done
+
+A file is **done** only if:
+
+- the Python translation exists,
+- it stays close to MATLAB,
+- an oracle test exists,
+- the oracle test passes.
+
+Migration is only trustworthy when:
+
+- critical files are translated,
+- file-level oracle tests and key checkpoints pass,
+- migration-plan milestones (demos) run and behave as expected,
+- optimization happens only after that.
+
+## Agent behavior and outputs
+
+When working in this repo:
+
+- do one concrete step at a time,
+- keep changes small and reviewable,
+- state briefly what file is being translated or tested,
+- avoid unnecessary abstractions and premature optimization,
+- never silently change semantics,
+- never mark work complete without a passing oracle test,
+- treat LLM output as a candidate; tests decide truth.
+
+For each task, produce only what is needed:
+
+- translated Python file,
+- oracle test file,
+- minimal shared-helper change,
+- or a note/log update when the user requests inspection/planning.
+
+### Mandatory end-of-iteration file status
+
+At the end of ***every iteration***, always report:
+
+- Files read: none
+- Files created:
+- Files modified:
+- Files deleted:
+- Shared files touched:
+- No files changed:
+
+This is required even for read-only iterations.
+
+If nothing changed, write exactly:
+
+- Files read: none
+- Files created: none
+- Files modified: none
+- Files deleted: none
+- Shared files touched: no
+- No files changed: yes
+
+Temporary-file reporting rule
+
+- If a temporary or debug file is created during an iteration, it must be reported in the end-of-iteration file-status block, even if it was deleted before the end of the iteration.
+
+At the end of a task, briefly state:
+
+- what files changed,
+- why they changed,
+- whether any shared file was touched,
+- any remaining uncertainty or follow-up.
+
+Default stance:
+
+- Windows PowerShell,
+- `C:\Users\andre\.cursor\RGMs\` + `conda activate rgms`,
+- read-only `C:\Users\andre\Documents\MATLAB\spm12\`,
+- one-file, staged MATLAB→Python translation with oracle tests,
+- minimal shared edits,
+- iteration logging in `logs\log_0.md` until the user rolls to the next log.
