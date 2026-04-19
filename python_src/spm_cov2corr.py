@@ -10,6 +10,8 @@ def spm_cov2corr(C):
         d = C.diagonal()
     else:
         C = as_matlab_array(C)
+        if C.ndim == 0:
+            C = np.reshape(C, (1, 1), order="F")
         n = max(C.shape)
         d = np.diag(C)
 

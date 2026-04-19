@@ -1,0 +1,29 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Type/lint caches
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Notebook and editor/OS noise
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# MATLAB editor autosaves
+*.asv
+*.m~

@@ -12,7 +12,9 @@ def spm_sum(*varargin):
         S = _sum_dim(X, dim)
     else:
         vecdim = varargin[1]
-        if _is_numeric_vecdim(vecdim):
+        if isinstance(vecdim, str) and vecdim.lower() == "all":
+            S = np.sum(X)
+        elif _is_numeric_vecdim(vecdim):
             S = X
             for dim in np.asarray(vecdim, dtype=int).ravel(order="F"):
                 S = _sum_dim(S, int(dim))

@@ -66,7 +66,7 @@ def test_spm_cov2corr_identity_oracle(eng):
 
 
 def test_spm_cov2corr_singleton_oracle(eng):
-    C = np.array([[4.0]])
+    C = 4.0
 
     R_matlab = eng.eval("full(spm_cov2corr(4))")
     R_python = spm_cov2corr(C)

@@ -46,3 +46,13 @@ MATLAB source in this repository only replaces empty cells. The expression
 `spm_cat({eye(2), []; 0, [1 1; 1 1]})` errors in the `.m` fallback with
 inconsistent concatenation dimensions. Python should not implement scalar-zero
 expansion unless the MATLAB source used as oracle changes.
+
+## `spm_check_version.py` MATLAB Engine Delegation
+
+Decision: keep `spm_check_version.py` backed by MATLAB Engine for exact oracle
+fidelity.
+
+`spm_check_version.m` depends on the running MATLAB/Octave/toolbox installation
+and MATLAB's `version`/`ver` behavior. Do not hard-code a Python version table.
+The Python port should lazily delegate to the repository MATLAB source through
+MATLAB Engine and surface MATLAB-originated errors.

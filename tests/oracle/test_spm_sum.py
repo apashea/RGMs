@@ -50,6 +50,16 @@ def test_spm_sum_vecdim_tensor_oracle(spm_sum_eng):
     assert_matlab_match(S_matlab, S_python)
 
 
+def test_spm_sum_all_tensor_oracle(spm_sum_eng):
+    X = np.arange(1.0, 25.0).reshape((2, 3, 4), order="F")
+
+    spm_sum_eng.eval("X_spm_sum = reshape(1:24, [2 3 4]);", nargout=0)
+    S_matlab = spm_sum_eng.eval("spm_sum(X_spm_sum, 'all')")
+    S_python = spm_sum(X, "all")
+
+    assert_matlab_match(S_matlab, S_python)
+
+
 def test_spm_sum_scalar_oracle(spm_sum_eng):
     X = 5.0
 
