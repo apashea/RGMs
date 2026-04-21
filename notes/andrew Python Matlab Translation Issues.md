@@ -158,6 +158,31 @@ silently switch to `eigh` for convenience unless an oracle proves identical
 **discrete** downstream choices (sorting + indexing), not just similar
 eigenvalues.
 
+**`sort(abs(e(:,j)))` uses complex magnitude.** MATLAB’s `e` is generally complex
+from `eig`; the next line uses `abs` on that complex vector. A Python port that
+first projects **`real(e(:,j))`** and only then takes **`abs`** can differ at
+ULP scale from **`abs(e(:,j))`** when tiny imaginary parts are present, which
+matters when many `|e|` entries sit in a **near-tie** band for `sort(...,'descend')`.
+
+**Empirical checkpoint (2026-04-21, stream 1 group 2, spectral iter2):** with
+`abs(complex)` aligned to MATLAB, SciPy `eig` vs MATLAB `eig` still yields a
+**few-ULP** mismatch at the first sort-rank competitor row while the MATLAB
+rank-1 row matches in **0 ULP** between `abs` vectors — enough to permute the
+sorted index list under mergesort and change the discrete group vector under
+strict byte equality.
+
+**BLAS / LAPACK vendor (byte-exact `eig` gate):** the `rgms` conda stack here uses
+**OpenBLAS-backed** NumPy/SciPy (`numpy.show_config` reports `scipy-openblas`).
+MATLAB’s shipped linear algebra on Windows is typically **Intel MKL**. Both may
+call **LAPACK `*geev`**, but **implementation and rounding differ** at the last
+few ulps of eigenvectors — layout tricks (**C vs Fortran contiguous**,
+`overwrite_a`, NumPy vs SciPy `eig`) did **not** change the failing checkpoint’s
+`max|abs(e_py)-abs(e_mat)|` (~8.6e-16) or the **`js` permutation match** in a
+dedicated probe. Closing a **strict byte-exact** spectral gate therefore likely
+requires **toolchain alignment** (e.g. MKL-linked SciPy/NumPy where feasible and
+authorized) or an **explicit MATLAB-backed** reference for this step — not
+further local Python tie-break tweaks alone.
+
 **Policy reminder:** if a new corner case needs a project decision (for example
 accepting non-byte grouping when LAPACK layouts differ), ask the user first, then
 record the settled rule here or in the repo-root `Python Matlab Translation Issues.md`.

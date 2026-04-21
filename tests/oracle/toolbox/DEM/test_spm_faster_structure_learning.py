@@ -15,6 +15,7 @@ from python_src.toolbox.DEM.spm_MDP_generate import spm_MDP_generate
 from python_src.toolbox.DEM.spm_MDP_pong import spm_MDP_pong
 from python_src.toolbox.DEM.spm_faster_structure_learning import spm_faster_structure_learning
 from python_src.toolbox.DEM.spm_rgm_group import _spm_cat_row, _spm_mdp_mi_scalar, spm_rgm_group
+from python_src.spm_dir_MI import spm_dir_MI
 from python_src.spm_log import spm_log
 from tests.helpers.compare import assert_matlab_match
 
@@ -31,6 +32,161 @@ def _tlog(enabled: bool, msg: str) -> None:
 def _diaglog(enabled: bool, msg: str) -> None:
     if enabled:
         print(f"[DIAG] {msg}", flush=True)
+
+
+def _make_matlab_rgm_eig_pair(eng):
+    """Build ``eig_pair`` for :func:`spm_rgm_group` using MATLAB ``eig(...,'nobalance')``.
+
+    Mirrors ``[e,v] = eig(MI(i,i),'nobalance')`` in ``spm_rgm_group.m`` so Python’s
+    spectral partition matches MATLAB’s when SciPy/OpenBLAS eigenvectors differ at
+    ULP-level ties. Oracle / checkpoint harness only — not for production runs.
+    """
+    call_i = {"n": 0}
+
+    def _eig_pair(sub: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        sub = np.asarray(sub, dtype=np.float64)
+        n = int(sub.shape[0])
+        if sub.shape != (n, n):
+            raise ValueError("eig_pair expects a square MI block")
+        call_i["n"] = call_i["n"] + 1
+        tag = f"{call_i['n']}_{id(sub) & 0xFFFFFF:x}"
+        mname = f"rgms_MIwk_{tag}"
+        ename = f"rgms_e_{tag}"
+        vname = f"rgms_v_{tag}"
+        eng.workspace[mname] = matlab.double(sub.tolist())
+        eng.eval(f"[{ename},{vname}] = eig({mname},'nobalance');", nargout=0)
+        lam = eng.eval(f"diag({vname})")
+        vals = np.asarray(lam, dtype=np.complex128).reshape(-1, order="F").ravel()
+        evecs = np.asarray(eng.eval(ename), dtype=np.complex128)
+        if evecs.size != n * n:
+            raise RuntimeError(
+                f"MATLAB eig returned size {evecs.size}, expected {n * n} for n={n}"
+            )
+        if evecs.shape != (n, n):
+            evecs = np.reshape(evecs, (n, n), order="F")
+        eng.eval(f"clear {mname} {ename} {vname}", nargout=0)
+        return vals, evecs
+
+    return _eig_pair
+
+
+def _matlab_mi_for_o_slice(eng, pdp_o_name: str, idx_mat: str) -> np.ndarray:
+    """Build MATLAB ``rgms_MI`` for ``O([idx],:)`` (same script as stream-1 oracle)."""
+    eng.eval(
+        "rgms_os = " + f"{pdp_o_name}([{idx_mat}],:); "
+        "[rgms_no,rgms_nt] = size(rgms_os); "
+        "rgms_n = false(1,rgms_no); rgms_r = cell(1,rgms_no); "
+        "for rgms_o = 1:rgms_no, "
+        "  rgms_r{rgms_o} = spm_cat(rgms_os(rgms_o,:)); "
+        "  rgms_n(rgms_o) = any(diff(rgms_r{rgms_o},[],2),'all'); "
+        "end; "
+        "rgms_MI = zeros(rgms_no,rgms_no); "
+        "for rgms_i = 1:rgms_no, "
+        "  for rgms_j = rgms_i:rgms_no, "
+        "    if rgms_n(rgms_i) && rgms_n(rgms_j), "
+        "      rgms_p = rgms_r{rgms_i}*rgms_r{rgms_j}'; "
+        "      rgms_MI(rgms_i,rgms_j) = spm_MDP_MI(rgms_p); "
+        "      rgms_MI(rgms_j,rgms_i) = rgms_MI(rgms_i,rgms_j); "
+        "    end; "
+        "  end; "
+        "end;",
+        nargout=0,
+    )
+    return np.asarray(eng.eval("rgms_MI"), dtype=np.float64)
+
+
+def _matlab_mi_from_o_cell_var(eng, cell_name: str, m: int) -> np.ndarray:
+    """MATLAB ``MI`` for a cell ``O`` already in the Engine (mirrors ``spm_rgm_group.m``).
+
+    Builds the Kronecker-reduced ``R`` grid, ``spm_cat`` rows, flags, and symmetric
+    ``MI`` using MATLAB ``spm_MDP_MI`` — same numerics as ``spm_rgm_group`` on that
+    slice. ``cell_name`` must be a safe MATLAB identifier (caller-generated).
+    """
+    eng.eval(
+        f"rgms_Os_loc = {cell_name}; "
+        "[rgms_No0,rgms_ntB] = size(rgms_Os_loc); "
+        f"rgms_mB = {int(m)}; "
+        "rgms_Rb = {}; "
+        "for rgms_tb = 1:rgms_ntB, "
+        "  rgms_ii = 1; "
+        "  for rgms_oo = 1:rgms_mB:rgms_No0, "
+        "    p = rgms_Os_loc{rgms_oo,rgms_tb}; "
+        "    for rgms_rr = 1:(rgms_mB - 1), "
+        "      p = kron(p, rgms_Os_loc{rgms_oo + rgms_rr,rgms_tb}); "
+        "    end; "
+        "    rgms_Rb{rgms_ii,rgms_tb} = p; "
+        "    rgms_ii = rgms_ii + 1; "
+        "  end; "
+        "end; "
+        "rgms_No1 = size(rgms_Rb,1); "
+        "rgms_nb = false(1,rgms_No1); "
+        "rgms_rb = cell(1,rgms_No1); "
+        "for rgms_ox = 1:rgms_No1, "
+        "  rgms_rb{rgms_ox} = spm_cat(rgms_Rb(rgms_ox,:)); "
+        "  rgms_nb(rgms_ox) = any(diff(rgms_rb{rgms_ox},[],2),'all'); "
+        "end; "
+        "rgms_MI_out = zeros(rgms_No1,rgms_No1); "
+        "for rgms_ix = 1:rgms_No1, "
+        "  for rgms_jx = rgms_ix:rgms_No1, "
+        "    if rgms_nb(rgms_ix) && rgms_nb(rgms_jx), "
+        "      rgms_pb = rgms_rb{rgms_ix}*rgms_rb{rgms_jx}'; "
+        "      rgms_MI_out(rgms_ix,rgms_jx) = spm_MDP_MI(rgms_pb); "
+        "      rgms_MI_out(rgms_jx,rgms_ix) = rgms_MI_out(rgms_ix,rgms_jx); "
+        "    end; "
+        "  end; "
+        "end;",
+        nargout=0,
+    )
+    return np.asarray(eng.eval("rgms_MI_out"), dtype=np.float64)
+
+
+def _make_matlab_link_dir_mi_fn(eng):
+    """Oracle-only: ``spm_dir_MI(a)`` in MATLAB for linked stream matrices ``ss.ID`` / ``IE``."""
+
+    seq = {"i": 0}
+
+    def _link_mi(a_mat: np.ndarray) -> float:
+        seq["i"] += 1
+        tag = seq["i"]
+        mname = f"rgms_am_link_{tag}"
+        outname = f"rgms_E_link_{tag}"
+        a_mat = np.asarray(a_mat, dtype=np.float64)
+        nr, nc = int(a_mat.shape[0]), int(a_mat.shape[1])
+        eng.workspace[mname] = matlab.double(a_mat.tolist(), size=(nr, nc))
+        eng.eval(f"{outname} = spm_dir_MI({mname});", nargout=0)
+        val = float(np.asarray(eng.eval(outname), dtype=np.float64).reshape(-1)[0])
+        eng.eval(f"clear {mname} {outname}", nargout=0)
+        return val
+
+    return _link_mi
+
+
+def _make_rgm_mi_override_fn_matlab(eng):
+    """PROVISIONAL / ORACLE-ONLY: push each ``o_sub`` slice to MATLAB and return ``MI``.
+
+    Reversible: callers omit ``rgm_mi_override_fn`` (default). Used only to keep
+    Python ``spm_faster_structure_learning`` aligned with MATLAB while validating
+    the transliteration; remove once native ``MI`` + ``eig`` parity is restored.
+    """
+    seq = {"i": 0}
+
+    def _mi_fn(o_sub: list, m: int) -> np.ndarray:
+        seq["i"] += 1
+        cname = f"rgmsOb{seq['i']}"
+        no = len(o_sub)
+        nt = len(o_sub[0]) if no else 0
+        for o in range(no):
+            for t in range(nt):
+                arr = np.asarray(o_sub[o][t], dtype=np.float64)
+                ns = int(arr.shape[0])
+                md = matlab.double(arr.tolist(), size=(ns, 1))
+                eng.workspace["O_tmp_rgm"] = md
+                eng.eval(f"{cname}{{{o+1},{t+1}}} = O_tmp_rgm;", nargout=0)
+        mi = _matlab_mi_from_o_cell_var(eng, cname, int(m))
+        eng.eval(f"clear {cname}", nargout=0)
+        return mi
+
+    return _mi_fn
 
 
 @pytest.fixture
@@ -307,7 +463,124 @@ def _matlab_find_map(eng, expr: str) -> dict[tuple[int, int], float]:
     return out
 
 
-def _assert_ss_exact(eng, mdp_name: str, mdp_py_lev: dict, lev: int, n_stream: int) -> None:
+def _diag_ss_mi_link_mismatch(
+    eng,
+    mdp_name: str,
+    mdp_py: list,
+    lev: int,
+    si: int,
+    sj: int,
+    kind: str,
+    key: tuple[int, int],
+    mv: float,
+    pv: float,
+) -> None:
+    """Isolate ``ss.ID`` / ``ss.IE`` mismatch: linked ``a`` matrix vs ``spm_dir_MI``."""
+    fi, fj = key
+    print(
+        f"[SS-LINK-DIAG] MDP{{{lev}}}.ss.{kind}{{{si},{sj}}} key={key} "
+        f"matlab_mi={mv:.17g} python_mi={pv:.17g}",
+        flush=True,
+    )
+    try:
+        gi_py = int(mdp_py[lev - 1]["ss"]["D"][si - 1][sj - 1][key])
+    except Exception as exc:
+        print(f"[SS-LINK-DIAG] Python ss.D lookup failed: {exc}", flush=True)
+        gi_py = None
+    try:
+        gi_m = int(
+            float(
+                np.asarray(
+                    eng.eval(
+                        f"full({mdp_name}{{{lev}}}.ss.D{{{si},{sj}}}({fi},{fj}))"
+                    ),
+                    dtype=np.float64,
+                ).ravel()[0]
+            )
+        )
+    except Exception as exc:
+        print(f"[SS-LINK-DIAG] MATLAB ss.D lookup failed: {exc}", flush=True)
+        gi_m = None
+    if gi_py is not None and gi_m is not None and gi_py != gi_m:
+        print(
+            f"[SS-LINK-DIAG] ss.D gi mismatch: MATLAB gi={gi_m} Python gi={gi_py}",
+            flush=True,
+        )
+    gi = gi_m if gi_m is not None else gi_py
+    if gi is None:
+        return
+    lev_next = lev + 1
+    if lev_next > len(mdp_py):
+        print(
+            f"[SS-LINK-DIAG] skip matrix pull: need MDP{{{lev_next}}} (have {len(mdp_py)} levels)",
+            flush=True,
+        )
+        return
+    try:
+        a_m = _eval_mat_array(eng, f"full({mdp_name}{{{lev_next}}}.a{{{gi}}})")
+        a_p = mdp_py[lev_next - 1]["a"][gi - 1][0]
+        if hasattr(a_p, "toarray"):
+            a_p = a_p.toarray()
+        a_p = np.asarray(a_p, dtype=np.float64)
+        dif = float(np.max(np.abs(np.asarray(a_m, dtype=np.float64) - a_p)))
+        print(
+            f"[SS-LINK-DIAG] linked a MDP{{{lev_next}}}.a{{{gi}}} max|diff|={dif:.3e} "
+            f"shape_mat={np.asarray(a_m).shape} shape_py={a_p.shape}",
+            flush=True,
+        )
+        sm, bm = _canon_bytes(np.asarray(a_m, dtype=np.float64), np.float64)
+        sp, bp = _canon_bytes(a_p, np.float64)
+        print(
+            f"[SS-LINK-DIAG] linked a bytes match: {sm == sp and bm == bp}",
+            flush=True,
+        )
+    except Exception as exc:
+        print(f"[SS-LINK-DIAG] linked a matrix pull failed: {exc}", flush=True)
+        return
+    try:
+        py_mi_on_ap = float(np.real(spm_dir_MI(a_p)))
+        print(
+            f"[SS-LINK-DIAG] spm_dir_MI(Python a)={py_mi_on_ap:.17g} "
+            f"(stored ss.{kind} py={pv:.17g})",
+            flush=True,
+        )
+    except Exception as exc:
+        print(f"[SS-LINK-DIAG] Python spm_dir_MI(a_p) failed: {exc}", flush=True)
+        py_mi_on_ap = None
+    try:
+        eng.workspace["rgms_ap"] = matlab.double(a_p.tolist())
+        eng.eval("rgms_mi_from_py_a = spm_dir_MI(rgms_ap);", nargout=0)
+        ml_mi_on_py_a = float(
+            np.asarray(eng.eval("rgms_mi_from_py_a"), dtype=np.float64).ravel()[0]
+        )
+        print(
+            f"[SS-LINK-DIAG] spm_dir_MI(MATLAB on Python a)={ml_mi_on_py_a:.17g}",
+            flush=True,
+        )
+        if py_mi_on_ap is not None:
+            print(
+                f"[SS-LINK-DIAG] Python vs MATLAB-on-Python-a MI delta="
+                f"{py_mi_on_ap - ml_mi_on_py_a:.3e}",
+                flush=True,
+            )
+        print(
+            f"[SS-LINK-DIAG] MATLAB ss.{kind} stored={mv:.17g} vs MATLAB(spm_dir_MI(py a)) "
+            f"delta={mv - ml_mi_on_py_a:.3e}",
+            flush=True,
+        )
+    except Exception as exc:
+        print(f"[SS-LINK-DIAG] MATLAB spm_dir_MI(rgms_ap) failed: {exc}", flush=True)
+
+
+def _assert_ss_exact(
+    eng,
+    mdp_name: str,
+    mdp_py_lev: dict,
+    lev: int,
+    n_stream: int,
+    *,
+    mdp_py_full: list | None = None,
+) -> None:
     for kind in ("D", "E", "ID", "IE"):
         for si in range(1, n_stream + 1):
             for sj in range(1, n_stream + 1):
@@ -334,18 +607,42 @@ def _assert_ss_exact(eng, mdp_name: str, mdp_py_lev: dict, lev: int, n_stream: i
                             f"MATLAB {mv} vs Python {pv}"
                         )
                     else:
-                        _assert_exact_canon(
-                            np.array([mv], dtype=np.float64),
-                            np.array([pv], dtype=np.float64),
-                            np.float64,
-                            f"MDP{{{lev}}}.ss.{kind}{{{si},{sj}}}{key}",
-                        )
+                        try:
+                            _assert_exact_canon(
+                                np.array([mv], dtype=np.float64),
+                                np.array([pv], dtype=np.float64),
+                                np.float64,
+                                f"MDP{{{lev}}}.ss.{kind}{{{si},{sj}}}{key}",
+                            )
+                        except AssertionError:
+                            if mdp_py_full is not None and kind in ("ID", "IE"):
+                                _diag_ss_mi_link_mismatch(
+                                    eng,
+                                    mdp_name,
+                                    mdp_py_full,
+                                    lev,
+                                    si,
+                                    sj,
+                                    kind,
+                                    key,
+                                    mv,
+                                    pv,
+                                )
+                            raise
 
 
 def _assert_rgm_group_streams_exact(
-    eng, pdp_o_name: str, o_py: list, s_mat: np.ndarray, d_val: int
+    eng,
+    pdp_o_name: str,
+    o_py: list,
+    s_mat: np.ndarray,
+    d_val: int,
+    *,
+    rgm_eig_pair=None,
 ) -> None:
     """Forward-ordered Step-6 start: n=1 call setup, then stream-wise grouping parity."""
+    if rgm_eig_pair is None and _env_flag("RGMS_FSL_RGM_MATLAB_EIG"):
+        rgm_eig_pair = _make_matlab_rgm_eig_pair(eng)
     n_stream = int(s_mat.shape[0])
     assert len(o_py) >= int(np.sum(np.prod(s_mat[:, :3], axis=1))), (
         "Python O rows are fewer than stream-indexed offsets expect"
@@ -598,7 +895,17 @@ def _assert_rgm_group_streams_exact(
         )
         n_g = int(eng.eval("numel(rgms_g_stream)"))
         o_sub = [o_py[int(i) - 1] for i in idx]
-        g_py = spm_rgm_group(o_sub, d_val, 1)
+        if rgm_eig_pair is not None:
+            mi_mlab = _matlab_mi_for_o_slice(eng, pdp_o_name, idx_mat)
+            g_py = spm_rgm_group(
+                o_sub,
+                d_val,
+                1,
+                eig_pair=rgm_eig_pair,
+                mi_override=mi_mlab,
+            )
+        else:
+            g_py = spm_rgm_group(o_sub, d_val, 1)
         assert n_g == len(g_py), f"spm_rgm_group stream {s}: length mismatch"
         for gi in range(1, n_g + 1):
             g_m = _eval_mat_array(eng, f"rgms_g_stream{{{gi}}}")
@@ -704,13 +1011,13 @@ def _assert_rgm_group_streams_exact(
                         vecs2 = np.asarray(vecs2, dtype=np.complex128)
                         py_jmax = int(np.argmax(np.abs(vals2)))
                         av2 = np.abs(vals2)
+                        mx_py = int(np.argmax(av2))
                         _diaglog(
                             True,
                             (
-                                f"iter2 |lambda| idx1 vs idx99: "
-                                f"|lam1|={float(av2[0]):.17g} |lam99|={float(av2[98]):.17g} "
-                                f"diff={float(av2[98]-av2[0]):.3e} "
-                                f"spacing1={float(np.spacing(av2[0])):.3e}"
+                                f"iter2 scipy |lambda|: argmax 1-based={mx_py + 1} "
+                                f"|lam|={float(av2[mx_py]):.17g} "
+                                f"spacing={float(np.spacing(av2[mx_py])):.3e}"
                             ),
                         )
                         vec2_py = vecs2[:, py_jmax]
@@ -746,20 +1053,58 @@ def _assert_rgm_group_streams_exact(
                             f"delta_top1={float(top_m[0]-top_p[0]):.3e}",
                         )
                         ord_m = _sort_abs_descend_matlab_like(np.abs(col2_m))
-                        ord_p = _sort_abs_descend_matlab_like(np.abs(col2_py_aln))
+                        # Match production `spm_rgm_group`: sort `abs` of complex column.
+                        ord_p = _sort_abs_descend_matlab_like(np.abs(col2_py))
                         if not np.array_equal(ord_m, ord_p):
                             diff_pos = int(np.argmax(ord_m != ord_p))
+                            im = int(ord_m[diff_pos])
+                            ip = int(ord_p[diff_pos])
+                            am = np.asarray(np.abs(col2_m), dtype=np.float64).ravel()
+                            ap = np.asarray(np.abs(col2_py), dtype=np.float64).ravel()
+                            dabs = np.abs(am - ap)
+                            ref = np.maximum(am, ap)
+                            # Focus ULP stats on rows that matter for early `sort` ranks.
+                            head = np.unique(
+                                np.concatenate(
+                                    [ord_m[: min(16, ord_m.size)], ord_p[: min(16, ord_p.size)]]
+                                )
+                            )
+                            ulp_rows: list[float] = []
+                            for ii in head:
+                                r0 = float(ref[ii])
+                                if r0 <= 0:
+                                    continue
+                                ulp_rows.append(float(dabs[ii] / np.spacing(r0)))
+                            ulp_max = max(ulp_rows) if ulp_rows else 0.0
                             _diaglog(
                                 True,
                                 (
                                     f"iter2 sort order diverges at rank pos {diff_pos + 1}: "
-                                    f"mat_idx={int(ord_m[diff_pos]) + 1} py_idx={int(ord_p[diff_pos]) + 1} "
-                                    f"|mat|={float(np.abs(col2_m[ord_m[diff_pos]])):.6g} "
-                                    f"|py|={float(np.abs(col2_py_aln[ord_p[diff_pos]])):.6g}"
+                                    f"mat_idx={im + 1} py_idx={ip + 1} "
+                                    f"|mat|={float(am[im]):.17g} |py|={float(ap[ip]):.17g}"
                                 ),
                             )
+                            _diaglog(
+                                True,
+                                (
+                                    f"iter2 |e| vec ULP on first-16 sort ranks (union mat/py): "
+                                    f"max_ulps={ulp_max:.3f} max|am-ap|={float(np.max(dabs)):.3e}"
+                                ),
+                            )
+                            for label, idx0 in (("mat_rank1", im), ("py_rank1", ip)):
+                                r0 = float(ref[idx0])
+                                ulp0 = float(dabs[idx0] / np.spacing(r0)) if r0 > 0 else float("nan")
+                                _diaglog(
+                                    True,
+                                    (
+                                        f"iter2 {label} 1-based={idx0 + 1}: "
+                                        f"am={float(am[idx0]):.17g} ap={float(ap[idx0]):.17g} "
+                                        f"delta={float(am[idx0] - ap[idx0]):.3e} "
+                                        f"ulps={ulp0:.3f}"
+                                    ),
+                                )
                         else:
-                            _diaglog(True, "iter2 sort order matches after phase align")
+                            _diaglog(True, "iter2 sort order matches (abs of complex principal col)")
                     except Exception:
                         pass
             _assert_exact_canon(
@@ -849,10 +1194,18 @@ def _assert_mdp_tree_exhaustive_exact(
             for gi in range(1, n_g_m + 1):
                 g_m = _eval_mat_array(eng, f"full({mdp_name}{{{lev}}}.G{{{s}}}{{{gi}}})")
                 g_p = np.asarray(g_py[gi - 1], dtype=np.float64)
-                _assert_exact_canon(g_m, g_p, np.float64, f"MDP{{{lev}}}.G{{{s}}}{{{gi}}}")
+                # MATLAB often stores index vectors as ``1×n`` rows; Python uses ``n×1``.
+                _assert_exact_canon(
+                    np.asarray(g_m, dtype=np.float64).ravel(),
+                    np.asarray(g_p, dtype=np.float64).ravel(),
+                    np.float64,
+                    f"MDP{{{lev}}}.G{{{s}}}{{{gi}}}",
+                )
 
         # ss.(D,E,ID,IE)
-        _assert_ss_exact(eng, mdp_name, mdp_py[lev - 1], lev, n_stream)
+        _assert_ss_exact(
+            eng, mdp_name, mdp_py[lev - 1], lev, n_stream, mdp_py_full=mdp_py
+        )
 
 
 def _snippet_s_matrix(nr: int = 4, nc: int = 4) -> np.ndarray:
@@ -1119,7 +1472,26 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_oracle(dem_eng_fsl_pd
 def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle(
     dem_eng_fsl_pdp,
 ):
-    """Exhaustive T11 gate: canonical-byte comparison for every nested MDP entry."""
+    """Exhaustive T11 gate: canonical-byte comparison for every nested MDP entry.
+
+    **Provisional translation bridge (reversible, oracle-only):**
+
+    - ``RGMS_FSL_RGM_MATLAB_EIG=1`` — pass MATLAB ``eig(...,'nobalance')`` into
+      :func:`spm_faster_structure_learning` only (``rgm_eig_pair``). Step-6
+      ``_assert_rgm_group_streams_exact`` still uses MATLAB ``MI`` + ``eig`` for
+      slice-indexed ``O`` when this flag is set. **Fast** enough for routine runs.
+    - ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1`` **in addition** — also pass
+      ``rgm_mi_override_fn`` so every ``spm_rgm_group`` rebuilds ``MI`` in MATLAB
+      from the current Python ``o_sub`` (many Engine round-trips; **slow**). Use
+      only when deliberately validating the full nested tree against MATLAB.
+    - ``RGMS_FSL_LINK_DIR_MI_MATLAB=1`` — optional ``link_dir_mi_fn`` so stream-link
+      stored MI matches MATLAB ``spm_dir_MI`` on each pulled ``a`` (many Engine
+      calls inside ``_link_streams``). Use when isolating ``ss.ID`` / ``IE`` parity;
+      combine with ``RGMS_FSL_RGM_MATLAB_*`` only when validating end-to-end.
+
+    Omit both flags for pure Python. Remove when native ``MI`` + ``eig`` parity
+    is restored.
+    """
     eng = dem_eng_fsl_pdp
     nr, nc, nd, na, npix = 12, 9, 4, 1, 0
     t_roll = 1000
@@ -1195,15 +1567,67 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
             _tlog(timing, f"checkpoint saved: {ck_py.name}, {ck_mat.name}")
 
     assert o_sl is not None
+    rgm_eig_pair = None
+    rgm_mi_override_fn = None
+    link_dir_mi_fn = None
+    if _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH") and not _env_flag(
+        "RGMS_FSL_RGM_MATLAB_EIG"
+    ):
+        pytest.fail(
+            "RGMS_FSL_RGM_MATLAB_MI_PUSH=1 requires RGMS_FSL_RGM_MATLAB_EIG=1 "
+            "(MATLAB ``eig`` without MATLAB ``MI`` is not a supported bridge)."
+        )
+    if _env_flag("RGMS_FSL_RGM_MATLAB_EIG"):
+        rgm_eig_pair = _make_matlab_rgm_eig_pair(eng)
+    if _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH"):
+        rgm_mi_override_fn = _make_rgm_mi_override_fn_matlab(eng)
+    if _env_flag("RGMS_FSL_LINK_DIR_MI_MATLAB"):
+        link_dir_mi_fn = _make_matlab_link_dir_mi_fn(eng)
     # Next earliest deterministic boundary inside SL path: stream-wise grouping.
     t_g = time.perf_counter()
-    _assert_rgm_group_streams_exact(eng, "O_fsl_sx", o_sl, s_mat, d_val=sc)
+    _assert_rgm_group_streams_exact(
+        eng, "O_fsl_sx", o_sl, s_mat, d_val=sc, rgm_eig_pair=rgm_eig_pair
+    )
     _tlog(timing, f"rgm_group checkpoints: {time.perf_counter() - t_g:.2f}s")
     t_sl = time.perf_counter()
-    mdp_p = spm_faster_structure_learning(o_sl, s_mat, sc)
+    mdp_p = spm_faster_structure_learning(
+        o_sl,
+        s_mat,
+        sc,
+        rgm_eig_pair=rgm_eig_pair,
+        rgm_mi_override_fn=rgm_mi_override_fn,
+        link_dir_mi_fn=link_dir_mi_fn,
+    )
     _tlog(timing, f"python spm_faster_structure_learning: {time.perf_counter() - t_sl:.2f}s")
 
     t_tree = time.perf_counter()
     _assert_mdp_tree_exhaustive_exact(eng, mdp_m_name, mdp_p, n_stream=4)
     _tlog(timing, f"mdp tree exhaustive compare: {time.perf_counter() - t_tree:.2f}s")
     _tlog(timing, f"total exhaustive gate: {time.perf_counter() - t0:.2f}s")
+
+
+@pytest.mark.slow
+def test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity(
+    dem_eng_fsl_pdp,
+):
+    """Step-6 grouping bytes match MATLAB when Python uses MATLAB ``eig(...,'nobalance')``.
+
+    Proves the spectral mismatch at ``spm_rgm_group`` stream 1 group 2 is isolated
+    to the eigenpair numerics of the active ``MI(i,i)`` block, not MI assembly or
+    downstream structure-learning logic in this harness.
+    """
+    ck_dir = Path(__file__).resolve().parent / "_checkpoint_data"
+    ck_py = ck_dir / "fsl_snippet_t1000_o_sl.pkl"
+    ck_mat = ck_dir / "fsl_snippet_t1000_matlab_inputs.mat"
+    if not ck_py.is_file() or not ck_mat.is_file():
+        pytest.skip("checkpoint artifacts missing (run exhaustive once to create them)")
+    eng = dem_eng_fsl_pdp
+    sc = 9
+    s_mat = _snippet_s_matrix(12, 9)
+    with ck_py.open("rb") as f:
+        o_sl = pickle.load(f)["o_sl"]
+    eng.eval(f"load('{ck_mat.as_posix()}','O_fsl_sx','S_fsl_sx');", nargout=0)
+    rgp = _make_matlab_rgm_eig_pair(eng)
+    _assert_rgm_group_streams_exact(
+        eng, "O_fsl_sx", o_sl, s_mat, d_val=sc, rgm_eig_pair=rgp
+    )

@@ -1104,3 +1104,230 @@ remains the goal, falsify two hypotheses in order: **(H1)** reordering Python
 eigenpairs to MATLAB’s `[e,v]` layout removes the rank-1 `sort` split; **(H2)** if
 not, quantify ULP diffs on the full `abs(principal_col))` vector vs MATLAB before
 any further sort heuristics.
+
+---
+
+## Iteration — `spm_rgm_group`: MATLAB `abs(e)` + ULP diagnostics (H2)
+
+**Read:** `python_src\toolbox\DEM\spm_rgm_group.py`, coherent status report (goal
+re-anchor), `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+(group diag block), `notes\andrew Python Matlab Translation Issues.md` (spectral
+subsection).
+
+**Modified:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`,
+`notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md` (this entry).
+
+**Created / deleted:** none.
+
+**Shared files touched:** no.
+
+**Change (production path):** spectral sort now feeds **`np.abs(col)`** on the
+**complex** principal column from `scipy.linalg.eig`, matching staged MATLAB
+`sort(abs(e(:,j)),'descend')` on complex `e` (no pre-strip to `real` before `abs`).
+
+**H2 instrumentation:** when `RGMS_FSL_GROUP_DIAG=1` and stream 1 group 2 mismatches,
+iter2 diagnostics report **ULP deltas on the union of MATLAB/Python first-16 sort
+ranks** (avoids denormal tail blowups), compare **`ord_p` from `abs(col2_py)`**
+(production-like), and replace the misleading “|lam99|” line with **SciPy
+`argmax(|λ|)`** in SciPy’s column order.
+
+**Checks run:**
+- `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **4 passed**.
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail`
+  with `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_GROUP_DIAG=1` → still fails
+  **`spm_rgm_group stream 1 group 2`** canonical bytes.
+- Representative DIAG: sort still diverges at **rank pos 1** (mat_idx=74 vs
+  py_idx=38); **mat_rank1** row shows **0 ULP** between MATLAB vs Python `abs`
+  vectors at that row; **py_rank1** row shows **~3 ULP** delta — consistent with
+  **different `eig` roundings** at tie-sensitive magnitudes, not an abstract
+  mergesort bug.
+
+**Conclusion:** **H1 (column reordering) is unlikely to be the sole fix** when the
+principal column already phase-aligns to ~1e-15 but **`abs`** still differs by
+O(1) ULP at the competitor index. Next policy/technical fork remains: match
+MATLAB’s **`eig` numerics** (or relax byte gate), not further local sort heuristics.
+
+---
+
+## Iteration — byte-exact `eig`: layout probe + BLAS hypothesis (OpenBLAS vs MKL)
+
+**Read:** `numpy.show_config()` (BLAS identification), SciPy `linalg._decomp.eig`
+source (calls LAPACK `geev` directly — no extra balancing in wrapper),
+`python_src\toolbox\DEM\spm_rgm_group.py` (current spectral path).
+
+**Created:** `_tmp_eig_layout_probe.py` (MATLAB Engine rebuild of `rgms_MI` +
+iter2 `sub`, compares MATLAB `sort` permutation `js` vs Python variants).
+
+**Deleted:** `_tmp_eig_layout_probe.py`, `_tmp_roundsort_probe.py` (stale import
+after `_matlab_max_diag_eig_index` removal), `_tmp_matlab_max_complex.py`
+(temporary MATLAB `max` toy probe).
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` (BLAS/MKL vs
+OpenBLAS byte-exact gate paragraph), `structure_learning_plan_week2.md` (§1.2.5
+toolchain bullet + revision history), `logs\log_0.md` (this entry).
+
+**Shared files touched:** no.
+
+**Probe results (checkpoint iter2, same `sub` as MATLAB):**
+- SciPy `eig` on **C-contiguous** vs **Fortran-contiguous** `sub` (symmetrize then
+  `ascontiguousarray` / `asfortranarray`): **identical** `max|abs(e_py)-abs(e_mat)|`
+  (~8.604e-16) and **`js_match` false** in both cases.
+- SciPy `eig(..., overwrite_a=True)` on Fortran `sub`: same.
+- NumPy `linalg.eig` C vs F: same.
+
+**Interpretation:** the residual is not fixed by **memory layout** or **SciPy vs
+NumPy front-end** on this OpenBLAS build; it is consistent with **different
+LAPACK/BLAS implementation details** vs MATLAB’s shipped numerics (MKL
+hypothesis). Byte-exact closure for this gate therefore needs **explicit
+user-authorized** environment alignment (e.g. MKL-linked SciPy) or another
+approved MATLAB-numeric reference path — not more Python-only sort tweaks.
+
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **4 passed**
+(not rerun exhaustive here after doc-only iteration; prior state: exhaustive
+still fails stream 1 group 2 until toolchain/bridge decision).
+
+---
+
+## Iteration — rollback: OpenBLAS PyPI NumPy/SciPy + restore `spm_MDP_MI._spm_MI`
+
+**Read:** `git diff python_src/spm_MDP_MI.py` (MKL-era edits), `rgms-rules.mdc`
+(environment mutation was user-authorized for MKL and for this rollback).
+
+**Modified:** `python_src\spm_MDP_MI.py` (reverted to committed transliteration via
+`git checkout HEAD -- python_src/spm_MDP_MI.py`), `logs\log_0.md` (this entry).
+
+**Conda / pip (`rgms` env):**
+- `conda remove -y numpy scipy mkl libblas libcblas liblapack` (and conda-pulled
+  MKL-related deps such as `tbb`, `llvm-openmp`, `libhwloc`, … as shown in the
+  transaction plan).
+- `pip install numpy==2.4.4 scipy==1.17.1` (restores prior **PyPI / scipy-openblas**
+  wheel stack; `numpy.show_config` again reports **scipy-openblas**).
+
+**Created / deleted:** none.
+
+**Shared files touched:** no.
+
+**Rationale:** MKL alignment surfaced strict **MI-term** byte differences and
+pressured **core** `spm_MDP_MI` edits; per project direction, roll back to **low
+coupling**: keep transliterated `_spm_MI` and revisit toolchain/bridge options
+later without MI churn.
+
+**Checks run:**
+- `pytest tests\oracle\test_spm_MDP_MI.py tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **8 passed**.
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q`
+  with `RGMS_FSL_USE_CHECKPOINT=1` → fails again at **`spm_rgm_group stream 1 group 2`**
+  canonical bytes (**known pre-MKL bottleneck** restored).
+
+---
+
+## Iteration — provisional MATLAB Engine bridge for `spm_rgm_group` / FSL (reversible)
+
+**Goal:** Continue snippet-scale exhaustive validation by optionally routing
+structure-learning grouping through MATLAB’s ``MI`` and ``eig(...,'nobalance')``
+via the Engine — **temporary**, **oracle-only**, default code paths unchanged.
+
+**Modified:**
+
+- `python_src\toolbox\DEM\spm_rgm_group.py` — optional keyword-only ``eig_pair``
+  (replace ``scipy.linalg.eig`` on each ``MI(i,i)`` block) and ``mi_override``
+  (replace internally built ``MI`` matrix).
+- `python_src\toolbox\DEM\spm_faster_structure_learning.py` — optional
+  keyword-only ``rgm_eig_pair`` and ``rgm_mi_override_fn`` forwarded into every
+  ``spm_rgm_group`` call; module docstring notes hooks are provisional / omit in
+  production.
+- `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` —
+  ``_make_matlab_rgm_eig_pair``, ``_matlab_mi_for_o_slice`` (slice-indexed ``O``),
+  ``_matlab_mi_from_o_cell_var`` + ``_make_rgm_mi_override_fn_matlab`` (push
+  current ``o_sub`` to MATLAB), Step-6 assert wiring, exhaustive harness env
+  split, ``test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity``,
+  guard ``RGMS_FSL_RGM_MATLAB_MI_PUSH`` requires ``RGMS_FSL_RGM_MATLAB_EIG``,
+  ``_assert_mdp_tree_exhaustive_exact`` compares ``MDP{*}.G{*}{*}`` with
+  ``.ravel()`` so MATLAB ``1×n`` vs Python ``n×1`` index vectors do not false-fail.
+
+**Created / deleted:** none.
+
+**Shared files touched:** no.
+
+**Environment flags (snippet exhaustive + Step-6 harness — do not lose):**
+
+| Flag | Purpose |
+|------|---------|
+| ``RGMS_FSL_USE_CHECKPOINT=1`` | Load ``o_sl`` from ``fsl_snippet_t1000_o_sl.pkl`` and ``O_fsl_sx``/``S_fsl_sx`` from ``fsl_snippet_t1000_matlab_inputs.mat``; skip Python ``spm_MDP_generate`` replay unless refresh. |
+| ``RGMS_FSL_REFRESH_CHECKPOINT=1`` | Force rebuild of the two checkpoint artifacts (use with care; overwrites files). |
+| ``RGMS_FSL_TIMING=1`` | Print phase timers inside the exhaustive test. |
+| ``RGMS_FSL_RGM_MATLAB_EIG=1`` | MATLAB ``eig(...,'nobalance')`` in Python ``spm_faster_structure_learning`` (``rgm_eig_pair``); Step-6 ``_assert_rgm_group_streams_exact`` also uses MATLAB ``MI`` (slice) + this ``eig`` when the flag is set. **Moderate** runtime. |
+| ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1`` | **Additionally** push each runtime ``o_sub`` to MATLAB and rebuild ``MI`` there (``rgm_mi_override_fn``). **Requires** ``RGMS_FSL_RGM_MATLAB_EIG=1``. **Slow** (~8 min snippet exhaustive on a typical dev machine). |
+| ``RGMS_FSL_GROUP_DIAG=1`` / ``RGMS_FSL_MI_DIAG=1`` | Extra Step-6 diagnostics (existing harness). |
+
+**Typical commands (PowerShell, ``conda activate rgms``):**
+
+```text
+# Fast Step-6 + tree on checkpoint; pure Python MI, MATLAB eig only in FSL when EIG set:
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+$env:RGMS_FSL_RGM_MATLAB_EIG='1'   # optional
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q
+
+# Full provisional MI+eig bridge (slow):
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+$env:RGMS_FSL_RGM_MATLAB_EIG='1'
+$env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1'
+pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q
+
+# Step-6 grouping bytes only (uses MATLAB MI slice + eig; no full FSL MI push):
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity -q
+```
+
+**Outcome (with both ``EIG`` and ``MI_PUSH`` on checkpoint):** exhaustive tree
+compare advances past prior ``MDP{1}.a{3}`` / ``G`` layout issues; current
+earliest observed mismatch moves to **`MDP{1}.ss.ID{1,2}(1, 58)`** canonical bytes
+(stream-link / ``spm_dir_MI`` lane — outside ``spm_rgm_group``).
+
+**Oracle spot-checks:** ``pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py``
+and FSL tests excluding the xfail exhaustive — **pass** after these edits.
+
+---
+
+## Iteration — ``ss.ID`` / ``ss.IE`` failure isolation (link ``a`` vs ``spm_dir_MI``)
+
+**Goal:** On the first canonical-byte mismatch for ``MDP{lev}.ss.ID`` or ``ss.IE``,
+print whether the linked Dirichlet matrix ``MDP{lev+1}.a{gi}`` matches MATLAB and
+whether ``spm_dir_MI`` disagrees on Python’s ``a`` alone (MATLAB vs Python port).
+
+**Modified:** ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`` —
+new ``_diag_ss_mi_link_mismatch``, ``_assert_ss_exact(..., mdp_py_full=mdp_py)``
+forwards full Python MDP list; on ``ID``/``IE`` ``AssertionError``, emit
+``[SS-LINK-DIAG]`` lines then re-raise.
+
+**Created / deleted:** none.
+
+**Interpretation:** If linked ``a`` bytes match but stored ``ss.ID`` / ``ss.IE`` still
+differ, suspect ``spm_dir_MI`` / ``psi`` numerics; if ``a`` differs, suspect
+``_link_streams`` / ``spm_dir_norm`` / ``sg`` indexing.
+
+**Oracle:** ``pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **5 passed**.
+
+---
+
+## Iteration — ``spm_dir_MI`` / stream-link parity (post ``[SS-LINK-DIAG]``)
+
+**Evidence:** Checkpoint exhaustive run with MATLAB EIG + MI_PUSH isolated the first
+``MDP{1}.ss.ID`` mismatch to **Python ``spm_dir_MI``** returning exact ``0.0`` where
+MATLAB returns ~``1e-16`` on **byte-identical** linked ``a`` (not ``_link_streams`` assembly).
+
+**Modified:**
+
+- ``python_src\spm_dir_MI.py`` — ``_spm_H`` now flattens inputs with Fortran (column-major)
+  order and accumulates ``sum(a)`` / ``sum(a.*psi(a+1))`` sequentially to mirror MATLAB
+  vector ``sum`` ordering and reduce spurious exact-zero cancellation on tiny MI.
+- ``python_src\toolbox\DEM\spm_faster_structure_learning.py`` — keyword-only
+  ``link_dir_mi_fn`` forwarded into ``_link_streams`` for oracle-only replacement of
+  ``spm_dir_MI`` when storing ``ss.ID`` / ``ss.IE``.
+- ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`` —
+  ``_make_matlab_link_dir_mi_fn``, env ``RGMS_FSL_LINK_DIR_MI_MATLAB`` (optional MATLAB
+  ``spm_dir_MI`` per linked matrix), exhaustive docstring updated.
+
+**Created / deleted:** none.
+
+**Shared files touched:** none.
+
+**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **12 passed**.

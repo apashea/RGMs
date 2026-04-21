@@ -4,9 +4,16 @@ Local MATLAB subfunctions ``spm_structure_fast`` and ``spm_group`` are
 ``_spm_structure_fast`` and ``_spm_group``. ``SPINBLOCK`` is fixed ``False`` to
 match the staged ``.m`` default used by the §5 snippet; the ``true`` spatial-block
 branch is deferred (see ``notes/andrew Python Matlab Translation Issues.md``).
+
+Optional keyword-only hooks ``rgm_eig_pair``, ``rgm_mi_override_fn``, and
+``link_dir_mi_fn`` exist only for **provisional**, **reversible** translation
+validation (e.g. MATLAB Engine oracles). Production callers should omit them so
+behaviour matches the committed pure-Python transliteration.
 """
 
 from __future__ import annotations
+
+from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
 from scipy import sparse
@@ -21,8 +28,33 @@ from python_src.toolbox.DEM.spm_rgm_group import spm_rgm_group
 from python_src.toolbox.DEM.spm_unique import spm_unique
 
 
-def spm_faster_structure_learning(O, S, dx=None, dt=None):
-    """RG structure learning — Pass 1 mirror of ``spm_faster_structure_learning.m``."""
+def spm_faster_structure_learning(
+    O,
+    S,
+    dx=None,
+    dt=None,
+    *,
+    rgm_eig_pair: Optional[Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]] = None,
+    rgm_mi_override_fn: Optional[Callable[[List[Any], int], np.ndarray]] = None,
+    link_dir_mi_fn: Optional[Callable[[np.ndarray], float]] = None,
+):
+    """RG structure learning — Pass 1 mirror of ``spm_faster_structure_learning.m``.
+
+    Parameters
+    ----------
+    rgm_eig_pair :
+        Forwarded as ``eig_pair`` to every ``spm_rgm_group`` call (oracle / MATLAB
+        ``eig(...,'nobalance')`` bridge). Default ``None`` keeps production SciPy
+        eigenpairs.
+    rgm_mi_override_fn :
+        Optional ``(o_sub, m) -> MI`` for provisional translation validation only;
+        forwarded as ``mi_override`` into each ``spm_rgm_group`` call. Default
+        ``None`` builds ``MI`` inside ``spm_rgm_group`` from ``O`` in Python.
+    link_dir_mi_fn :
+        Optional ``a_mat -> float`` replacing ``spm_dir_MI`` when storing stream-link
+        matrices ``ss.ID`` / ``ss.IE``. Oracle-only (e.g. MATLAB Engine); default
+        ``None`` uses native Python.
+    """
     spinblock = False
     S = np.asarray(S, dtype=np.float64)
     if S.ndim == 1:
@@ -72,7 +104,19 @@ def spm_faster_structure_learning(O, S, dx=None, dt=None):
                 n_o_s = int(np.prod(S[s - 1, :]))
                 idx = (offset + np.arange(1, n_o_s + 1, dtype=np.float64)).astype(np.int64)
                 o_sub = [o_cur[int(i) - 1] for i in idx]
-                g = spm_rgm_group(o_sub, int(dx[n - 1]), int(S[s - 1, 3]))
+                m_stream = int(S[s - 1, 3])
+                mi_override = None
+                if rgm_mi_override_fn is not None:
+                    mi_override = np.asarray(
+                        rgm_mi_override_fn(o_sub, m_stream), dtype=np.float64
+                    )
+                g = spm_rgm_group(
+                    o_sub,
+                    int(dx[n - 1]),
+                    m_stream,
+                    eig_pair=rgm_eig_pair,
+                    mi_override=mi_override,
+                )
 
             g_off = spm_unvec(spm_vec(g) + float(no), g)
             g_use = []
@@ -118,7 +162,7 @@ def spm_faster_structure_learning(O, S, dx=None, dt=None):
                         n_cells[(i_e, col_k)] = np.array([bool(np.asarray(p_t).ravel()[0])], dtype=bool)
 
         if n > 1:
-            _link_streams(mdp_n, mdp_h[n - 2], ng, sg)
+            _link_streams(mdp_n, mdp_h[n - 2], ng, sg, link_dir_mi_fn=link_dir_mi_fn)
 
         if int(np.max(ng)) < 2 and n > 1:
             mdp_h.append(mdp_n)
@@ -192,7 +236,14 @@ def _link_streams(
     mdp_prev: dict,
     ng: np.ndarray,
     sg: list[np.ndarray | None],
+    *,
+    link_dir_mi_fn: Optional[Callable[[np.ndarray], float]] = None,
 ) -> None:
+    def _stream_link_mi(a_mat: np.ndarray) -> float:
+        if link_dir_mi_fn is not None:
+            return float(link_dir_mi_fn(np.asarray(a_mat, dtype=np.float64)))
+        return float(np.real(spm_dir_MI(a_mat)))
+
     si = 1
     st = np.flatnonzero(ng) + 1
     for sj in st[1:].tolist():
@@ -225,7 +276,7 @@ def _link_streams(
                 mdp_prev["id"]["D"][fj - 1] = list(mdp_prev["id"]["D"][fj - 1]) + [gi]
                 _ss_store(mdp_prev["ss"]["D"], sj, sj, fj, fj, gj)
                 _ss_store(mdp_prev["ss"]["D"], si, sj, fi, fj, gi)
-                _ss_store_mi(mdp_prev["ss"]["ID"], si, sj, fi, fj, float(np.real(spm_dir_MI(a_mat))))
+                _ss_store_mi(mdp_prev["ss"]["ID"], si, sj, fi, fj, _stream_link_mi(a_mat))
 
                 gi = len(mdp_n["a"]) + 1
                 gj = int(np.asarray(mdp_prev["id"]["E"][fj - 1]).ravel()[0])
@@ -243,7 +294,7 @@ def _link_streams(
                 mdp_prev["id"]["E"][fj - 1] = list(mdp_prev["id"]["E"][fj - 1]) + [gi]
                 _ss_store(mdp_prev["ss"]["E"], sj, sj, fj, fj, gj)
                 _ss_store(mdp_prev["ss"]["E"], si, sj, fi, fj, gi)
-                _ss_store_mi(mdp_prev["ss"]["IE"], si, sj, fi, fj, float(np.real(spm_dir_MI(a_mat))))
+                _ss_store_mi(mdp_prev["ss"]["IE"], si, sj, fi, fj, _stream_link_mi(a_mat))
 
 
 def _append_linked_likelihood(mdp_n: dict, a_mat: np.ndarray, fi: int, si: int, sj: int) -> None:

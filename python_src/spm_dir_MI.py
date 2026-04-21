@@ -53,12 +53,22 @@ def _cell_get(x: Sequence[Any], index: int) -> Any:
 
 
 def _spm_H(a: np.ndarray) -> float:
-    """Differential entropy of a Dirichlet distribution (MATLAB local `spm_H`)."""
-    a = np.asarray(a, dtype=np.float64)
-    a0 = float(np.sum(a))
+    """Differential entropy of a Dirichlet distribution (MATLAB local `spm_H`).
+
+    MATLAB ``spm_H`` applies ``sum`` to vectors in linear-index order (column-major
+    storage). Flatten ``a`` with Fortran order before accumulating so marginal/joint
+    entropy paths match MATLAB ``spm_dir_MI`` cancellation behavior on tiny MI.
+    """
+    av = np.asarray(a, dtype=np.float64).reshape(-1, order="F")
+    a0 = 0.0
+    for x in av:
+        a0 += float(x)
     if a0 == 0.0:
         raise ValueError("spm_H: sum(a) is zero")
-    return float(psi(a0 + 1.0) - float(np.sum(a * psi(a + 1.0))) / a0)
+    s = 0.0
+    for i in range(av.size):
+        s += float(av[i]) * float(psi(float(av[i]) + 1.0))
+    return float(psi(a0 + 1.0) - s / a0)
 
 
 def spm_dir_MI(

@@ -7,7 +7,7 @@ Translated from spm_rgm_group.m (Pass 1). Uses `spm_cat`, `spm_MDP_MI`, and
 
 from __future__ import annotations
 
-from typing import Any, List, Sequence, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import scipy.linalg as spla
@@ -49,10 +49,16 @@ def _spm_cat_row(cells: Sequence[Any]) -> np.ndarray:
     return np.asarray(cat, dtype=np.float64)
 
 
+EigPairFn = Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]
+
+
 def spm_rgm_group(
     O: Sequence[Sequence[Any]],
     dx: int = 16,
     m: int = 1,
+    *,
+    eig_pair: Optional[EigPairFn] = None,
+    mi_override: Optional[np.ndarray] = None,
 ) -> List[np.ndarray]:
     """
     FORMAT G = spm_rgm_group(O,dx)
@@ -67,6 +73,17 @@ def spm_rgm_group(
         Upper bound on group size (default 16).
     m :
         Modalities per outcome (default 1). ``O`` must have ``No`` divisible by ``m``.
+    eig_pair :
+        Optional ``(sub) -> (vals, vecs)`` replacing ``scipy.linalg.eig`` on each
+        active ``MI(i,i)`` block. Must match SciPy convention: ``vals`` length ``n``
+        (one eigenvalue per column), ``vecs`` shape ``(n, n)`` with eigenvectors as
+        columns. Intended for oracle / MATLAB-numeric bridges only (default ``None``
+        uses SciPy).
+    mi_override :
+        Optional composite-layout ``MI`` matrix of shape ``(no, no)`` to use instead
+        of values from :func:`_spm_mdp_mi_scalar`. With a MATLAB ``eig_pair``, this
+        carries MATLAB’s exact ``MI`` bytes so the spectral while-loop matches
+        ``spm_rgm_group.m``. Default ``None`` builds ``MI`` from ``O`` as in MATLAB.
 
     Returns
     -------
@@ -109,14 +126,21 @@ def spm_rgm_group(
         d = np.diff(r_o, axis=1)
         n_flags[o] = bool(np.any(np.abs(d) > 1e-14))
 
-    mi = np.zeros((no, no), dtype=np.float64)
-    for i in range(no):
-        for j in range(i, no):
-            if n_flags[i] and n_flags[j]:
-                p = r_cells[i] @ r_cells[j].T
-                val = _spm_mdp_mi_scalar(p)
-                mi[i, j] = val
-                mi[j, i] = val
+    if mi_override is None:
+        mi = np.zeros((no, no), dtype=np.float64)
+        for i in range(no):
+            for j in range(i, no):
+                if n_flags[i] and n_flags[j]:
+                    p = r_cells[i] @ r_cells[j].T
+                    val = _spm_mdp_mi_scalar(p)
+                    mi[i, j] = val
+                    mi[j, i] = val
+    else:
+        mi = np.asarray(mi_override, dtype=np.float64)
+        if mi.shape != (no, no):
+            raise ValueError(
+                f"spm_rgm_group: mi_override shape {mi.shape} != ({no}, {no})"
+            )
 
     dx = int(np.fix(dx))
     u_thresh = float(np.exp(-16.0))
@@ -136,7 +160,10 @@ def spm_rgm_group(
         # SciPy's LAPACK-backed `eig` matches MATLAB's returned eigenpairs far more
         # closely than `numpy.linalg.eigh` for the exhaustive structure-learning
         # checkpoint (byte-level `sort(abs(e(:,j)),'descend')` parity).
-        vals, vecs = spla.eig(sub, check_finite=False, overwrite_a=False)
+        if eig_pair is None:
+            vals, vecs = spla.eig(sub, check_finite=False, overwrite_a=False)
+        else:
+            vals, vecs = eig_pair(sub)
         vals = np.asarray(vals, dtype=np.complex128).ravel(order="F")
         vecs = np.asarray(vecs, dtype=np.complex128)
         # MATLAB: `[~,j] = max(diag(v),[],1);` on the eigenvalue ordering returned
@@ -144,12 +171,11 @@ def spm_rgm_group(
         # first occurrence (MATLAB `max` behavior on vectors).
         jmax = int(np.argmax(np.abs(vals)))
         col = vecs[:, jmax]
-        if np.max(np.abs(np.imag(col))) <= 1e-12 * max(1.0, float(np.max(np.abs(col)))):
-            vec = np.real(col)
-        else:
-            vec = col
-        # MATLAB uses abs(complex) magnitude here, not abs(real-part only).
-        absv = np.abs(vec)
+        # MATLAB: `sort(abs(e(:,j)),'descend')` with `e` complex from `eig`.
+        # Use complex magnitude directly (do not strip imaginary parts before
+        # `abs`), so near-degenerate noise in real/imag parts matches MATLAB's
+        # `abs` pipeline for tie ordering.
+        absv = np.asarray(np.abs(col), dtype=np.float64).ravel()
         order = _sort_abs_descend_matlab_like(absv)
         j_take = order[: min(len(order), dx)]
         e_top = absv[j_take]
