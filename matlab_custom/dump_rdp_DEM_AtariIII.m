@@ -1,5 +1,5 @@
 % dump_rdp_DEM_AtariIII.m
-% Verbatim copy of spm12/toolbox/DEM/DEM_AtariIII.m lines 51-212
+% Verbatim copy of spm-main/toolbox/DEM/DEM_AtariIII.m lines 51-212
 % (through RDP.T = 64; ), then save RDP beside this file.
 % Requires SPM on path the same way you run the stock demo.
 

@@ -1,5 +1,5 @@
 % dump_rdp_DEM_chaos_compression.m
-% Verbatim copy of spm12/toolbox/DEM/DEM_chaos_compression.m lines 25-96
+% Verbatim copy of spm-main/toolbox/DEM/DEM_chaos_compression.m lines 25-96
 % (through RDP = spm_RDP_O(RDP,S); ), then save RDP beside this file.
 % Requires SPM on path the same way you run the stock demo.
 

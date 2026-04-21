@@ -50,7 +50,7 @@ On conflicts, preserve the MATLAB-faithful workflow and ask the user before proc
 ### Key paths
 
 - Project root: `C:\Users\andre\.cursor\RGMs\`
-- External SPM source (read-only): `C:\Users\andre\Documents\MATLAB\spm12\`
+- External SPM source (read-only): `C:\Users\andre\Documents\MATLAB\spm-main\`
 - Logs: `C:\Users\andre\.cursor\RGMs\logs\`
 - Misc (user-only): `C:\Users\andre\.cursor\RGMs\misc\`
 - Custom MATLAB: `C:\Users\andre\.cursor\RGMs\matlab_custom\`
@@ -147,7 +147,7 @@ Do not read or modify anything here unless explicitly asked.
 
 ## External SPM tree (read-only)
 
-- `C:\Users\andre\Documents\MATLAB\spm12\` is the installed SPM tree.
+- `C:\Users\andre\Documents\MATLAB\spm-main\` is the installed SPM tree.
 
 Rules:
 
@@ -361,7 +361,7 @@ Default stance:
 
 - Windows PowerShell,
 - `C:\Users\andre\.cursor\RGMs\` + `conda activate rgms`,
-- read-only `C:\Users\andre\Documents\MATLAB\spm12\`,
+- read-only `C:\Users\andre\Documents\MATLAB\spm-main\`,
 - one-file, staged MATLAB→Python translation with oracle tests,
 - minimal shared edits,
 - iteration logging in `logs\log_0.md` until the user rolls to the next log.

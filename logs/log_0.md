@@ -4,7 +4,7 @@
 
 **Inspected:** `rgms-rules.mdc`, `AGENTS.md`, migration docs, `Python Matlab Translation Issues.md`; template Python modules and oracle tests under `python_src/` and `tests/oracle/`; `tests/conftest.py`, `tests/helpers/matlab_engine.py`, `tests/helpers/compare.py`.
 
-**Copied:** `C:\Users\andre\Documents\MATLAB\spm12\spm_dir_norm.m` → `matlab_src\spm_dir_norm.m` (file was absent in `matlab_src`).
+**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_norm.m` → `matlab_src\spm_dir_norm.m` (file was absent in `matlab_src`).
 
 **Created:** `python_src\spm_dir_norm.py`, `tests\oracle\test_spm_dir_norm.py`.
 
@@ -24,7 +24,7 @@
 
 ## Iteration — `spm_vec` (Phase 0, Tier 0 item 0.6)
 
-**Inspected:** `rgms-rules.mdc`, `AGENTS.md`, `Migration Plan.md`, `Migration Tactics.md`, `notes\andrew Python Matlab Translation Issues.md`, this log; templates `python_src\spm_log.py`, `spm_cat.py`, `spm_sum.py`, `spm_dir_norm.py`, `spm_cross.py`, `spm_dot.py`; oracle tests `test_spm_log.py`, `test_spm_cat.py`, `test_spm_sum.py`, `test_spm_dir_norm.py`; `tests\conftest.py`, `tests\helpers\matlab_engine.py`, `tests\helpers\compare.py`; MATLAB source `C:\Users\andre\Documents\MATLAB\spm12\spm_vec.m` (and `spm_unvec.m` for staging only).
+**Inspected:** `rgms-rules.mdc`, `AGENTS.md`, `Migration Plan.md`, `Migration Tactics.md`, `notes\andrew Python Matlab Translation Issues.md`, this log; templates `python_src\spm_log.py`, `spm_cat.py`, `spm_sum.py`, `spm_dir_norm.py`, `spm_cross.py`, `spm_dot.py`; oracle tests `test_spm_log.py`, `test_spm_cat.py`, `test_spm_sum.py`, `test_spm_dir_norm.py`; `tests\conftest.py`, `tests\helpers\matlab_engine.py`, `tests\helpers\compare.py`; MATLAB source `C:\Users\andre\Documents\MATLAB\spm-main\spm_vec.m` (and `spm_unvec.m` for staging only).
 
 **Copied:** `spm_vec.m` and `spm_unvec.m` from read-only SPM into `matlab_src\` (both were absent; no overwrites).
 
@@ -153,5 +153,187 @@
 **Modified:** `misc\depr\spm_phase0_canonical_vs_alternative_evaluation.md` (single intro + two sentences on cross tests + one `##` section per function).
 
 **Modified:** `logs\log_0.md` (this entry).
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — docs: SPM install folder `spm12` → `spm-main`
+
+**Inspected:** repo-wide search for `spm12` in project docs and path strings.
+
+**Modified:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`, `misc\rgms-rules.mdc`, `Migration Plan.md`, `Migration Tactics.md`, `logs\log_0.md` (historical path strings in prior entries), `matlab_custom\dump_rdp_DEM_AtariIII.m`, `matlab_custom\dump_rdp_DEM_chaos_compression.m` — only folder-name segment `spm12` → `spm-main` in path-like references (`spm12/` or `...\spm12\` or `spm12/toolbox`).
+
+**Shared files touched:** no (`matlab_compat.py` unchanged).
+
+**Left unchanged:** `matlab_custom\spm_rgm_log.md` (prose “spm12 code”, not a `spm12/` path).
+
+---
+
+## Iteration — T1 `spm_speye` (Week 2 plan)
+
+**Read:** `Python Matlab Translation Issues.md`, `notes\andrew Python Matlab Translation Issues.md`; `C:\Users\andre\Documents\MATLAB\spm-main\spm_speye.m` (source of truth); `tests\helpers\matlab_engine.py`, `tests\helpers\compare.py`, `tests\oracle\test_spm_cov2corr.py` (sparse oracle pattern).
+
+**Copied:** `spm_speye.m` from read-only SPM into `matlab_src\spm_speye.m` (verbatim staging).
+
+**Created:** `python_src\spm_speye.py` (Pass 1: `*args` nargin tail, `_spdiags_ones_k` for `spdiags(ones(m,1),k,m,n)`, `c==1` wrap recursion, `c==2` via CSC column nnz vs MATLAB `find(~any(D))`, square `D^o`); `tests\oracle\test_spm_speye.py` (dense `full(spm_speye(...))` workspace eval — Engine cannot return sparse).
+
+**Shared files touched:** no (`matlab_compat.py`, `tests\helpers\compare.py` unchanged).
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_speye.py` — 9 passed.
+
+---
+
+## Iteration — T2 `spm_kron` (Week 2 plan)
+
+**Read:** `notes\andrew Python Matlab Translation Issues.md` (opening / row-vector policy refresh); `C:\Users\andre\Documents\MATLAB\spm-main\spm_kron.m` (source of truth).
+
+**Copied:** `spm_kron.m` from read-only SPM into `matlab_src\spm_kron.m` (verbatim staging).
+
+**Created:** `python_src\spm_kron.py` (Pass 1: list/tuple as `iscell`; `K` starts `csr_matrix([[1.0]])` then `sparse.kron` loop matching `kron(A{i},K)`; two-arg branch `kron(sparse(A),sparse(B))`); `tests\oracle\test_spm_kron.py` (dense `full(spm_kron(...))` via workspace eval).
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_kron.py` — 5 passed.
+
+---
+
+## Iteration — T3 `spm_combinations` (Week 2 plan)
+
+**Read:** `notes\andrew Python Matlab Translation Issues.md` (row-vector policy refresh); `C:\Users\andre\Documents\MATLAB\spm-main\spm_combinations.m` (source of truth).
+
+**Copied:** `spm_combinations.m` from read-only SPM into `matlab_src\spm_combinations.m` (verbatim staging).
+
+**Created:** `python_src\spm_combinations.py` (Pass 1: `iscell` branch for `dtype=object` ndarray or list/tuple of array-like domains; numeric branch `1:Nu(f)`; inner `kron` loop; `u(:)` via `reshape(..., order='F')`); `tests\oracle\test_spm_combinations.py` (numeric row/column/list, cell two domains, single factor).
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_combinations.py` — 5 passed.
+
+---
+
+## Iteration — T4 `spm_parents` (Week 2 plan)
+
+**Read:** `notes\andrew Python Matlab Translation Issues.md` (row-vector policy refresh); `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_parents.m` (source of truth).
+
+**Copied:** `spm_parents.m` from read-only SPM into `matlab_src\toolbox\DEM\spm_parents.m` (verbatim staging).
+
+**Created:** `python_src\toolbox\DEM\spm_parents.py` (Pass 1: `id` dict; `g` MATLAB 1-based; `ff` path with `iscell(Q)` vs numeric `Q(id.ff)`; `fg`/`gg` as `ndarray` row `id.fg(g,[s{:}])` or nested list for `id.fg{g}{s{:}}`; `_cell_multi_get` for 1–2+ indices); `tests\oracle\toolbox\DEM\test_spm_parents.py` (state-independent, `ff`+numeric `fg`/`gg` matrices column-major `reshape`, nested cell `Q`/`fg`/`gg`, `ff` without `fg`/`gg`).
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_parents.py` — 4 passed.
+
+---
+
+## Iteration — T5 `spm_MDP_checkX` (Week 2 plan)
+
+**Read:** `notes\andrew Python Matlab Translation Issues.md`; staged `matlab_src\toolbox\DEM\spm_MDP_checkX.m` (SPM typo fix on default-`B` branch: `ndims(MDP.A{1})` not `ndims(A)`); `python_src\toolbox\DEM\spm_MDP_checkX.py`, `tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py`.
+
+**Modified:** `python_src\toolbox\DEM\spm_MDP_checkX.py` — fixed `C` default branch `append`/`np.asarray(..., dtype=...)` parentheses; synthetic missing-`B` maps to **2-D** `np.eye(n,n)` like MATLAB; after `spm_dir_norm` on each `B{f}`, drop singleton third dimension `(n,n,1)→(n,n)` to match MATLAB’s storage of `ones(n,n,1)`; `tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py` — `_pull_cell_matrix` temp name `rgms_tmp_mx` (MATLAB names cannot start with `_`); grid oracle uses struct indexing `G_out(1,1)` / `G_out(2,1)`; `id.g{1}` compare uses `np.atleast_2d` for Engine 0-d vs `(1,1)` Python. `notes\andrew Python Matlab Translation Issues.md` — new section on Engine eval identifiers, struct vs brace indexing, `B` trailing singleton, 1×1 scalar round-trip.
+
+**Shared files touched:** no (`matlab_compat.py`, `tests\helpers\compare.py` unchanged).
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py` — **3 passed**.
+
+---
+
+## Iteration — T6 `spm_dir_MI` (Week 2 plan)
+
+**Read:** `notes\andrew Python Matlab Translation Issues.md`; `structure_learning_plan_week2.md` §8.8; read-only `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_MI.m`; `python_src\spm_log.py`, `spm_cat.py`; `matlab_compat.as_matlab_array`.
+
+**Copied:** `spm_dir_MI.m` → `matlab_src\spm_dir_MI.m` (verbatim staging).
+
+**Created:** `python_src\spm_dir_MI.py` (Pass 1: cell recursion; `a(:,:)` as `reshape(..., order='F')` with first row size preserved; local `_spm_H` with `scipy.special.psi`; optional `c` / `h` via sentinel so `spm_dir_MI(a, [], h)` matches MATLAB `nargin > 1`; costs use `spm_log` + matrix forms of `C'*sum(A,2)` and `sum(A,1)*H`; `spm_cat` on `h` with dense `.todense()` when sparse); `tests\oracle\test_spm_dir_MI.py` (7 cases). **Divergence:** multimodal + `h` cell branch uses per-modality `h[g]` (SPM line 25 passes whole `h` and mis-dimensions); oracle for that case uses MATLAB sum of unimodal calls; `_iscell_arg` avoids treating a plain numeric Python list as a modality cell.
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` (new `spm_dir_MI` subsection).
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_dir_MI.py` — **7 passed**.
+
+---
+
+## Iteration — T7 `spm_rgm_group` (Week 2 plan)
+
+**Read:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`; read-only `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_rgm_group.m`; `python_src\spm_cat.py`, `spm_MDP_MI.py`, `matlab_src\spm_cat.m` (path); staged `matlab_src\toolbox\DEM\spm_rgm_group.m`.
+
+**Copied:** `spm_rgm_group.m` → `matlab_src\toolbox\DEM\spm_rgm_group.m` (verbatim).
+
+**Created:** `python_src\toolbox\DEM\spm_rgm_group.py` (Pass 1: multimodal `kron` via `np.kron`; `spm_cat` row with dense `spm_cat` output; temporal-change flag `np.any` on `diff` along time; symmetric `MI` with `spm_MDP_MI` scalar branch; `np.linalg.eig` + eigenvector sort / `exp(-16)` pruning; `while` partition; final `(G{g}-1)*m` expansion); `tests\oracle\toolbox\DEM\test_spm_rgm_group.py` (4 cases: empty `O`, `No < dx` single group, clustering `dx=3`, `m=2`). MATLAB Engine assigns each `O{o,t}` with `matlab.double(..., size=(Ns,1))` so `spm_cat` matches column layout.
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` (Engine `O` column orientation for `spm_rgm_group` oracles).
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py` — **4 passed**.
+
+---
+
+## Iteration — `structure_learning_plan_week2.md` (Week 2 structure-learning plan)
+
+**Inspected:** prior planning thread (MATLAB snippet, SPM dependency graph under `spm-main`, `matlab_src` / `python_src` inventories, topological and snippet-aligned staging).
+
+**Created:** `structure_learning_plan_week2.md` at repo root — full reference for gameplay + `spm_faster_structure_learning` translation: rules pointers, paths, full target script, inventories, SPM file table, per-function dependency sections, port order T1–T12, snippet stages S0–S6, oracle strategy, risks, definition of done, reporting obligations, appendix matrix.
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — T8 `spm_MDP_generate` (Week 2 plan)
+
+**Read:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`; staged `matlab_src\toolbox\DEM\spm_MDP_generate.m`; `python_src\toolbox\DEM\spm_MDP_generate.py`.
+
+**Modified:** `python_src\toolbox\DEM\spm_MDP_generate.py` — full local `_spm_induction` mirroring `spm_MDP_generate.m` (sparse `spm_kron` Kronecker chain, backwards reachability on `Bf`, `G` maximisation, `32*R` + `_spm_shiftdim_m32`); `_b_matrix_for_u` for MATLAB `B(:,:,u)` when `B` is folded `Ns×Ns`; `id_list` now `copy.deepcopy(mdp["id"])` per model; **critical fix:** prescribed `s`/`u` must not be copied via `s_new.ravel(order="F")[ii]=…` on C-contiguous `zeros` (`.ravel` can be a **copy**), so `s`/`u` were silently cleared and every timestep re-sampled — replaced with whole-matrix slice copy when shapes match `(Nf,T)` else `unravel_index` writes; `G` update uses `np.kron` over factors in `r_fac` order (MATLAB `R*P{r,k}` with `numel(r)==1`); imports `spm_kron` from `python_src`. **Created/extended:** `tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` — (1) minimal single-factor oracle with MATLAB `rand` replay; (2) `Ng=2`, `Nm=2`, no `hid`, `rand(120)` replay including `O{g,t}`; (3) `id.hid` single active factor row (induction exercised) with `rand(40)` replay.
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` — `spm_MDP_generate` `s`/`u` init and `hid`/`hif` note.
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` — **3 passed**.
+
+**Follow-up:** MATLAB `G(k)=R*P{r,k}` with `numel(r)>1` errors in R2024b Engine on staged `spm_MDP_generate.m`; multi-factor `hif` induction oracles need SPM-side resolution or a MATLAB-only harness before expanding Python oracles beyond single-factor `hif`.
+
+---
+
+## Iteration — T9 `spm_MDP_pong` (Week 2 plan)
+
+**Read:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`; read-only SPM `spm_MDP_pong.m`; staged mirror and assets.
+
+**Copied / staged:** `spm_MDP_pong.m` → `matlab_src\toolbox\DEM\spm_MDP_pong.m`; downloaded `baseball.png` and `bat.png` from `https://github.com/spm/spm/tree/main/toolbox/DEM` into `matlab_src\toolbox\DEM\` (SPM sprites for `imread`).
+
+**Modified (MATLAB mirror):** `matlab_src\toolbox\DEM\spm_MDP_pong.m` — after default `Np`, added `nP = zeros(1,Np);` so all six outputs are assigned when `Np==0` (unmodified SPM leaves `nP` unset and the Engine errors on `[MDP,...,nP] = spm_MDP_pong(...)`).
+
+**Created:** `python_src\toolbox\DEM\spm_MDP_pong.py` (Pass 1: physics loop, `Na`/`Np` branches, `spm_dir_norm` on `B`, sparse `D`/`E`, MDP assembly, PNG via PyPNG `asDirect`, scipy `zoom` resize, `RGB.G` / nested `RGB.V` matching MATLAB’s Nr×Nc cell of repeated `V`); `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` (oracle: `cd` to DEM for `imread`; `(4,4,1,0,0)` full MDP+RGB; `(4,4,1,0,1)` with MATLAB `rand` replay via `numpy.random.rand` patch).
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` — `spm_MDP_pong` section (`nP`, `RGB.V` cell layout, PNG vs MATLAB `imread`, PyPNG).
+
+**Shared files touched:** no.
+
+**Environment:** `pip install pypng` into conda env **`rgms`** (PNG loading dependency).
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — **2 passed**. `RGB.V` compared with `assert_allclose(..., atol=155)` because MATLAB `imread` applies PNG display/gamma handling; PyPNG decodes raw samples (documented in branch notes).
+
+---
+
+## Iteration — `spm_MDP_pong` refinement (structure-learning focus, RGB oracle deferred)
+
+**Inspected:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`, `python_src\toolbox\DEM\spm_MDP_pong.py`, `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py`.
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` — oracle priority for **`MDP`/`id`** vs deferred **`RGB`**; **`Na`** reward/constraint tensor initialization note (match MATLAB `false` + `a(1,:,:)=true`).
+
+**Modified:** `python_src\toolbox\DEM\spm_MDP_pong.py` — **`Na`** branch: reward and miss likelihoods now use **`zeros((2,...))`** then **`a[0,:,:] = True`** (replacing incorrect **`np.ones`** that set both outcome rows true).
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — default tests no longer assert **`RGB`**; added **`test_spm_MDP_pong_na_true_small_grid_oracle`** `(4,4,1,1,0)`; full RGB check moved to **`test_spm_MDP_pong_rgb_visualization_oracle`** marked **`@pytest.mark.skip`**; **`_assert_mdp_matches`** extended with **`isfield`** checks for **`id.reward`**, **`id.contraint`**, **`id.control`**.
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — **3 passed**, **1 skipped** (RGB visualization oracle).
+
+---
+
+## Iteration — documentation (`structure_learning_plan_week2.md`)
+
+**Modified:** `structure_learning_plan_week2.md` — new **§1.1 Next focus (short-term handoff)** (integration oracle **`GDP→spm_MDP_checkX→spm_MDP_generate`** before SL; T10/T11 sequencing notes; optional `(12,9,…)` Pong; refresh **§6 / appendix** when repo catches up; **`spm_figure`** scope reminder); revision history row dated **2026-04-21**.
 
 **Shared files touched:** no.
