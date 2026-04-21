@@ -337,3 +337,27 @@
 **Modified:** `structure_learning_plan_week2.md` — new **§1.1 Next focus (short-term handoff)** (integration oracle **`GDP→spm_MDP_checkX→spm_MDP_generate`** before SL; T10/T11 sequencing notes; optional `(12,9,…)` Pong; refresh **§6 / appendix** when repo catches up; **`spm_figure`** scope reminder); revision history row dated **2026-04-21**.
 
 **Shared files touched:** no.
+
+---
+
+## Iteration — Pong → `spm_MDP_generate` integration gate (Week 2 §1.1)
+
+**Goal:** Prove rollout parity for **`spm_MDP_pong` → GDP → `spm_MDP_generate(GDP)`** (with `spm_MDP_checkX` invoked inside generate, as in MATLAB line 48) **before** end-to-end **`spm_faster_structure_learning`** oracles.
+
+**Read:** `structure_learning_plan_week2.md` §1.1; staged `matlab_src\toolbox\DEM\spm_MDP_generate.m` (local `spm_sample`); `notes\andrew Python Matlab Translation Issues.md` (for post-hoc RNG documentation).
+
+**Created:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py` — `spm_MDP_pong(4,4,1,1,0)` with **`Na=true`**, `GDP.T=4`, `GDP.tau=1`; MATLAB reference with **`rng(0,'twister')`** then `spm_MDP_generate(GDP)`; Python run with **`numpy.random.rand`** patched from MATLAB **`rng(0,'twister'); rand(8192,1)`** (explicit **`twister`** so buffer matches reference generator); asserts **`s`**, **`u`**, **`o`**, and every **`O{g,t}`** vs Engine.
+
+**Modified:** `python_src\toolbox\DEM\spm_MDP_generate.py` — (1) **Outcome likelihood sampling:** slice **`mdp["A"][g]`** without coercing the whole tensor to **`float64`** so **logical** columns stay **`bool`** and **`_spm_sample`** takes MATLAB’s **logical** path (`find` + `randperm`-equivalent consumption), not the numeric **`rand < cumsum`** path (which desynchronised RNG and policy **`PK`** draws); densify sparse slices with **`toarray()`** only; store **`O`** cells as **`float64`** for **`full(...)`** oracle compares. (2) **`_spm_sample` (bool):** mirror MATLAB **`twister`** stream pairing for local **`spm_sample`**: **`k==1`** uses no scalar **`rand()`**; **`2≤k≤4`** consumes **two** MATLAB-order **`rand()`** scalars then **`floor(r1*k)`** position among **`flatnonzero`** order; **`k≥5`** one **`rand()`**; do **not** use **`np.random.permutation`** for this replay contract. (3) **`O` cell sizing:** second dimension must follow MATLAB **`cell(Nm, max(Ng), T)`** (use **`max(Ng)`**, not **`max(No(g))`**) so **`O{g,t}`** columns are not truncated when **`Ng ≫ max(No)`** (Pong with **`Na=true`**).
+
+**Modified:** `python_src\toolbox\DEM\spm_MDP_checkX.py` — when normalising **`D`/`E`**, if a factor matrix is **sparse CSR**, **`full`** it before **`reshape`** to a dense column (MATLAB **`full`**); avoids failures on sparse **`D`/`E`** from Pong.
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` — new **§ RNG: `spm_MDP_generate`, logical `A{g}`, `spm_sample`, and MATLAB–Python `rand()` replay** (generator label **`twister`**, logical vs numeric **`spm_sample`**, **`randperm`** stream consumption, **`Np==0`** preamble for buffers, limits of **`rand()`**-only replay).
+
+**Modified:** `structure_learning_plan_week2.md` and **`logs\log_0.md`** (this entry) — status through §1.1 gate; §6/§8/revision/appendix refresh for “as of 2026-04-21”.
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` — **4 passed** (integration + three existing **`spm_MDP_generate`** oracles).
+
+**Next coherent step (not done here):** **`spm_faster_structure_learning` (T11)** and/or **`spm_O2rgb` (T10)** per plan; optionally wire the integration test (and/or generate oracles) as a **mandatory CI** gate.

@@ -34,7 +34,8 @@ def _pull_cell_matrix(eng, expr: str) -> np.ndarray:
 
 
 def _matlab_rand_stream_after_reset(dem_eng, n: int) -> list:
-    dem_eng.eval(f"rng(0); rgms_rand_buf = rand({int(n)}, 1);", nargout=0)
+    """Match MATLAB ``spm_MDP_generate`` script: explicit ``twister`` stream."""
+    dem_eng.eval(f"rng(0,'twister'); rgms_rand_buf = rand({int(n)}, 1);", nargout=0)
     return np.asarray(dem_eng.eval("rgms_rand_buf"), dtype=float).ravel().tolist()
 
 
@@ -45,7 +46,7 @@ def test_pong_na_true_then_generate_small_T_oracle(dem_eng):
     ``Np=0`` so Pong uses no ``rand``; replay aligns ``spm_MDP_generate`` draws only.
     """
     dem_eng.eval(
-        "rng(0); "
+        "rng(0,'twister'); "
         "[GDP,hid,cid,con,RGB,nP] = spm_MDP_pong(4,4,1,1,0); "
         "GDP.T = 4; "
         "GDP.tau = 1; "

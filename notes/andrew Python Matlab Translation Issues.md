@@ -141,6 +141,103 @@ uses `id.hid` shaped so `hif` is a **single** factor index (e.g. one non-zero
 row in `hid`). Python matches that regime and builds the Kronecker column stack
 with `np.kron` in `r_fac` order when `numel(r)==1`.
 
+## RNG: `spm_MDP_generate`, logical `A{g}`, `spm_sample`, and MATLAB–Python `rand()` replay
+
+This subsection records what was learned while closing the **Pong → GDP →
+`spm_MDP_generate`** integration oracle (`tests/oracle/toolbox/DEM/test_spm_MDP_pong_generate_integration.py`).
+The goal was strict rollout parity (`s`, `u`, `o`, and `O{g,t}`) under a shared
+random-number contract. The lessons generalise to other MATLAB-to-Python work
+where tests **replay** MATLAB’s scalar `rand()` stream in NumPy.
+
+### MATLAB local `spm_sample` has two incompatible paths
+
+In staged `spm_MDP_generate.m`, the nested `spm_sample` behaves as follows:
+
+- **Logical `P`:** `i = find(P); i = i(randperm(numel(i),1));` — uniform choice
+  among the linear indices returned by `find(P)` (sorted order for a logical
+  matrix), implemented via **`randperm`**, not via `cumsum` of a normalised
+  column.
+- **Numeric `P`:** `i = find(rand < cumsum(P),1);` — one scalar **`rand()`**
+  per call (for the usual column-stochastic `P`), with MATLAB’s column-major
+  `cumsum` down the column.
+
+Python must branch on **`dtype == bool`** (after slicing) the same way. If
+likelihood columns are coerced to **`float64`** before sampling (for example by
+`np.asarray(A{g}, dtype=np.float64)` before indexing), every logical modality
+silently takes the **numeric** path. That is not just a distribution bug: it
+changes **how many** scalar random draws occur and in what order, so **all**
+later draws (policy `PK` sampling, state transitions, further outcomes)
+desynchronise even when a MATLAB `rand()` buffer is replayed in Python.
+
+**Decision:** when translating outcome generation, slice **`MDP.A{g}`** (Python
+`mdp["A"][g]`) without destroying logical dtype; densify sparse slices to a dense
+array for indexing, then pass the resulting column to `_spm_sample` as **bool**
+or **float** according to the slice’s dtype. Store `O` cells for oracles in a
+numeric form compatible with `full(...)` comparisons (for example `float64`
+0/1 for former logical columns).
+
+### `randperm(k,1)` is not universally “one `rand()`” on the twister stream
+
+For oracle tests that patch **`numpy.random.rand`** with a vector of values from
+MATLAB **`rand(N,1)`**, every Python call to `np.random.rand()` must correspond
+to one MATLAB **`rand()`** scalar in order. MATLAB’s **`randperm(k,1)`** does
+**not** always advance that stream by exactly one **`rand()`** output.
+
+Empirical checks on MATLAB’s **`twister`** generator (used deliberately in the
+oracle) showed the following **stream alignment** relative to successive MATLAB
+**`rand()`** outputs after a common `rng(seed,'twister')` reset:
+
+- **`k == numel(i) == 1`:** no scalar **`rand()`** consumption (deterministic
+  choice among a single index).
+- **`k` in `{2,3,4}`:** **`randperm(k,1)`** advances the global stream by **two**
+  successive MATLAB **`rand()`** scalars. The **selected** linear index among the
+  `k` positives still matches **`floor(k * r1) + 1`** in **1-based** position
+  along MATLAB’s sorted `find(P)` list, where **`r1`** is the **first** of those
+  two scalars; the **second** scalar must still be drawn in Python so the next
+  `rand()` in the replay buffer lines up with MATLAB’s next explicit or implicit
+  draw.
+- **`k >= 5`:** **`randperm(k,1)`** advances the stream by **one** MATLAB
+  **`rand()`** scalar, with the same **`floor(k * r1) + 1`** mapping to a
+  1-based position among the `k` entries (equivalently 0-based
+  **`floor(r1 * k)`** clamped to `0 … k-1` on `flatnonzero` order).
+
+**Decision:** Python’s `_spm_sample` for boolean masks implements the above
+consumption pattern so that **`rand()` replay** matches MATLAB for
+`spm_MDP_generate` rollouts. Do **not** substitute **`np.random.permutation`**
+for parity with MATLAB **`randperm`** under this replay scheme: NumPy’s
+permutation machinery does not consume the patched **`rand()`** sequence in a
+MATLAB-identical way.
+
+### Fix the MATLAB **generator label**, not only the seed integer
+
+`rng(0)` without a second argument selects MATLAB’s **current default**
+algorithm, which can differ across MATLAB versions and session settings. A
+buffer built with one generator label and a script run with another will not
+match even if the seed integer is zero.
+
+**Decision:** for paired MATLAB/Python oracles that record `rand(N,1)` in
+MATLAB and replay it in Python, set the generator **explicitly** on the MATLAB
+side (for example **`rng(0,'twister')`**) both when running the reference and
+when filling the buffer, and document that choice next to the test.
+
+### Preamble before `spm_MDP_generate` matters for the buffer
+
+`spm_MDP_pong(..., Np=0)` does not execute the “random pixels” loop in `.m`, so
+with `Np == 0` MATLAB Pong does not consume **`rand()`** before
+`spm_MDP_generate`. If **`Np > 0`**, MATLAB Pong calls **`rand()`** during
+construction; any oracle buffer must then be collected **after** the same
+Pong call (and any other preamble) that the reference script runs, not from a
+bare `rng; rand(N)` in isolation.
+
+### Scope limit of `rand()`-only replay
+
+Replaying **`rand()`** scalars covers every draw that the translated code routes
+through **`np.random.rand()`** with the same call order as MATLAB’s use of
+**`rand()`** in the mirrored paths. It does **not** automatically cover other
+MATLAB RNG entry points (`randi`, `randn`, internal toolbox calls) unless those
+are also bridged or the test uses a different strategy (for example structural
+comparison without bit-identical RNG, or a full portable generator port).
+
 ## `spm_MDP_pong`: `nP` output, `RGB.V` layout, PNG read vs MATLAB `imread`
 
 **`nP` when `Np==0`:** Unmodified SPM `spm_MDP_pong.m` never assigns `nP` if the

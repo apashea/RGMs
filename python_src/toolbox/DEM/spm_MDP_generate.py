@@ -23,13 +23,19 @@ from python_src.toolbox.DEM.spm_parents import spm_parents
 def _spm_sample(p: Any) -> int:
     if isinstance(p, np.ndarray) and p.dtype == bool:
         flat = np.flatnonzero(p.ravel(order="F"))
-        if flat.size == 0:
-            raise ValueError("spm_sample: empty logical mask")
-        # MATLAB `spm_sample`: i = find(P); i = i(randperm(numel(i),1));
-        # `randperm(k,1)` consumes one uniform from the same RNG stream as `rand`.
-        # Verified: equivalent to picking position `floor(k*rand)+1` among sorted `find(P)`.
         k = int(flat.size)
-        pos = int(np.floor(float(np.random.rand()) * k))
+        if k == 0:
+            raise ValueError("spm_sample: empty logical mask")
+        # MATLAB spm_MDP_generate local spm_sample: logical P uses randperm(numel(i),1).
+        # For MATLAB's twister default, randperm(k,1) selects index floor(k*r1)+1 using the
+        # first rand() output r1 after reset; when 2<=k<=4 it also consumes a second rand()
+        # so the stream stays aligned with replayed MATLAB rand() buffers.
+        if k == 1:
+            return int(flat[0] + 1)
+        r1 = float(np.random.rand())
+        if k <= 4:
+            float(np.random.rand())
+        pos = int(np.floor(r1 * k))
         if pos >= k:
             pos = k - 1
         return int(flat[pos] + 1)
@@ -370,14 +376,20 @@ def spm_MDP_generate(mdp_in: Union[dict, List[dict]]) -> Union[dict, List[dict]]
                 j, i = spm_parents(id_list[m], g + 1, mdp["s"][:, t_idx - 1])
                 i_arr = np.atleast_1d(np.asarray(i, dtype=np.float64)).astype(int).ravel()
                 j_arr = np.atleast_1d(np.asarray(j, dtype=np.float64)).astype(int).ravel()
-                ag = np.asarray(mdp["A"][g], dtype=np.float64)
+                ag = mdp["A"][g]
                 for o in i_arr.tolist():
                     ind = [int(mdp["s"][jj - 1, t_idx - 1]) for jj in j_arr.tolist()]
                     sl = (slice(None),) + tuple(ii - 1 for ii in ind)
-                    col = np.asarray(ag[sl], dtype=np.float64).reshape(-1, order="F")
-                    col = col.reshape(-1, 1, order="F")
-                    o_cell[m][int(o) - 1][t_idx - 1] = col
-                    mdp["o"][int(o) - 1, t_idx - 1] = _spm_sample(col)
+                    sub = ag[sl]
+                    if sp.issparse(sub):
+                        sub = sub.toarray()
+                    col = np.asarray(sub)
+                    col = np.reshape(col, (-1, 1), order="F")
+                    o_cell[m][int(o) - 1][t_idx - 1] = col.astype(np.float64, copy=False)
+                    sample_col = (
+                        col if col.dtype == np.bool else col.astype(np.float64, copy=False)
+                    )
+                    mdp["o"][int(o) - 1, t_idx - 1] = _spm_sample(sample_col)
 
         for m in range(nm):
             mdp = models[m]
