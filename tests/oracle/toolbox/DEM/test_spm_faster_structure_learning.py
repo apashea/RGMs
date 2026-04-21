@@ -2,6 +2,9 @@
 
 from pathlib import Path
 from unittest.mock import patch
+import os
+import pickle
+import time
 
 import matlab
 import numpy as np
@@ -15,7 +18,17 @@ from python_src.toolbox.DEM.spm_rgm_group import (
     _spm_mdp_mi_scalar,
     spm_rgm_group,
 )
+from python_src.spm_log import spm_log
 from tests.helpers.compare import assert_matlab_match
+
+
+def _env_flag(name: str) -> bool:
+    return str(os.getenv(name, "0")).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _tlog(enabled: bool, msg: str) -> None:
+    if enabled:
+        print(f"[TIMER] {msg}", flush=True)
 
 
 @pytest.fixture
@@ -203,17 +216,43 @@ def _assert_ss_exact(eng, mdp_name: str, mdp_py_lev: dict, lev: int, n_stream: i
 def _assert_rgm_group_streams_exact(
     eng, pdp_o_name: str, o_py: list, s_mat: np.ndarray, d_val: int
 ) -> None:
-    """Forward-ordered SL checkpoint: stream-wise ``spm_rgm_group`` parity."""
+    """Forward-ordered Step-6 start: n=1 call setup, then stream-wise grouping parity."""
     n_stream = int(s_mat.shape[0])
     assert len(o_py) >= int(np.sum(np.prod(s_mat[:, :3], axis=1))), (
         "Python O rows are fewer than stream-indexed offsets expect"
     )
+    # Start-of-call checkpoints (n=1, before grouping internals).
+    nt_m = int(np.asarray(eng.eval(f"size({pdp_o_name},2)"), dtype=int).item())
+    nt_p = len(o_py[0]) if o_py else 0
+    assert nt_m == nt_p, "Step-6 start: Nt mismatch before grouping"
+    # With call form spm_faster_structure_learning(O,S,Sc), MATLAB uses dt default 2 at n=1.
+    t_py = np.arange(1, nt_p, 2, dtype=np.int64)
+    t_m = np.asarray(eng.eval(f"1:2:({nt_m} - 1)"), dtype=np.int64).ravel(order="F")
+    _assert_exact_canon(t_m, t_py, np.float64, "Step-6 start: decimated t-index")
+
     for s in range(1, n_stream + 1):
         o_stack = np.concatenate([[0.0], np.prod(s_mat[:, :3], axis=1).astype(np.float64)])
         offset = int(o_stack[s - 1])
         n_o_s = int(np.prod(s_mat[s - 1, :3]))
         idx = np.arange(offset + 1, offset + n_o_s + 1, dtype=np.int64)
         idx_mat = " ".join(str(int(v)) for v in idx)
+        # Validate start-of-stream call arguments to spm_rgm_group at n=1.
+        d_m = float(np.asarray(eng.eval(f"{int(d_val)}"), dtype=float).item())
+        m_m = float(np.asarray(eng.eval(f"S_fsl_sx({s},4)"), dtype=float).item())
+        assert d_m == float(d_val), f"Step-6 start stream {s}: d mismatch"
+        assert m_m == float(s_mat[s - 1, 3]), f"Step-6 start stream {s}: m mismatch"
+        eng.eval(
+            f"rgms_o_start = [0; prod(S_fsl_sx,2)]; "
+            f"rgms_idx_start = rgms_o_start({s}) + (1:prod(S_fsl_sx({s},:)));",
+            nargout=0,
+        )
+        idx_m = np.asarray(eng.eval("rgms_idx_start"), dtype=np.float64).ravel(order="F")
+        _assert_exact_canon(
+            idx_m,
+            idx.astype(np.float64),
+            np.float64,
+            f"Step-6 start stream {s}: O(o,:) row index mapping",
+        )
         # Earliest SL-boundary checkpoint: verify stream-slice indexing at key times.
         t_candidates = sorted({1, len(o_py[int(idx[0]) - 1]) // 2, len(o_py[int(idx[0]) - 1])})
         for row_pos, row_idx in enumerate(idx, start=1):
@@ -271,6 +310,73 @@ def _assert_rgm_group_streams_exact(
                         val = _spm_mdp_mi_scalar(p_ij)
                         mi_p[i0, j0] = val
                         mi_p[j0, i0] = val
+            # Earliest-within-MI checkpoint: isolate first mismatching (i,j).
+            mism_ij = np.argwhere(mi_m != mi_p)
+            if mism_ij.size:
+                i0, j0 = (int(v) for v in mism_ij[0])
+                i1 = i0 + 1
+                j1 = j0 + 1
+                p_m = _eval_mat_array(eng, f"full(rgms_r{{{i1}}}*rgms_r{{{j1}}}')")
+                p_p = r_cells[i0] @ r_cells[j0].T
+                _assert_exact_canon(
+                    p_m,
+                    p_p,
+                    np.float64,
+                    f"spm_rgm_group stream 1 p({i1},{j1})",
+                )
+                mi_scalar_m = float(
+                    _eval_mat_array(
+                        eng,
+                        f"spm_MDP_MI(full(rgms_r{{{i1}}}*rgms_r{{{j1}}}'))",
+                    ).ravel()[0]
+                )
+                mi_scalar_p = float(_spm_mdp_mi_scalar(p_p))
+                # Decompose MI scalar to isolate earliest numeric divergence.
+                a_m = _eval_mat_array(eng, f"full(rgms_r{{{i1}}}*rgms_r{{{j1}}}')")
+                s_m = float(np.asarray(a_m, dtype=np.float64).sum())
+                a_m_norm = np.asarray(a_m, dtype=np.float64) / s_m
+                eng.eval(
+                    f"rgms_pij = full(rgms_r{{{i1}}}*rgms_r{{{j1}}}'); "
+                    "rgms_Aij = rgms_pij/sum(rgms_pij,'all'); "
+                    "rgms_t1 = rgms_Aij(:)'*spm_log(rgms_Aij(:)); "
+                    "rgms_t2 = sum(rgms_Aij,1)*spm_log(sum(rgms_Aij,1)'); "
+                    "rgms_t3 = sum(rgms_Aij,2)'*spm_log(sum(rgms_Aij,2));",
+                    nargout=0,
+                )
+                t1_m = float(np.asarray(eng.eval("rgms_t1"), dtype=np.float64).ravel()[0])
+                t2_m = float(np.asarray(eng.eval("rgms_t2"), dtype=np.float64).ravel()[0])
+                t3_m = float(np.asarray(eng.eval("rgms_t3"), dtype=np.float64).ravel()[0])
+                a_p_norm = np.asarray(p_p, dtype=np.float64) / float(np.asarray(p_p, dtype=np.float64).sum())
+                a_col = a_p_norm.reshape(-1, 1, order="F")
+                t1_p = float((a_col.T @ spm_log(a_col)).ravel()[0])
+                row_sum = np.sum(a_p_norm, axis=0, keepdims=True)
+                col_sum = np.sum(a_p_norm, axis=1, keepdims=True)
+                t2_p = float((row_sum @ spm_log(row_sum.T)).ravel()[0])
+                t3_p = float((col_sum.T @ spm_log(col_sum)).ravel()[0])
+                _assert_exact_canon(
+                    np.array([t1_m], dtype=np.float64),
+                    np.array([t1_p], dtype=np.float64),
+                    np.float64,
+                    f"spm_rgm_group stream 1 MI-term1({i1},{j1})",
+                )
+                _assert_exact_canon(
+                    np.array([t2_m], dtype=np.float64),
+                    np.array([t2_p], dtype=np.float64),
+                    np.float64,
+                    f"spm_rgm_group stream 1 MI-term2({i1},{j1})",
+                )
+                _assert_exact_canon(
+                    np.array([t3_m], dtype=np.float64),
+                    np.array([t3_p], dtype=np.float64),
+                    np.float64,
+                    f"spm_rgm_group stream 1 MI-term3({i1},{j1})",
+                )
+                _assert_exact_canon(
+                    np.array([mi_scalar_m], dtype=np.float64),
+                    np.array([mi_scalar_p], dtype=np.float64),
+                    np.float64,
+                    f"spm_rgm_group stream 1 MI-scalar({i1},{j1})",
+                )
             _assert_exact_canon(mi_m, mi_p, np.float64, "spm_rgm_group stream 1 MI")
 
         eng.eval(
@@ -649,38 +755,83 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
     sc = 9
     buf_n = 5_000_000
     mdp_m_name = "MDP_fsl_snip_exact"
+    s_mat = _snippet_s_matrix(nr, nc)
+    timing = _env_flag("RGMS_FSL_TIMING")
+    use_checkpoint = _env_flag("RGMS_FSL_USE_CHECKPOINT")
+    refresh_checkpoint = _env_flag("RGMS_FSL_REFRESH_CHECKPOINT")
+    ck_dir = Path(__file__).resolve().parent / "_checkpoint_data"
+    ck_py = ck_dir / "fsl_snippet_t1000_o_sl.pkl"
+    ck_mat = ck_dir / "fsl_snippet_t1000_matlab_inputs.mat"
+    t0 = time.perf_counter()
 
-    eng.eval(
-        "rng(0,'twister'); "
-        f"[GDP_sx,hid,cid,con,RGB_sx,nP] = spm_MDP_pong({nr},{nc},{nd},{na},{npix}); "
-        f"GDP_sx.T = {int(t_roll)}; GDP_sx.tau = 1; "
-        "PDP_sx = spm_MDP_generate(GDP_sx);",
-        nargout=0,
-    )
-    eng.eval(
-        f"O_fsl_sx = PDP_sx.O(:,1:{k}); "
-        "S_fsl_sx = ones(4,3); "
-        f"S_fsl_sx(1,:) = [{nr},{nc},1]; S_fsl_sx(2,:) = [1,1,1]; "
-        "S_fsl_sx(3,:) = [1,1,1]; S_fsl_sx(4,:) = [1,1,1]; "
-        "S_fsl_sx(:,end+1:4) = 1;",
-        nargout=0,
-    )
-    eng.eval(
-        f"{mdp_m_name} = spm_faster_structure_learning(O_fsl_sx,S_fsl_sx,{sc});",
-        nargout=0,
-    )
+    o_sl = None
 
-    rand_buf = _matlab_rand_buf_twister_np(eng, buf_n)
-    gdp = spm_MDP_pong(nr, nc, nd, na, npix)[0]
-    gdp["T"] = float(t_roll)
-    gdp["tau"] = 1.0
-    with patch("numpy.random.rand", side_effect=_rand_replay_callable(rand_buf)):
-        pdp = spm_MDP_generate(gdp)
-    # Forward-ordered gate: verify generate-stage O parity first, before SL tree checks.
-    _assert_pdp_o_window_matches(eng, "PDP_sx", pdp, k)
-    o_sl = [[pdp["O"][g][t] for t in range(k)] for g in range(len(pdp["O"]))]
+    if use_checkpoint and (not refresh_checkpoint) and ck_py.exists() and ck_mat.exists():
+        t_load = time.perf_counter()
+        with ck_py.open("rb") as f:
+            payload = pickle.load(f)
+        o_sl = payload["o_sl"]
+        eng.eval(f"load('{ck_mat.as_posix()}','O_fsl_sx','S_fsl_sx');", nargout=0)
+        eng.eval(
+            f"{mdp_m_name} = spm_faster_structure_learning(O_fsl_sx,S_fsl_sx,{sc});",
+            nargout=0,
+        )
+        _tlog(timing, f"checkpoint load+matlab fsl: {time.perf_counter() - t_load:.2f}s")
+    else:
+        t_m = time.perf_counter()
+        eng.eval(
+            "rng(0,'twister'); "
+            f"[GDP_sx,hid,cid,con,RGB_sx,nP] = spm_MDP_pong({nr},{nc},{nd},{na},{npix}); "
+            f"GDP_sx.T = {int(t_roll)}; GDP_sx.tau = 1; "
+            "PDP_sx = spm_MDP_generate(GDP_sx);",
+            nargout=0,
+        )
+        eng.eval(
+            f"O_fsl_sx = PDP_sx.O(:,1:{k}); "
+            "S_fsl_sx = ones(4,3); "
+            f"S_fsl_sx(1,:) = [{nr},{nc},1]; S_fsl_sx(2,:) = [1,1,1]; "
+            "S_fsl_sx(3,:) = [1,1,1]; S_fsl_sx(4,:) = [1,1,1]; "
+            "S_fsl_sx(:,end+1:4) = 1;",
+            nargout=0,
+        )
+        eng.eval(
+            f"{mdp_m_name} = spm_faster_structure_learning(O_fsl_sx,S_fsl_sx,{sc});",
+            nargout=0,
+        )
+        _tlog(timing, f"matlab setup+fsl: {time.perf_counter() - t_m:.2f}s")
+
+        t_p = time.perf_counter()
+        rand_buf = _matlab_rand_buf_twister_np(eng, buf_n)
+        gdp = spm_MDP_pong(nr, nc, nd, na, npix)[0]
+        gdp["T"] = float(t_roll)
+        gdp["tau"] = 1.0
+        with patch("numpy.random.rand", side_effect=_rand_replay_callable(rand_buf)):
+            pdp = spm_MDP_generate(gdp)
+        _tlog(timing, f"python generate replay: {time.perf_counter() - t_p:.2f}s")
+
+        t_o = time.perf_counter()
+        # Forward-ordered gate: verify generate-stage O parity first, before SL tree checks.
+        _assert_pdp_o_window_matches(eng, "PDP_sx", pdp, k)
+        o_sl = [[pdp["O"][g][t] for t in range(k)] for g in range(len(pdp["O"]))]
+        _tlog(timing, f"pre-SL O parity+build o_sl: {time.perf_counter() - t_o:.2f}s")
+
+        if use_checkpoint:
+            ck_dir.mkdir(parents=True, exist_ok=True)
+            with ck_py.open("wb") as f:
+                pickle.dump({"o_sl": o_sl}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            eng.eval(f"save('{ck_mat.as_posix()}','O_fsl_sx','S_fsl_sx');", nargout=0)
+            _tlog(timing, f"checkpoint saved: {ck_py.name}, {ck_mat.name}")
+
+    assert o_sl is not None
     # Next earliest deterministic boundary inside SL path: stream-wise grouping.
-    _assert_rgm_group_streams_exact(eng, "O_fsl_sx", o_sl, _snippet_s_matrix(nr, nc), d_val=sc)
-    mdp_p = spm_faster_structure_learning(o_sl, _snippet_s_matrix(nr, nc), sc)
+    t_g = time.perf_counter()
+    _assert_rgm_group_streams_exact(eng, "O_fsl_sx", o_sl, s_mat, d_val=sc)
+    _tlog(timing, f"rgm_group checkpoints: {time.perf_counter() - t_g:.2f}s")
+    t_sl = time.perf_counter()
+    mdp_p = spm_faster_structure_learning(o_sl, s_mat, sc)
+    _tlog(timing, f"python spm_faster_structure_learning: {time.perf_counter() - t_sl:.2f}s")
 
+    t_tree = time.perf_counter()
     _assert_mdp_tree_exhaustive_exact(eng, mdp_m_name, mdp_p, n_stream=4)
+    _tlog(timing, f"mdp tree exhaustive compare: {time.perf_counter() - t_tree:.2f}s")
+    _tlog(timing, f"total exhaustive gate: {time.perf_counter() - t0:.2f}s")

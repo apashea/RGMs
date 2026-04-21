@@ -76,6 +76,101 @@
 
 ---
 
+## Iteration — earliest-within-MI isolation in Step 6
+
+**Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` and
+active exhaustive terminal outputs.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`:
+- added first-mismatch isolation inside stream-1 MI checkpoint:
+  - for first `(i,j)` where `MI_m != MI_p`, compare
+    `p = r{i}*r{j}'` (with MATLAB `full(...)`) and then compare the scalar
+    `spm_MDP_MI(p)` result directly.
+- fixed MATLAB sparse conversion issue in checkpoint by wrapping MATLAB
+  expressions with `full(...)`.
+
+**Result (after rerun):**
+- sparse-conversion tooling failure resolved,
+- earliest mismatch advanced to
+  `spm_rgm_group stream 1 MI-scalar(1,24)` canonical-byte mismatch,
+  with values matching numerically to displayed precision but differing at raw
+  float64 byte level.
+
+**Checks run:**
+- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` → fail at MI scalar checkpoint above.
+- lint diagnostics on edited file: no errors.
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — Step 6 restart from SL call start (validated Step-5 inputs)
+
+**Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`:
+- strengthened `_assert_rgm_group_streams_exact(...)` to begin from earliest
+  start-of-call boundaries before prior assumed mismatch locations:
+  - `Nt` parity at SL call start,
+  - decimated time index parity (`t = 1:2:(Nt-1)` for `dt(1)=2` default),
+  - per-stream `d` and `m` argument parity for `spm_rgm_group`,
+  - per-stream MATLAB row-index mapping parity for `O(o,:)` selection formula.
+
+**Checks run:**
+- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q`
+  - result: fail remains at earliest currently observed internal boundary
+    `spm_rgm_group stream 1 MI` canonical mismatch (108x108),
+    with new start-of-call checks passing first.
+- lints on edited file: no errors.
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — Step 5 closure (`PDP.O(:,1:1000)` and `O(o,:)` slicing)
+
+**Read:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`:
+- added `_assert_fsl_input_slice_exact(...)`:
+  - constructs MATLAB `O_fsl_step5 = PDP.O(:,1:k)` and snippet-shaped `S`,
+  - validates full row-by-row parity for all rows and all time columns against
+    Python `pdp["O"]` using column-stacked row blocks,
+  - validates stream row boundaries implied by `S` and used by
+    `O(o,:)` indexing in `spm_faster_structure_learning`.
+- added `@pytest.mark.slow`
+  `test_snippet_sl_input_slice_boundary_oracle` for exact branch
+  (`12,9,4,1,0`, `T=1000`, `k=1000`, replay contract).
+
+**Checks run:**
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py::test_snippet_sl_input_slice_boundary_oracle -q` → passed.
+- lint diagnostics on edited file → no errors.
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — Step 4 closure (`spm_get_hits` / `spm_get_miss`) on exact branch
+
+**Read:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`:
+- added helper `_py_hits_miss_from_o_id(...)` that mirrors snippet semantics:
+  - `find(o(id.reward,:) > 1)`
+  - `find(o(id.contraint,:) > 1)`
+- added `@pytest.mark.slow`
+  `test_snippet_helper_semantics_hits_miss_oracle` for exact branch
+  (`12,9,4,1,0`, `T=1000`, replay contract), comparing MATLAB helper outputs to
+  Python-computed indices from replay-aligned `pdp["o"]` and `pdp["id"]`.
+
+**Checks run:**
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py::test_snippet_helper_semantics_hits_miss_oracle -q` → passed.
+- lint diagnostics on edited test files → no errors.
+
+**Shared files touched:** no.
+
+---
+
 ## Iteration — `structure_learning_plan_week2.md` coherence rewrite for strict order
 
 **Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`;
@@ -123,6 +218,34 @@ document-control sections) and `c:\Users\andre\.cursor\rules\rgms-rules.mdc`.
 **Shared files touched:** no.
 
 **Tests run:** none (documentation-only cleanup).
+
+---
+
+## Iteration — Step 1 sanity + Step 2/3 exact-branch closures
+
+**Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`,
+`tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`,
+`tests\oracle\toolbox\DEM\test_spm_MDP_pong.py`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py`:
+- added `@pytest.mark.slow`
+  `test_spm_MDP_pong_na_true_snippet_branch_oracle` for explicit Step 2 closure
+  on exact branch input `spm_MDP_pong(12,9,4,1,0)`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`:
+- added `@pytest.mark.slow`
+  `test_pong_na_true_then_generate_snippet_branch_oracle` for explicit Step 3
+  closure on exact branch (`12,9,4,1,0`, `GDP.T=1000`, `tau=1`) under replay
+  contract (`rng(...,'twister')` + MATLAB `rand(N,1)` buffer replay into Python).
+- test asserts `s/u/o` parity and representative `O{g,t}` checkpoints (`t=1`,
+  `t=T/2`, `t=T`) across all outcomes to keep runtime tractable.
+
+**Checks run:**
+- Step 1 sanity: `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` → passed.
+- Step 2 exact branch: `pytest ...::test_spm_MDP_pong_na_true_snippet_branch_oracle -q` → passed.
+- Step 3 exact branch: `pytest ...::test_pong_na_true_then_generate_snippet_branch_oracle -q` → passed.
+
+**Shared files touched:** no.
 
 ---
 

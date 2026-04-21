@@ -103,6 +103,32 @@ def test_spm_MDP_pong_na_true_small_grid_oracle(dem_eng):
     _assert_mdp_matches(dem_eng, out_py[0])
 
 
+@pytest.mark.slow
+def test_spm_MDP_pong_na_true_snippet_branch_oracle(dem_eng):
+    """Exact snippet branch pre-SL closure: ``spm_MDP_pong(12,9,4,1,0)``."""
+    dem_eng.eval(
+        "[MDP,hid,cid,con,RGB,nP] = spm_MDP_pong(12,9,4,1,0);",
+        nargout=0,
+    )
+
+    out_py = spm_MDP_pong(12, 9, 4, 1, 0)
+
+    hid_m = np.asarray(dem_eng.eval("hid"), dtype=float)
+    cid_m = np.asarray(dem_eng.eval("cid"), dtype=float)
+    con_m = np.asarray(dem_eng.eval("con"), dtype=float)
+    nP_m = np.asarray(dem_eng.eval("nP"), dtype=float)
+
+    assert_matlab_match(hid_m, out_py[1])
+    assert_matlab_match(cid_m, out_py[2])
+    assert_matlab_match(con_m, out_py[3])
+    assert_matlab_match(
+        np.atleast_2d(np.asarray(nP_m, dtype=float)),
+        np.atleast_2d(np.asarray(out_py[5], dtype=float)),
+    )
+
+    _assert_mdp_matches(dem_eng, out_py[0])
+
+
 def test_spm_MDP_pong_distractor_rand_replay_oracle(dem_eng):
     """Np=1 exercises rand; replay MATLAB rand stream in Python."""
     dem_eng.eval(
