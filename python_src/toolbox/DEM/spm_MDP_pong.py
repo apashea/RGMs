@@ -116,6 +116,10 @@ def spm_MDP_pong(
                 A[g] = A[g][:, :ss, :]
             break
 
+        if s_loop - 1 >= S.shape[0]:
+            # MATLAB expands ``S(s,:)`` with zero-filled rows on demand.
+            grow = max(int(Ng), 1)
+            S = np.vstack([S, np.zeros((grow, 4), dtype=np.float64)])
         S[s_loop - 1, :] = rvec.ravel()
 
         n = _sub2ind(Nr, Nc, i, j)

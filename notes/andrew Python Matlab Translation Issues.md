@@ -229,6 +229,71 @@ construction; any oracle buffer must then be collected **after** the same
 Pong call (and any other preamble) that the reference script runs, not from a
 bare `rng; rand(N)` in isolation.
 
+### `spm_faster_structure_learning` on `PDP.O(:,1:k)` (tiered T11)
+
+**`test_spm_faster_structure_learning_pdp_o_slice_integration_oracle`** builds
+the same **`GDP` / `PDP`** as the §1.1 integration oracle (`spm_MDP_pong(4,4,1,1,0)`,
+**`GDP.T=4`**, **`tau=1`**, **`rng(0,'twister')`**), then slices **`PDP.O(:,1:k)`**
+for small **`k`** and runs **`spm_faster_structure_learning(..., S, dx, dt)`**
+with the §5 snippet-shaped **`S`**. Python **`spm_MDP_generate`** is driven with
+**`numpy.random.rand`** patched from a MATLAB **`rand(8192,1)`** buffer collected
+**after** the same preamble (same pattern as **`test_spm_MDP_pong_generate_integration`**).
+Structure learning itself is deterministic given **`O`**; the replay contract
+matters so **`O`** matches before SL runs. The PDP slice oracles in
+**`test_spm_faster_structure_learning.py`** assert **`PDP.O(:,1:k)`** cell-by-cell
+against Python’s **`pdp["O"]`** immediately after **`spm_MDP_generate`** (same
+**`rand`** patch) and **before** **`spm_faster_structure_learning`**, so the
+Pong→generate→**`O`**→SL numeric chain is checked in one test path without figures.
+
+On this path, **`spm_log`** and **`spm_MDP_MI`** can emit NumPy **`RuntimeWarning`**
+(divide-by-zero in **`log`**, invalid divide in MI) on degenerate Dirichlet
+slices—MATLAB does not surface equivalent warnings. The PDP slice oracle test
+filters those two known messages so pytest’s warnings summary stays actionable;
+do not silence new warning classes without confirming MATLAB parity.
+
+**`SPINBLOCK`:** Staged `spm_faster_structure_learning.m` sets **`SPINBLOCK = false`**
+(the mutual-information / **`spm_rgm_group`** partition). The §5 gameplay snippet
+uses that default. RGMs Python mirrors **`~SPINBLOCK`** only for this chain; the
+**`true`** branch (spatial **`spm_group`** blocks, alternate **`S`** / **`O`**
+advance at the level boundary) is **not** required for snippet-level “complete
+T11” or for Pong→generate→SL integration oracles until a driver explicitly enables
+it and we add a dedicated oracle (Engine would call the same flag in staged `.m`).
+
+**Wider outcome windows:** With **`GDP.T = 4`**, **`PDP.O`** has only four time
+columns, so **`k ≤ 4`** is the natural cap for slice parity at that configuration.
+Tiered coverage for larger **`k`** (toward the script’s **`1:1000`**) uses a larger
+**`GDP.T`** in a separate oracle (marked **`slow`** when **`T`** or **`k`** is
+large) and a proportionally larger **`rand(N,1)`** replay buffer so
+**`spm_MDP_generate`** does not exhaust the patched stream mid-rollout.
+
+Current tier coverage includes a snippet-scale slow oracle:
+**`spm_MDP_pong(12,9,4,1,0)`**, **`GDP.T = 1000`**, **`PDP.O(:,1:1000)`**,
+**`S(1,:)=[12,9,1]`**, and **`spm_faster_structure_learning(...,Sc)`** with
+**`Sc = 9`**. This matches the non-plotting end of the §5 snippet.
+
+An additional **exhaustive canonical-byte comparator** exists for this same
+snippet-scale setup. It traverses all nested `MDP` entries (`a`, `b`, `id`,
+`G`, `sA/sB/sC`, `ss`) and compares canonicalized bytes field-by-field.
+Current status: **expected mismatch** at least at **`MDP{1}.a{5}`** on the
+snippet-scale run; the exhaustive test is marked **`xfail`** while the exact
+state-ordering divergence is investigated.
+
+### Forward-ordered mismatch triage rule (active T11 workflow)
+
+For snippet-scale reproducibility work on
+`spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc)`, treat late-field
+differences (for example `MDP{1}.a{5}`) as **symptoms**, not immediate fix
+targets. The required triage order is:
+
+1. confirm replay-controlled equivalence from the earliest operation in the
+   active pipeline path;
+2. locate the first checkpoint that diverges;
+3. fix only that earliest divergence;
+4. revalidate all prior checkpoints before touching downstream leaves.
+
+This prevents unstable “fix-later-then-backtrack” cycles and keeps progress
+coherent with the reproducibility objective.
+
 ### Scope limit of `rand()`-only replay
 
 Replaying **`rand()`** scalars covers every draw that the translated code routes
@@ -246,10 +311,23 @@ staged copy under `matlab_src\toolbox\DEM\spm_MDP_pong.m` adds `nP =
 zeros(1,Np)` after the default `Np` handling so Engine/oracle calls remain valid.
 Python returns `nP` as a **1×Np** `float64` row (`zeros((1,0))` when `Np==0`).
 
+**`S(s,:) = r` dynamic growth:** MATLAB grows `S` automatically when assignment
+index `s` exceeds current rows. In `spm_MDP_pong.py`, the deterministic path for
+larger grids (for example `12×9`) can exceed the initial `Ng` rows before loop
+closure, so Python must explicitly append zero rows before `S[s-1,:] = r`.
+
 **`RGB.V`:** MATLAB assigns **the same** basis matrix `V` into **every**
 location of an **Nr×Nc** cell array (`RGB.V{i,j} = V`). Python mirrors this with
 a list-of-lists of shape **Nr×Nc**, each entry a copy of the `192×5` matrix (for
 `n=8`). Oracle tests compare `RGB.V{1,1}` to `RGB["V"][0][0]`.
+
+### `spm_O2rgb` (T10) Engine pulls
+
+**`test_spm_O2rgb.py`** assigns MATLAB workspace temps with **`eng.eval("rgms_tmp_mx = …")`**
+when reading **`PDP.O{g,t}`**, **`RGB.G{i,j}`**, and **`RGB.V{i,j}`**. Temps whose names
+start with an underscore (for example **`_oc`**) triggered **“Invalid text character”**
+from MATLAB Engine **`eval`** in this environment; use **`rgms_`-prefixed** names
+consistent with other DEM oracles.
 
 **`RGB.V` oracle tolerance:** MATLAB `imread` applies PNG **gAMA / display**
 handling for the DEM sprites; PyPNG’s `asDirect()` decode matches **raw**
@@ -265,10 +343,10 @@ install pypng`) for PNG loading in `python_src\toolbox\DEM\spm_MDP_pong.py`.
 **Oracle priority (structure-learning path):** Default pytest oracles emphasize
 parity on **`MDP`** and returns used by **`spm_MDP_generate`** (`hid`, `cid`,
 `con`, **`id`** including **`Na=true`** branches: **`reward`**, **`contraint`**,
-**`control`**). **`RGB`** / **`imread`** comparisons are **deferred** — the
-Python translation still executes the MATLAB-faithful RGB block for Pass 1, but
-oracle assertions on **`RGB.N`**, **`RGB.G`**, and **`RGB.V`** are **`skip`ped**
-until visualization / **`spm_O2rgb`** work is scheduled (`structure_learning_plan_week2.md` **S5**).
+**`control`**). **`spm_O2rgb`** now has its own oracle (`test_spm_O2rgb.py`),
+while snippet-completion work intentionally defers plotting-loop invocation
+(`spm_figure` / `imshow` / `drawnow` and in-loop `spm_O2rgb(...)`) to **T12**
+scope in `structure_learning_plan_week2.md`.
 
 **`Na` reward / constraint tensors:** MATLAB builds `a = false(2,...)` then
 `a(1,:,:) = true` before clearing/placing hits or misses. An early Python

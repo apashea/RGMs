@@ -116,7 +116,8 @@ def spm_rgm_group(
         idx_max = int(np.argmax(vals_r))
         vec = vecs[:, idx_max]
         absv = np.abs(np.real(vec))
-        order = np.argsort(-absv)
+        # MATLAB `sort(...,'descend')` is stable for ties; preserve index order on ties.
+        order = np.argsort(-absv, kind="mergesort")
         j_take = order[: min(len(order), dx)]
         e_top = absv[j_take]
         j_take = j_take[e_top >= u_thresh]
