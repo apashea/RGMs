@@ -76,6 +76,111 @@
 
 ---
 
+## Iteration — deeper spectral-loop isolation (iteration-2 divergence)
+
+**Read:** active Step-6 plan scope in `structure_learning_plan_week2.md`,
+forward-ordered notes in `notes\andrew Python Matlab Translation Issues.md`,
+MATLAB spectral-loop source `matlab_src\toolbox\DEM\spm_rgm_group.m`, Python
+port `python_src\toolbox\DEM\spm_rgm_group.py`, and current exhaustive
+checkpoint diagnostics in
+`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+**Modified:** `python_src\toolbox\DEM\spm_rgm_group.py`.
+
+- Updated principal eigenpair selection to align with MATLAB complex-max
+  semantics: `idx_max = argmax(abs(vals))` after `eig`.
+- Retained `abs(vec)` for eigenvector component ranking.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+- Added richer opt-in diagnostics for spectral grouping source analysis:
+  - MATLAB iteration-1/2 loop traces (`i`, `j`) and iteration-2 eigenvalues.
+  - Python traces on MATLAB `MI` for methods:
+    `eigh`, `eig`, `eig` + quicksort, `scipy.linalg.eig`, and power iteration.
+  - Added helper traces for group picks across first two iterations and
+    eigenvalue-gap reporting.
+
+**Checks run (checkpoint-resume exhaustive gate):**
+
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -s -q`
+  with `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_TIMING=1`,
+  `RGMS_FSL_GROUP_DIAG=1` (multiple runs while isolating).
+
+**Key findings refined:**
+
+1. MATLAB and Python agree on spectral **iteration 1** picks.
+2. Divergence starts at spectral **iteration 2**.
+3. On MATLAB `MI`, no tested Python eig path reproduces MATLAB iteration-2
+   group exactly (`eigh`, `eig`, SciPy eig, or sort-kind variants).
+4. Power-iteration path is closest in membership overlap but still not exact.
+5. MATLAB iteration-2 leading eigenvalue gap is non-trivial (`~1.48e-02`), so
+   this is not explained by a simple top-eigenvalue tie.
+6. Current bottleneck remains local to MATLAB-vs-Python spectral decomposition
+   behavior in `spm_rgm_group` iteration 2.
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — thorough bottleneck refresh (Step-6 spectral divergence)
+
+**Read:** `structure_learning_plan_week2.md` (§1.2 active checklist and current
+state), `notes\andrew Python Matlab Translation Issues.md` (forward-ordered T11
+rule + snippet-scale scope), `matlab_src\toolbox\DEM\spm_rgm_group.m` (spectral
+loop lines 83–105), `python_src\toolbox\DEM\spm_rgm_group.py`, and active
+checkpointed exhaustive-gate diagnostics in
+`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+**Context refreshed (current bottleneck):**
+
+- Upstream forward gates remain closed through Step 5; active failure is Step 6.
+- MI-term ULP drift was already isolated and moved behind reproducibility-close
+  checks for diagnostics only; earliest semantic failure remains
+  `spm_rgm_group stream 1 group 2`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+- Added deeper group diagnostics:
+  - MATLAB spectral-loop trace capture for first two iterations (`i`, `j`,
+    eigenvalue vector) using MATLAB’s own `eig(...,'nobalance')` loop.
+  - Python spectral trace on the same MATLAB `MI` for multiple methods:
+    `eigh`, `eig`, `eig`+`quicksort`, and `scipy.linalg.eig`.
+  - Added eigenvalue-gap diagnostic for MATLAB iteration 2.
+- Purpose: identify whether mismatch is from MI values, sort ties, eig backend,
+  or loop-state semantics.
+
+**Modified:** `python_src\toolbox\DEM\spm_rgm_group.py`.
+
+- Re-aligned eigenvalue selection rule to MATLAB semantics for complex values:
+  choose principal eigenvector via `argmax(abs(vals))` after `np.linalg.eig`
+  (instead of real-part criterion).
+- Kept eigenvector magnitude ranking as `abs(vec)` (previously corrected from
+  incorrect `abs(real(vec))`).
+
+**Checks run (checkpoint-resume path):**
+
+- Repeated:
+  `pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -s -q`
+  with `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_TIMING=1`,
+  `RGMS_FSL_GROUP_DIAG=1`.
+
+**Key findings:**
+
+1. MATLAB and Python spectral iteration **1** agree exactly on selected group.
+2. Divergence starts at spectral iteration **2**.
+3. Running Python grouping on MATLAB’s exact `MI` still diverges at iteration 2
+   across all tested Python eig/sort variants (`eigh`, `eig`, `scipy eig`,
+   quicksort tie path).
+4. MATLAB iteration-2 top eigenvalue gap is not near-zero (`gap12 ≈ 1.48e-02`),
+   so the mismatch is not explained by a trivial leading-eigenvalue tie.
+5. Therefore the bottleneck is now tightly localized to MATLAB-vs-Python
+   spectral decomposition behavior/ordering in `spm_rgm_group` iteration 2
+   (not upstream RNG, not stream slicing, not MI matrix construction).
+
+**Shared files touched:** no.
+
+---
+
 ## Iteration — earliest-within-MI isolation in Step 6
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` and
@@ -772,6 +877,88 @@ component ordering deterministic with stable tie handling
 
 ---
 
+## Iteration — Step-6 boundary advance and grouping-source isolation
+
+**Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`;
+`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`;
+`python_src\spm_MDP_MI.py`; `matlab_src\spm_MDP_MI.m`;
+`python_src\spm_log.py`; `matlab_src\spm_log.m`;
+`python_src\toolbox\DEM\spm_rgm_group.py`; `matlab_src\toolbox\DEM\spm_rgm_group.m`.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+- Added optional diagnostics (`RGMS_FSL_MI_DIAG`, `RGMS_FSL_GROUP_DIAG`) to isolate
+  Step-6 failures without changing default behavior.
+- Confirmed `MI-term1(1,24)` differs by 1 ULP and traced source to `spm_log(A(:))`
+  entry-level ULP drift (MATLAB vs NumPy libm path), not to `A(:)` construction.
+- Added strict reproducibility-close checks (tight `atol`) for stream-1 MI-term1,
+  MI-scalar, and MI matrix checkpoints so Step-6 can continue past known ULP-only
+  drift.
+- Added group-source diagnostic that runs Python grouping on MATLAB `MI` and reports
+  MATLAB group vs Python group vs Python-from-MATLAB-MI group at first mismatch.
+
+**Modified:** `python_src\toolbox\DEM\spm_rgm_group.py`.
+
+- Fixed MATLAB-faithfulness bug: use `abs(vec)` (complex magnitude) rather than
+  `abs(real(vec))` for eigenvector sorting.
+- Switched principal-vector extraction to symmetric eigensolver (`np.linalg.eigh`)
+  for real-symmetric MI submatrices.
+
+**Checks run:**
+
+- Exhaustive gate with checkpoint-resume and diagnostics (`--runxfail -s -q`) across
+  multiple runs.
+- Progression:
+  1. earliest block moved past `MI-term1(1,24)` canonical mismatch;
+  2. new earliest semantic boundary remains
+     `spm_rgm_group stream 1 group 2` membership mismatch.
+- Group-source diagnostic result at `g2`:
+  - MATLAB group and Python group differ;
+  - Python grouping run on MATLAB `MI` also differs from MATLAB group.
+  - Interpretation: divergence is in spectral/group-selection behavior itself
+    (not only MI value drift).
+- Sanity oracle: `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → 4 passed.
+
+**Shared files touched:** no.
+
+---
+
+## Iteration — Step-6 harness hardening (timing + checkpoint resume)
+
+**Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`;
+`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`;
+`structure_learning_plan_week2.md`; active exhaustive terminal output.
+
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
+
+- Added minimal optional timing instrumentation behind
+  `RGMS_FSL_TIMING=1` (phase-level timers and total wall time).
+- Added optional checkpoint-resume flow behind
+  `RGMS_FSL_USE_CHECKPOINT=1` and `RGMS_FSL_REFRESH_CHECKPOINT=1`.
+- Checkpoint paths:
+  - `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_snippet_t1000_o_sl.pkl`
+  - `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_snippet_t1000_matlab_inputs.mat`
+- Resume mode loads cached pre-SL artifacts and re-enters at SL-stage checks,
+  preserving forward-ordered discipline while reducing repeated upstream cost.
+
+**Checks run:**
+
+- `python -m pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -s -q`
+  with `RGMS_FSL_TIMING=1`, `RGMS_FSL_USE_CHECKPOINT=1`.
+- Observed timings (representative run):
+  - MATLAB setup + FSL: `7.59s`
+  - Python replay generate: `12.76s`
+  - Pre-SL `O` parity + `o_sl` build: `419.74s` (dominant cost)
+- Earliest failing boundary remains:
+  `spm_rgm_group stream 1 MI-term1(1,24)` canonical-byte mismatch.
+
+**Shared files touched:** no.
+
+**Notes:** This setup is now the active Step-6 debugging baseline for coherent,
+forward-ordered reruns without losing context.
+
+---
+
 ## Iteration — enforce forward-ordered gate inside snippet-scale exhaustive test
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` (snippet-scale T11 tests).
@@ -860,3 +1047,60 @@ Python RNG equivalence is deferred until replay-controlled stability is reached.
 **Shared files touched:** no.
 
 **Tests run:** none (documentation-only iteration).
+
+---
+
+## Iteration — coherent checkpoint: `spm_rgm_group` stream 1 group 2 (Step 6)
+
+**Read (this pass):** `logs\log_0.md` (tail), `structure_learning_plan_week2.md`
+(§1.2.5), `notes\andrew Python Matlab Translation Issues.md` (prior `spm_rgm_group`
+orientation section); coordinated review of spectral-loop iter2 diagnostics.
+
+**Modified (this pass):** `logs\log_0.md` (this entry), `structure_learning_plan_week2.md`
+(§1.2.5 current-boundary text + revision history row),
+`notes\andrew Python Matlab Translation Issues.md` (new subsection on `eig` /
+`max` / `sort(abs)` fidelity).
+
+**Created / deleted:** none.
+
+**Shared files touched:** no.
+
+**Progress point (facts, not speculation):**
+
+- Forward-ordered exhaustive harness still fails `--runxfail` at
+  **`spm_rgm_group stream 1 group 2`** canonical bytes (example: MATLAB
+  `[81, 42, 64, …]` vs Python `[42, 81, 64, …]` on the checkpointed path).
+- Harness diagnostics show **spectral while-loop iteration 1** aligned between
+  MATLAB and Python traces; **iteration 2** diverges.
+- On the iter2 submatrix, the **principal eigenvector column matches MATLAB up
+  to a global phase** (phase-aligned max entrywise diff on the order of **1e-15**),
+  yet **`sort(abs(e(:,jmax)),'descend')` permutations differ at rank position 1**
+  (logged example: MATLAB next index **74** vs Python **38** with equal
+  magnitudes at display precision). That changes which active indices survive the
+  `dx` cap / threshold and therefore the **1-based group vector bytes**.
+- **MATLAB `eig(...,'nobalance')` vs SciPy `scipy.linalg.eig`:** the **multiset
+  of eigenvalues** matches to floating noise, but **column ordering of eigenpairs
+  differs** (e.g. MATLAB `jmax` at column **99** vs SciPy’s dominant λ appearing
+  in column **1** for the same symmetric `sub`). Any hand-rolled “MATLAB-like
+  `max(diag(v))`” rule must be validated on the **actual** `diag(v)` vector in
+  MATLAB’s column order; a previously tried heuristic was **falsified** against
+  Engine truth on this checkpoint.
+- **Sort machinery:** NumPy `argsort(-abs(x), kind="mergesort")` was verified
+  against MATLAB `sort(abs(x),'descend')` **when `x` is exactly MATLAB’s
+  float vector**; remaining pain is **ULP differences in `x` produced by
+  different `eig` implementations**, not a guessed tie-break table in isolation.
+
+**Checks run (recent coherent session, representative):**
+- `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **4 passed**
+  (file-level oracle does not cover this snippet-scale byte gate).
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail`
+  with `RGMS_FSL_USE_CHECKPOINT=1` → fails at **`_assert_rgm_group_streams_exact`**
+  stream 1 group 2 (as above).
+
+**Next work direction (for a later iteration, not executed here):** decide whether
+byte-exact closure requires **matching MATLAB’s `eig` numerics and column layout**
+(or an explicit documented relaxation at this discrete boundary). If byte-exact
+remains the goal, falsify two hypotheses in order: **(H1)** reordering Python
+eigenpairs to MATLAB’s `[e,v]` layout removes the rank-1 `sort` split; **(H2)** if
+not, quantify ULP diffs on the full `abs(principal_col))` vector vs MATLAB before
+any further sort heuristics.

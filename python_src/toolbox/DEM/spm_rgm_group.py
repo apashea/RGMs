@@ -10,9 +10,24 @@ from __future__ import annotations
 from typing import Any, List, Sequence, Union
 
 import numpy as np
+import scipy.linalg as spla
 
 from python_src.spm_cat import spm_cat
 from python_src.spm_MDP_MI import spm_MDP_MI
+
+
+def _sort_abs_descend_matlab_like(absv: np.ndarray) -> np.ndarray:
+    """Row order after MATLAB ``sort(abs(e(:,jmax)),'descend')`` on a column vector.
+
+    Verified against MATLAB Engine on the structure-learning exhaustive
+    checkpoint: MATLAB's permutation matches NumPy
+    ``argsort(-abs(x), kind='mergesort')``.
+    """
+    a = np.asarray(absv, dtype=np.float64).ravel()
+    n = int(a.size)
+    if n == 0:
+        return np.zeros(0, dtype=np.int64)
+    return np.argsort(-a, kind="mergesort").astype(np.int64, copy=False)
 
 
 def _spm_mdp_mi_scalar(p: np.ndarray) -> float:
@@ -111,13 +126,31 @@ def spm_rgm_group(
 
     while active.size > 0:
         sub = mi[np.ix_(active - 1, active - 1)]
-        vals, vecs = np.linalg.eig(sub.astype(np.float64))
-        vals_r = np.real(vals)
-        idx_max = int(np.argmax(vals_r))
-        vec = vecs[:, idx_max]
-        absv = np.abs(np.real(vec))
-        # MATLAB `sort(...,'descend')` is stable for ties; preserve index order on ties.
-        order = np.argsort(-absv, kind="mergesort")
+        sub = np.asarray(sub, dtype=np.float64)
+        # `MI` should be symmetric; enforce exact symmetry to match MATLAB's treatment
+        # of the mutual-information matrix as a real symmetric operator in this path.
+        sub = 0.5 * (sub + sub.T)
+        # MATLAB: `[e,v] = eig(MI(i,i),'nobalance'); [~,j] = max(diag(v),[],1);`
+        #
+        # `MI(i,i)` is symmetric, but MATLAB still uses the general-real `eig` path.
+        # SciPy's LAPACK-backed `eig` matches MATLAB's returned eigenpairs far more
+        # closely than `numpy.linalg.eigh` for the exhaustive structure-learning
+        # checkpoint (byte-level `sort(abs(e(:,j)),'descend')` parity).
+        vals, vecs = spla.eig(sub, check_finite=False, overwrite_a=False)
+        vals = np.asarray(vals, dtype=np.complex128).ravel(order="F")
+        vecs = np.asarray(vecs, dtype=np.complex128)
+        # MATLAB: `[~,j] = max(diag(v),[],1);` on the eigenvalue ordering returned
+        # by `eig`. For complex eigenvalues this is magnitude order; ties pick the
+        # first occurrence (MATLAB `max` behavior on vectors).
+        jmax = int(np.argmax(np.abs(vals)))
+        col = vecs[:, jmax]
+        if np.max(np.abs(np.imag(col))) <= 1e-12 * max(1.0, float(np.max(np.abs(col)))):
+            vec = np.real(col)
+        else:
+            vec = col
+        # MATLAB uses abs(complex) magnitude here, not abs(real-part only).
+        absv = np.abs(vec)
+        order = _sort_abs_descend_matlab_like(absv)
         j_take = order[: min(len(order), dx)]
         e_top = absv[j_take]
         j_take = j_take[e_top >= u_thresh]

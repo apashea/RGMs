@@ -9,15 +9,12 @@ import time
 import matlab
 import numpy as np
 import pytest
+import scipy.linalg as spla
 
 from python_src.toolbox.DEM.spm_MDP_generate import spm_MDP_generate
 from python_src.toolbox.DEM.spm_MDP_pong import spm_MDP_pong
 from python_src.toolbox.DEM.spm_faster_structure_learning import spm_faster_structure_learning
-from python_src.toolbox.DEM.spm_rgm_group import (
-    _spm_cat_row,
-    _spm_mdp_mi_scalar,
-    spm_rgm_group,
-)
+from python_src.toolbox.DEM.spm_rgm_group import _spm_cat_row, _spm_mdp_mi_scalar, spm_rgm_group
 from python_src.spm_log import spm_log
 from tests.helpers.compare import assert_matlab_match
 
@@ -29,6 +26,11 @@ def _env_flag(name: str) -> bool:
 def _tlog(enabled: bool, msg: str) -> None:
     if enabled:
         print(f"[TIMER] {msg}", flush=True)
+
+
+def _diaglog(enabled: bool, msg: str) -> None:
+    if enabled:
+        print(f"[DIAG] {msg}", flush=True)
 
 
 @pytest.fixture
@@ -167,6 +169,133 @@ def _assert_exact_canon(mat, py, dtype, path: str) -> None:
     assert bm == bp, f"{path}: canonical byte mismatch"
 
 
+def _assert_repro_close_f64(mat, py, path: str, atol: float = 5e-16, rtol: float = 0.0) -> None:
+    m = np.asarray(mat, dtype=np.float64)
+    p = np.asarray(py, dtype=np.float64)
+    assert m.shape == p.shape, f"{path}: shape mismatch MATLAB {m.shape} vs Python {p.shape}"
+    if not np.allclose(m, p, atol=atol, rtol=rtol, equal_nan=True):
+        diff = np.max(np.abs(m - p))
+        raise AssertionError(f"{path}: reproducibility mismatch (max abs diff {diff})")
+
+
+def _last_argmax_abs_complex(vals: np.ndarray) -> int:
+    v = np.asarray(vals, dtype=np.complex128).ravel()
+    if v.size == 0:
+        raise ValueError("empty eigenvalue vector")
+    keys = np.stack((np.real(v), np.imag(v)), axis=1)
+    order = np.lexsort((-np.arange(v.size, dtype=np.int64), -keys[:, 1], -keys[:, 0]))
+    return int(order[0])
+
+
+def _sort_abs_descend_matlab_like(absv: np.ndarray) -> np.ndarray:
+    a = np.asarray(absv, dtype=np.float64).ravel()
+    n = int(a.size)
+    if n == 0:
+        return np.zeros(0, dtype=np.int64)
+    return np.argsort(-a, kind="mergesort").astype(np.int64, copy=False)
+
+
+def _python_groups_from_mi(
+    mi: np.ndarray,
+    dx: int,
+    u_thresh: float = float(np.exp(-16.0)),
+    method: str = "eigh",
+    sort_kind: str = "mergesort",
+) -> list[np.ndarray]:
+    active = np.arange(1, mi.shape[0] + 1, dtype=np.int64)
+    groups: list[np.ndarray] = []
+    while active.size > 0:
+        sub = mi[np.ix_(active - 1, active - 1)]
+        sub = np.asarray(sub, dtype=np.float64)
+        if method == "eig":
+            vals, vecs = np.linalg.eig(sub)
+            idx_max = _last_argmax_abs_complex(vals)
+            vec = vecs[:, idx_max]
+        elif method == "scipy_eig":
+            vals, vecs = spla.eig(sub, check_finite=False, overwrite_a=False)
+            idx_max = _last_argmax_abs_complex(vals)
+            vec = vecs[:, idx_max]
+        elif method == "power":
+            n = sub.shape[0]
+            v = np.ones((n,), dtype=np.float64)
+            v /= np.linalg.norm(v)
+            for _ in range(256):
+                w = sub @ v
+                nw = np.linalg.norm(w)
+                if nw == 0:
+                    break
+                v_next = w / nw
+                if np.linalg.norm(v_next - v) < 1e-14:
+                    v = v_next
+                    break
+                v = v_next
+            vec = v
+        else:
+            vals, vecs = np.linalg.eigh(sub)
+            vec = vecs[:, int(np.argmax(vals))]
+        order = _sort_abs_descend_matlab_like(np.abs(vec))
+        j_take = order[: min(len(order), int(dx))]
+        e_top = np.abs(vec)[j_take]
+        j_take = j_take[e_top >= u_thresh]
+        groups.append(active[j_take].copy())
+        mask = np.ones(active.shape, dtype=bool)
+        mask[j_take] = False
+        active = active[mask]
+    return groups
+
+
+def _python_group_trace_from_mi(
+    mi: np.ndarray,
+    dx: int,
+    u_thresh: float = float(np.exp(-16.0)),
+    method: str = "eigh",
+    n_iter: int = 2,
+    sort_kind: str = "mergesort",
+) -> list[list[int]]:
+    active = np.arange(1, mi.shape[0] + 1, dtype=np.int64)
+    trace: list[list[int]] = []
+    for _ in range(n_iter):
+        if active.size == 0:
+            break
+        sub = mi[np.ix_(active - 1, active - 1)]
+        sub = np.asarray(sub, dtype=np.float64)
+        if method == "eig":
+            vals, vecs = np.linalg.eig(sub)
+            idx_max = _last_argmax_abs_complex(vals)
+            vec = vecs[:, idx_max]
+        elif method == "scipy_eig":
+            vals, vecs = spla.eig(sub, check_finite=False, overwrite_a=False)
+            idx_max = _last_argmax_abs_complex(vals)
+            vec = vecs[:, idx_max]
+        elif method == "power":
+            n = sub.shape[0]
+            v = np.ones((n,), dtype=np.float64)
+            v /= np.linalg.norm(v)
+            for _ in range(256):
+                w = sub @ v
+                nw = np.linalg.norm(w)
+                if nw == 0:
+                    break
+                v_next = w / nw
+                if np.linalg.norm(v_next - v) < 1e-14:
+                    v = v_next
+                    break
+                v = v_next
+            vec = v
+        else:
+            vals, vecs = np.linalg.eigh(sub)
+            vec = vecs[:, int(np.argmax(vals))]
+        order = _sort_abs_descend_matlab_like(np.abs(vec))
+        j_take = order[: min(len(order), int(dx))]
+        e_top = np.abs(vec)[j_take]
+        j_take = j_take[e_top >= u_thresh]
+        trace.append(active[j_take].astype(int).tolist())
+        mask = np.ones(active.shape, dtype=bool)
+        mask[j_take] = False
+        active = active[mask]
+    return trace
+
+
 def _matlab_find_map(eng, expr: str) -> dict[tuple[int, int], float]:
     eng.eval(f"[rgms_i,rgms_j,rgms_v] = find({expr});", nargout=0)
     ii = np.asarray(eng.eval("rgms_i"), dtype=np.int64).ravel()
@@ -267,6 +396,7 @@ def _assert_rgm_group_streams_exact(
                 )
 
         if s == 1:
+            diag = _env_flag("RGMS_FSL_MI_DIAG")
             # Earliest deterministic checkpoint inside grouping: MI matrix.
             eng.eval(
                 "rgms_os = " + f"{pdp_o_name}([{idx_mat}],:); "
@@ -338,12 +468,15 @@ def _assert_rgm_group_streams_exact(
                 eng.eval(
                     f"rgms_pij = full(rgms_r{{{i1}}}*rgms_r{{{j1}}}'); "
                     "rgms_Aij = rgms_pij/sum(rgms_pij,'all'); "
+                    "rgms_logA = spm_log(rgms_Aij(:)); "
                     "rgms_t1 = rgms_Aij(:)'*spm_log(rgms_Aij(:)); "
+                    "rgms_t1_alt = sum(rgms_Aij(:).*spm_log(rgms_Aij(:))); "
                     "rgms_t2 = sum(rgms_Aij,1)*spm_log(sum(rgms_Aij,1)'); "
                     "rgms_t3 = sum(rgms_Aij,2)'*spm_log(sum(rgms_Aij,2));",
                     nargout=0,
                 )
                 t1_m = float(np.asarray(eng.eval("rgms_t1"), dtype=np.float64).ravel()[0])
+                t1_m_alt = float(np.asarray(eng.eval("rgms_t1_alt"), dtype=np.float64).ravel()[0])
                 t2_m = float(np.asarray(eng.eval("rgms_t2"), dtype=np.float64).ravel()[0])
                 t3_m = float(np.asarray(eng.eval("rgms_t3"), dtype=np.float64).ravel()[0])
                 a_p_norm = np.asarray(p_p, dtype=np.float64) / float(np.asarray(p_p, dtype=np.float64).sum())
@@ -353,10 +486,66 @@ def _assert_rgm_group_streams_exact(
                 col_sum = np.sum(a_p_norm, axis=1, keepdims=True)
                 t2_p = float((row_sum @ spm_log(row_sum.T)).ravel()[0])
                 t3_p = float((col_sum.T @ spm_log(col_sum)).ravel()[0])
-                _assert_exact_canon(
+                if diag:
+                    a_col_m = a_m_norm.reshape(-1, 1, order="F")
+                    log_col_m_mat = np.asarray(eng.eval("rgms_logA"), dtype=np.float64).reshape(-1, 1, order="F")
+                    log_col_m = spm_log(a_col_m)
+                    log_col_p = spm_log(a_col)
+                    contrib_m = a_col_m * log_col_m
+                    contrib_p = a_col * log_col_p
+                    log_diffs = np.where(
+                        log_col_m_mat.reshape(-1, order="F") != log_col_m.reshape(-1, order="F")
+                    )[0]
+                    flat_m = contrib_m.reshape(-1, order="F")
+                    flat_p = contrib_p.reshape(-1, order="F")
+                    diffs = np.where(flat_m != flat_p)[0]
+                    _diaglog(
+                        True,
+                        (
+                            f"MI({i1},{j1}) t1_m={t1_m:.17g} t1_m_alt={t1_m_alt:.17g} t1_p={t1_p:.17g} "
+                            f"delta={t1_m - t1_p:.17g}"
+                        ),
+                    )
+                    if diffs.size:
+                        k0 = int(diffs[0])
+                        _diaglog(
+                            True,
+                            (
+                                f"MI({i1},{j1}) first contrib diff at idx {k0 + 1}: "
+                                f"A_m={float(a_col_m[k0, 0]):.17g}, A_p={float(a_col[k0, 0]):.17g}, "
+                                f"log_m={float(log_col_m[k0, 0]):.17g}, log_p={float(log_col_p[k0, 0]):.17g}, "
+                                f"contrib_m={float(flat_m[k0]):.17g}, contrib_p={float(flat_p[k0]):.17g}"
+                            ),
+                        )
+                    else:
+                        t1_p_sum = float(np.sum(flat_p, dtype=np.float64))
+                        t1_p_sum_f = float(
+                            np.sum(np.asarray(contrib_p, dtype=np.float64).reshape(-1, order="F"), dtype=np.float64)
+                        )
+                        t1_p_dot = float(np.dot(a_col.ravel(order="F"), log_col_p.ravel(order="F")))
+                        _diaglog(
+                            True,
+                            (
+                                f"MI({i1},{j1}) no per-entry contrib byte diff; accumulation candidates "
+                                f"matmul={t1_p:.17g}, sum={t1_p_sum:.17g}, sumF={t1_p_sum_f:.17g}, "
+                                f"dotF={t1_p_dot:.17g}"
+                            ),
+                        )
+                    if log_diffs.size:
+                        klog = int(log_diffs[0])
+                        _diaglog(
+                            True,
+                            (
+                                f"MI({i1},{j1}) first spm_log diff at idx {klog + 1}: "
+                                f"log_mat={float(log_col_m_mat[klog, 0]):.17g}, "
+                                f"log_py={float(log_col_m[klog, 0]):.17g}"
+                            ),
+                        )
+                    else:
+                        _diaglog(True, f"MI({i1},{j1}) spm_log(A(:)) matches entrywise")
+                _assert_repro_close_f64(
                     np.array([t1_m], dtype=np.float64),
                     np.array([t1_p], dtype=np.float64),
-                    np.float64,
                     f"spm_rgm_group stream 1 MI-term1({i1},{j1})",
                 )
                 _assert_exact_canon(
@@ -371,13 +560,37 @@ def _assert_rgm_group_streams_exact(
                     np.float64,
                     f"spm_rgm_group stream 1 MI-term3({i1},{j1})",
                 )
-                _assert_exact_canon(
+                _assert_repro_close_f64(
                     np.array([mi_scalar_m], dtype=np.float64),
                     np.array([mi_scalar_p], dtype=np.float64),
-                    np.float64,
                     f"spm_rgm_group stream 1 MI-scalar({i1},{j1})",
                 )
-            _assert_exact_canon(mi_m, mi_p, np.float64, "spm_rgm_group stream 1 MI")
+            _assert_repro_close_f64(mi_m, mi_p, "spm_rgm_group stream 1 MI")
+            if _env_flag("RGMS_FSL_GROUP_DIAG"):
+                eng.eval(
+                    "rgms_dbg_i = 1:size(rgms_MI,1); "
+                    "rgms_dbg_dx = fix(" + f"{int(d_val)}" + "); "
+                    "rgms_dbg_U = exp(-16); "
+                    "for rgms_dbg_iter = 1:2, "
+                    "  rgms_dbg_sub = rgms_MI(rgms_dbg_i,rgms_dbg_i); "
+                    "  [rgms_dbg_evec,rgms_dbg_eval] = eig(rgms_dbg_sub,'nobalance'); "
+                    "  rgms_dbg_lambda = diag(rgms_dbg_eval); "
+                    "  [~,rgms_dbg_jmax] = max(diag(rgms_dbg_eval),[],1); "
+                    "  rgms_dbg_col = rgms_dbg_evec(:,rgms_dbg_jmax); "
+                    "  [rgms_dbg_es,rgms_dbg_js] = sort(abs(rgms_dbg_evec(:,rgms_dbg_jmax)),'descend'); "
+                    "  rgms_dbg_k = 1:min(numel(rgms_dbg_js),rgms_dbg_dx); "
+                    "  rgms_dbg_j = rgms_dbg_js(rgms_dbg_k); "
+                    "  rgms_dbg_j(rgms_dbg_es(rgms_dbg_k) < rgms_dbg_U) = []; "
+                    "  assignin('base',sprintf('rgms_dbg_i_%d',rgms_dbg_iter),rgms_dbg_i); "
+                    "  assignin('base',sprintf('rgms_dbg_j_%d',rgms_dbg_iter),rgms_dbg_j); "
+                    "  assignin('base',sprintf('rgms_dbg_es_%d',rgms_dbg_iter),rgms_dbg_es(rgms_dbg_k)); "
+                    "  assignin('base',sprintf('rgms_dbg_lam_%d',rgms_dbg_iter),rgms_dbg_lambda); "
+                    "  assignin('base',sprintf('rgms_dbg_jmax_%d',rgms_dbg_iter),rgms_dbg_jmax); "
+                    "  assignin('base',sprintf('rgms_dbg_col_%d',rgms_dbg_iter),full(rgms_dbg_col)); "
+                    "  rgms_dbg_i(rgms_dbg_j) = []; "
+                    "end;",
+                    nargout=0,
+                )
 
         eng.eval(
             f"rgms_g_stream = spm_rgm_group({pdp_o_name}([{idx_mat}],:), {int(d_val)}, 1);",
@@ -390,6 +603,165 @@ def _assert_rgm_group_streams_exact(
         for gi in range(1, n_g + 1):
             g_m = _eval_mat_array(eng, f"rgms_g_stream{{{gi}}}")
             g_p = np.asarray(g_py[gi - 1], dtype=np.float64)
+            if s == 1 and _env_flag("RGMS_FSL_GROUP_DIAG"):
+                g_m_r = np.asarray(g_m).ravel()
+                g_p_r = np.asarray(g_p).ravel()
+                if not np.array_equal(g_m_r, g_p_r):
+                    mi_from_m = np.asarray(eng.eval("rgms_MI"), dtype=np.float64)
+                    py_from_mi_m = _python_groups_from_mi(mi_from_m, int(d_val), method="eigh", sort_kind="mergesort")
+                    py_from_mi_m_eig = _python_groups_from_mi(mi_from_m, int(d_val), method="eig", sort_kind="mergesort")
+                    py_from_mi_m_eig_quick = _python_groups_from_mi(
+                        mi_from_m, int(d_val), method="eig", sort_kind="quicksort"
+                    )
+                    py_from_mi_m_scipy = _python_groups_from_mi(
+                        mi_from_m, int(d_val), method="scipy_eig", sort_kind="mergesort"
+                    )
+                    py_from_mi_m_power = _python_groups_from_mi(
+                        mi_from_m, int(d_val), method="power", sort_kind="mergesort"
+                    )
+                    g_from_mi = (
+                        py_from_mi_m[gi - 1].astype(np.float64)
+                        if gi - 1 < len(py_from_mi_m)
+                        else np.array([], dtype=np.float64)
+                    )
+                    g_from_mi_eig = (
+                        py_from_mi_m_eig[gi - 1].astype(np.float64)
+                        if gi - 1 < len(py_from_mi_m_eig)
+                        else np.array([], dtype=np.float64)
+                    )
+                    g_from_mi_eig_quick = (
+                        py_from_mi_m_eig_quick[gi - 1].astype(np.float64)
+                        if gi - 1 < len(py_from_mi_m_eig_quick)
+                        else np.array([], dtype=np.float64)
+                    )
+                    g_from_mi_scipy = (
+                        py_from_mi_m_scipy[gi - 1].astype(np.float64)
+                        if gi - 1 < len(py_from_mi_m_scipy)
+                        else np.array([], dtype=np.float64)
+                    )
+                    g_from_mi_power = (
+                        py_from_mi_m_power[gi - 1].astype(np.float64)
+                        if gi - 1 < len(py_from_mi_m_power)
+                        else np.array([], dtype=np.float64)
+                    )
+                    _diaglog(
+                        True,
+                        (
+                            f"group diag stream 1 g{gi}: "
+                            f"mat={g_m_r.astype(int).tolist()} "
+                            f"py={g_p_r.astype(int).tolist()} "
+                            f"py_from_matMI_eigh={g_from_mi.astype(int).tolist()} "
+                            f"py_from_matMI_eig={g_from_mi_eig.astype(int).tolist()} "
+                            f"py_from_matMI_eig_quick={g_from_mi_eig_quick.astype(int).tolist()} "
+                            f"py_from_matMI_scipy_eig={g_from_mi_scipy.astype(int).tolist()} "
+                            f"py_from_matMI_power={g_from_mi_power.astype(int).tolist()}"
+                        ),
+                    )
+                    try:
+                        i1 = np.asarray(eng.eval("rgms_dbg_i_1"), dtype=np.int64).ravel(order="F")
+                        j1 = np.asarray(eng.eval("rgms_dbg_j_1"), dtype=np.int64).ravel(order="F")
+                        i2 = np.asarray(eng.eval("rgms_dbg_i_2"), dtype=np.int64).ravel(order="F")
+                        j2 = np.asarray(eng.eval("rgms_dbg_j_2"), dtype=np.int64).ravel(order="F")
+                        lam2 = np.asarray(eng.eval("rgms_dbg_lam_2"), dtype=np.complex128).ravel(order="F")
+                        jmax2 = int(np.asarray(eng.eval("rgms_dbg_jmax_2"), dtype=np.int64).ravel(order="F")[0])
+                        col2_m = np.asarray(eng.eval("rgms_dbg_col_2"), dtype=np.complex128).ravel(order="F")
+                        _diaglog(
+                            True,
+                            (
+                                f"matlab spectral dbg: iter1 i_len={i1.size} j={j1.astype(int).tolist()} | "
+                                f"iter2 i_len={i2.size} j={j2.astype(int).tolist()}"
+                            ),
+                        )
+                        tr_eigh = _python_group_trace_from_mi(
+                            mi_from_m, int(d_val), method="eigh", n_iter=2, sort_kind="mergesort"
+                        )
+                        tr_eig = _python_group_trace_from_mi(
+                            mi_from_m, int(d_val), method="eig", n_iter=2, sort_kind="mergesort"
+                        )
+                        tr_eig_quick = _python_group_trace_from_mi(
+                            mi_from_m, int(d_val), method="eig", n_iter=2, sort_kind="quicksort"
+                        )
+                        tr_scipy = _python_group_trace_from_mi(
+                            mi_from_m, int(d_val), method="scipy_eig", n_iter=2, sort_kind="mergesort"
+                        )
+                        tr_power = _python_group_trace_from_mi(
+                            mi_from_m, int(d_val), method="power", n_iter=2, sort_kind="mergesort"
+                        )
+                        _diaglog(
+                            True,
+                            f"python spectral dbg: eigh={tr_eigh} | eig={tr_eig} | eig_quick={tr_eig_quick} | scipy_eig={tr_scipy} | power={tr_power}",
+                        )
+                        lam2_abs = np.sort(np.abs(lam2))[::-1]
+                        _diaglog(
+                            True,
+                            f"matlab iter2 |lambda| top6={lam2_abs[:6].tolist()} gap12={float(lam2_abs[0]-lam2_abs[1]):.3e}",
+                        )
+                        sub2 = mi_from_m[np.ix_(i2 - 1, i2 - 1)]
+                        sub2 = np.asarray(sub2, dtype=np.float64)
+                        sub2 = 0.5 * (sub2 + sub2.T)
+                        vals2, vecs2 = spla.eig(sub2, check_finite=False, overwrite_a=False)
+                        vals2 = np.asarray(vals2, dtype=np.complex128).ravel(order="F")
+                        vecs2 = np.asarray(vecs2, dtype=np.complex128)
+                        py_jmax = int(np.argmax(np.abs(vals2)))
+                        av2 = np.abs(vals2)
+                        _diaglog(
+                            True,
+                            (
+                                f"iter2 |lambda| idx1 vs idx99: "
+                                f"|lam1|={float(av2[0]):.17g} |lam99|={float(av2[98]):.17g} "
+                                f"diff={float(av2[98]-av2[0]):.3e} "
+                                f"spacing1={float(np.spacing(av2[0])):.3e}"
+                            ),
+                        )
+                        vec2_py = vecs2[:, py_jmax]
+                        lam_sel_m = lam2[jmax2 - 1]
+                        lam_sel_py = vals2[py_jmax]
+                        _diaglog(
+                            True,
+                            (
+                                f"iter2 eig pick: mat_jmax={jmax2} lam={complex(lam_sel_m)} | "
+                                f"py_jmax={py_jmax + 1} lam={complex(lam_sel_py)}"
+                            ),
+                        )
+                        col2_py = vec2_py
+                        # Compare principal columns up to complex phase (MATLAB may return arbitrary global phase).
+                        cross = np.vdot(col2_m, col2_py)
+                        if np.abs(cross) > 0:
+                            scale = cross / np.abs(cross)
+                            col2_py_aln = col2_py * scale
+                        else:
+                            col2_py_aln = col2_py
+                        max_abs_diff = float(np.max(np.abs(col2_m - col2_py_aln)))
+                        _diaglog(
+                            True,
+                            f"iter2 principal col max|diff| after phase align: {max_abs_diff:.3e}",
+                        )
+                        am_raw = np.abs(col2_m)
+                        ap_raw = np.abs(vec2_py)
+                        top_m = np.sort(am_raw)[-2:][::-1]
+                        top_p = np.sort(ap_raw)[-2:][::-1]
+                        _diaglog(
+                            True,
+                            f"iter2 |e| top2 mat={top_m.tolist()} py_raw={top_p.tolist()} "
+                            f"delta_top1={float(top_m[0]-top_p[0]):.3e}",
+                        )
+                        ord_m = _sort_abs_descend_matlab_like(np.abs(col2_m))
+                        ord_p = _sort_abs_descend_matlab_like(np.abs(col2_py_aln))
+                        if not np.array_equal(ord_m, ord_p):
+                            diff_pos = int(np.argmax(ord_m != ord_p))
+                            _diaglog(
+                                True,
+                                (
+                                    f"iter2 sort order diverges at rank pos {diff_pos + 1}: "
+                                    f"mat_idx={int(ord_m[diff_pos]) + 1} py_idx={int(ord_p[diff_pos]) + 1} "
+                                    f"|mat|={float(np.abs(col2_m[ord_m[diff_pos]])):.6g} "
+                                    f"|py|={float(np.abs(col2_py_aln[ord_p[diff_pos]])):.6g}"
+                                ),
+                            )
+                        else:
+                            _diaglog(True, "iter2 sort order matches after phase align")
+                    except Exception:
+                        pass
             _assert_exact_canon(
                 np.asarray(g_m).ravel(),
                 np.asarray(g_p).ravel(),

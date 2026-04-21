@@ -122,6 +122,46 @@ it as a **1×Ns** row, producing a **1×(Ns·Nt)** `spm_cat` result instead of
 `matlab.double(..., size=(Ns, 1))` (or equivalent) so each `O{o,t}` is an
 **Ns×1** column, matching `python_src`’s `(Ns, 1)` `ndarray` layout.
 
+## `spm_rgm_group` spectral step: `eig`, `max(diag(v))`, and `sort(abs(...),'descend')`
+
+This records cross-cutting lessons from debugging **byte-exact** parity on the
+snippet-scale exhaustive checkpoint when the earliest failure sits inside
+`spm_rgm_group`’s spectral grouping (`[e,v]=eig(MI(i,i),'nobalance');` then
+`[~,j]=max(diag(v),[],1);` then `sort(abs(e(:,j)),'descend')` in staged
+`spm_rgm_group.m`).
+
+**Eigenpair column order is part of the contract.** MATLAB and SciPy may return
+the **same multiset of eigenvalues** (up to floating noise) yet permute
+**eigenvector columns** differently. The statement `[~,j]=max(diag(v),[],1)` is
+always relative to **that function’s returned `v` layout**; you cannot infer
+`j` from another library’s column order without an explicit alignment step.
+
+**Principal direction can match while discrete outputs diverge.** Two
+implementations can agree on the **dominant eigenvector up to global phase**
+(entrywise residuals ~1e-15) and still produce different **`sort(abs(e(:,j)),'descend')`**
+permutations when many `|e|` entries are **ties at printed precision** but differ
+at **ULP** in the underlying floats. That changes early ranks in the sorted order,
+hence which indices survive the `dx` cap / threshold, hence **canonical 1-based
+group vectors** under strict byte equality.
+
+**Validated vs guessed behavior.** On the failing checkpoint, NumPy
+`argsort(-abs(x), kind="mergesort")` matched MATLAB’s `sort(abs(x),'descend')`
+**when `x` was the exact MATLAB-exported principal column**. When `x` is the
+Python-produced column from SciPy `eig`, the same sort rule can still diverge
+from MATLAB because **`x` is not bitwise identical**, not because mergesort was
+“wrong” in the abstract.
+
+**Symmetric `MI(i,i)` still follows MATLAB’s general-real `eig` path.** Even when
+the mutual-information block is symmetric positive semidefinite in theory,
+MATLAB calls the **non-specialised** `eig` path (`'nobalance'`). Python should not
+silently switch to `eigh` for convenience unless an oracle proves identical
+**discrete** downstream choices (sorting + indexing), not just similar
+eigenvalues.
+
+**Policy reminder:** if a new corner case needs a project decision (for example
+accepting non-byte grouping when LAPACK layouts differ), ask the user first, then
+record the settled rule here or in the repo-root `Python Matlab Translation Issues.md`.
+
 ## `spm_MDP_generate` prescribed `s` / `u` and local `spm_induction`
 
 **Copying prescribed states/controls:** MATLAB `try … find(MDP.s); k(i)=MDP.s(i)` copies
