@@ -52,6 +52,64 @@ def _cell_get(x: Sequence[Any], index: int) -> Any:
     return x[index]
 
 
+def _marginals_sum_matlab_like(a_arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """``sum(a,2)`` and ``sum(a,1)`` with sequential float accumulation (MATLAB ``sum``).
+
+    NumPy ``np.sum(..., axis=...)`` can use pairwise reduction; SPM marginals feed
+    ``spm_H`` and drive MI cancellation at ~ULP scale on large grids.
+    """
+    a_arr = np.asarray(a_arr, dtype=np.float64)
+    nr, nc = int(a_arr.shape[0]), int(a_arr.shape[1])
+    col_sums = np.zeros((nr, 1), dtype=np.float64)
+    row_sums = np.zeros((1, nc), dtype=np.float64)
+    for i in range(nr):
+        s = 0.0
+        for j in range(nc):
+            s += float(a_arr[i, j])
+        col_sums[i, 0] = s
+    for j in range(nc):
+        s = 0.0
+        for i in range(nr):
+            s += float(a_arr[i, j])
+        row_sums[0, j] = s
+    return col_sums, row_sums
+
+
+def _sum_all_matlab_like(a_arr: np.ndarray) -> float:
+    """``sum(a,'all')`` in linear index order ``a(:)`` (column-major)."""
+    av = np.asarray(a_arr, dtype=np.float64).reshape(-1, order="F")
+    s = 0.0
+    for x in av:
+        s += float(x)
+    return float(s)
+
+
+def _sum_axis1_matlab_like(a_arr: np.ndarray) -> np.ndarray:
+    """``sum(A,2)`` for compatibility with outcome-cost term (column vector)."""
+    a_arr = np.asarray(a_arr, dtype=np.float64)
+    nr, nc = int(a_arr.shape[0]), int(a_arr.shape[1])
+    out = np.zeros((nr, 1), dtype=np.float64)
+    for i in range(nr):
+        s = 0.0
+        for j in range(nc):
+            s += float(a_arr[i, j])
+        out[i, 0] = s
+    return out
+
+
+def _sum_axis0_matlab_like(a_arr: np.ndarray) -> np.ndarray:
+    """``sum(A,1)`` as row vector for state-cost term."""
+    a_arr = np.asarray(a_arr, dtype=np.float64)
+    nr, nc = int(a_arr.shape[0]), int(a_arr.shape[1])
+    out = np.zeros((1, nc), dtype=np.float64)
+    for j in range(nc):
+        s = 0.0
+        for i in range(nr):
+            s += float(a_arr[i, j])
+        out[0, j] = s
+    return out
+
+
 def _spm_H(a: np.ndarray) -> float:
     """Differential entropy of a Dirichlet distribution (MATLAB local `spm_H`).
 
@@ -128,7 +186,7 @@ def spm_dir_MI(
             if c_sum != 0.0:
                 c_col = c_col / c_sum
             cap_c = spm_log(c_col)
-            s2 = np.sum(big_a, axis=1, keepdims=True)
+            s2 = _sum_axis1_matlab_like(big_a)
             e_val = e_val + float(np.asarray(cap_c.T @ s2, dtype=np.float64).reshape(-1)[0])
 
     if h is not _MISSING:
@@ -146,7 +204,7 @@ def spm_dir_MI(
             if h_sum != 0.0:
                 h_col = h_col / h_sum
             cap_h = spm_log(h_col)
-            s1 = np.sum(big_a, axis=0, keepdims=True)
+            s1 = _sum_axis0_matlab_like(big_a)
             e_val = e_val + float(np.asarray(s1 @ cap_h, dtype=np.float64).reshape(-1)[0])
 
     return float(e_val)

@@ -111,6 +111,44 @@ per-modality** calls `spm_dir_MI(a1,c1,h1) + spm_dir_MI(a2,c2,h2)`.
 
 Local `spm_H` uses SciPy **`psi`** (digamma) to mirror MATLAB **`psi`**, not the
 repo’s separate `spm_psi` helper (which implements a different expression).
+**`spm_psi` vs `spm_dir_MI`:** `spm_psi.m` / `spm_psi.py` implement
+**`psi(a) - psi(sum(a,1))`** (log-normalised Dirichlet **columns**, capped at
+`-32`) — the **expectation of log marginals** path, **not** the `spm_H` entropy
+formula inside `spm_dir_MI` (`psi(a0+1) - sum(a.*psi(a+1))/a0`). So **`spm_psi`
+is not a drop-in substitute** for `spm_dir_MI`’s digamma usage; any `psi`
+parity work targets **`scipy.special.psi`** vs MATLAB **`psi`** on the
+**`a0+1`** and **`a_i+1`** arguments in **`spm_H`** only.
+
+**Checkpoint probe (`test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy`):** on
+`MDP{2}.a{21}` from the snippet checkpoint MATLAB `MDP`, MATLAB vs SciPy
+**`psi`** on every argument used by the three `spm_H` evaluations agrees to
+**`<1e-14`**, and MATLAB **`sum(v.*psi(v+1))`** matches both NumPy vector sum
+and Python’s sequential inner loop for the column marginal — so the observed
+**Python `spm_dir_MI==0` vs MATLAB `~1e-16`** on that **`a`** is **not** explained
+by SciPy vs MATLAB **`psi`** on sampled scalars nor by a simple inner-sum order
+bug on that marginal alone; the residual is in **how the three `H` terms
+combine** (cancellation) and/or subtle marginal / joint path differences not
+covered by that single-marginal inner-sum check.
+
+## `spm_dir_MI` near-zero MI on linked `a` (`ss.ID` / `ss.IE` bytes)
+
+On the snippet T1000 exhaustive checkpoint with MATLAB EIG + MI_PUSH, the first
+canonical-byte mismatch can sit in **`MDP{1}.ss.ID`** (e.g. key `(1, 58)`).
+**`[SS-LINK-DIAG]`** then shows: linked **`MDP{2}.a{gi}`** matches MATLAB **byte-for-byte**;
+MATLAB’s stored **`ss.ID`** equals MATLAB **`spm_dir_MI`** on Python’s **`a`**;
+Python **`spm_dir_MI`** returns **exact `0.0`** while MATLAB keeps **`~1e-16`**.
+So the lane is **`spm_dir_MI` / `_spm_H` numerics** (cancellation / **`psi`**),
+not **`_link_streams`** assembly. Tightening **`_spm_H`** (Fortran flatten +
+sequential inner sums) and MATLAB-like **sequential marginal sums** for
+**`sum(a,2)`** / **`sum(a,1)`** did **not** move Python off zero on that checkpoint
+matrix—native follow-up likely needs **`psi`** bit parity or an explicit numeric
+policy. Harness-only flag **`RGMS_FSL_LINK_DIR_MI_MATLAB`** calls MATLAB
+**`spm_dir_MI`** when writing **`ss.ID`/`ss.IE`** to see whether the **rest** of the
+nested **`MDP`** tree still diverges (provisional isolation, not production).
+**Empirical (2026-04-22):** with checkpoint + EIG + MI_PUSH + **`LINK_DIR_MI`**,
+``test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle``
+**passes** — so remaining native work for byte-exact tree parity on this harness is
+**concentrated in Python ``spm_dir_MI``** (not downstream fields after link MI).
 
 ## `spm_rgm_group` cell `O{o,t}` orientation (MATLAB Engine)
 

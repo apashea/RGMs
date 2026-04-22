@@ -639,6 +639,7 @@ def _assert_rgm_group_streams_exact(
     d_val: int,
     *,
     rgm_eig_pair=None,
+    rgm_mi_override_fn=None,
 ) -> None:
     """Forward-ordered Step-6 start: n=1 call setup, then stream-wise grouping parity."""
     if rgm_eig_pair is None and _env_flag("RGMS_FSL_RGM_MATLAB_EIG"):
@@ -729,14 +730,20 @@ def _assert_rgm_group_streams_exact(
                 np.float64,
                 "spm_rgm_group stream 1 n-flags",
             )
-            mi_p = np.zeros((len(o_sub), len(o_sub)), dtype=np.float64)
-            for i0 in range(len(o_sub)):
-                for j0 in range(i0, len(o_sub)):
-                    if n_flags[i0] and n_flags[j0]:
-                        p_ij = r_cells[i0] @ r_cells[j0].T
-                        val = _spm_mdp_mi_scalar(p_ij)
-                        mi_p[i0, j0] = val
-                        mi_p[j0, i0] = val
+            if rgm_mi_override_fn is not None:
+                mi_p = np.asarray(
+                    rgm_mi_override_fn(o_sub, int(s_mat[s - 1, 3])),
+                    dtype=np.float64,
+                )
+            else:
+                mi_p = np.zeros((len(o_sub), len(o_sub)), dtype=np.float64)
+                for i0 in range(len(o_sub)):
+                    for j0 in range(i0, len(o_sub)):
+                        if n_flags[i0] and n_flags[j0]:
+                            p_ij = r_cells[i0] @ r_cells[j0].T
+                            val = _spm_mdp_mi_scalar(p_ij)
+                            mi_p[i0, j0] = val
+                            mi_p[j0, i0] = val
             # Earliest-within-MI checkpoint: isolate first mismatching (i,j).
             mism_ij = np.argwhere(mi_m != mi_p)
             if mism_ij.size:
@@ -1480,17 +1487,19 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
       :func:`spm_faster_structure_learning` only (``rgm_eig_pair``). Step-6
       ``_assert_rgm_group_streams_exact`` still uses MATLAB ``MI`` + ``eig`` for
       slice-indexed ``O`` when this flag is set. **Fast** enough for routine runs.
-    - ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1`` **in addition** — also pass
+    - ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1`` — pass
       ``rgm_mi_override_fn`` so every ``spm_rgm_group`` rebuilds ``MI`` in MATLAB
       from the current Python ``o_sub`` (many Engine round-trips; **slow**). Use
-      only when deliberately validating the full nested tree against MATLAB.
+      for lane isolation: with ``RGMS_FSL_RGM_MATLAB_EIG=0`` this is Lane-B
+      (MATLAB MI + Python eig), with ``RGMS_FSL_RGM_MATLAB_EIG=1`` this is
+      Lane-C (MATLAB MI + MATLAB eig).
     - ``RGMS_FSL_LINK_DIR_MI_MATLAB=1`` — optional ``link_dir_mi_fn`` so stream-link
       stored MI matches MATLAB ``spm_dir_MI`` on each pulled ``a`` (many Engine
       calls inside ``_link_streams``). Use when isolating ``ss.ID`` / ``IE`` parity;
       combine with ``RGMS_FSL_RGM_MATLAB_*`` only when validating end-to-end.
 
-    Omit both flags for pure Python. Remove when native ``MI`` + ``eig`` parity
-    is restored.
+    Omit all three flags for pure Python. Remove bridges when native ``MI`` +
+    ``eig`` + link ``spm_dir_MI`` parity/policy is resolved.
     """
     eng = dem_eng_fsl_pdp
     nr, nc, nd, na, npix = 12, 9, 4, 1, 0
@@ -1570,23 +1579,31 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
     rgm_eig_pair = None
     rgm_mi_override_fn = None
     link_dir_mi_fn = None
-    if _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH") and not _env_flag(
+    lane_b = _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH") and not _env_flag(
         "RGMS_FSL_RGM_MATLAB_EIG"
-    ):
-        pytest.fail(
-            "RGMS_FSL_RGM_MATLAB_MI_PUSH=1 requires RGMS_FSL_RGM_MATLAB_EIG=1 "
-            "(MATLAB ``eig`` without MATLAB ``MI`` is not a supported bridge)."
-        )
+    )
     if _env_flag("RGMS_FSL_RGM_MATLAB_EIG"):
         rgm_eig_pair = _make_matlab_rgm_eig_pair(eng)
     if _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH"):
         rgm_mi_override_fn = _make_rgm_mi_override_fn_matlab(eng)
     if _env_flag("RGMS_FSL_LINK_DIR_MI_MATLAB"):
         link_dir_mi_fn = _make_matlab_link_dir_mi_fn(eng)
+    if lane_b:
+        print(
+            "[DIAG] Lane B enabled: MATLAB MI push with Python/SciPy eig "
+            "(diagnostic ablation, provisional only).",
+            flush=True,
+        )
     # Next earliest deterministic boundary inside SL path: stream-wise grouping.
     t_g = time.perf_counter()
     _assert_rgm_group_streams_exact(
-        eng, "O_fsl_sx", o_sl, s_mat, d_val=sc, rgm_eig_pair=rgm_eig_pair
+        eng,
+        "O_fsl_sx",
+        o_sl,
+        s_mat,
+        d_val=sc,
+        rgm_eig_pair=rgm_eig_pair,
+        rgm_mi_override_fn=rgm_mi_override_fn,
     )
     _tlog(timing, f"rgm_group checkpoints: {time.perf_counter() - t_g:.2f}s")
     t_sl = time.perf_counter()

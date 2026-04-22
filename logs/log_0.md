@@ -12,6 +12,34 @@
 
 **Shared files touched:** none.
 
+---
+
+## Iteration — new concise Week-2 plan document (22APR2026)
+
+**Created:** ``notes\structure_learning_plan_week2_22APR2026.md`` as a shorter,
+focused planning artifact replacing the cluttered structure of the older week-2
+plan for active operational use.
+
+**Requested structure implemented exactly:**
+
+1. ``# 1. Plan`` — translation scope and immediate objective.
+2. ``# 2. Purpose of code`` — paragraph-level meaning of each key function
+   (`spm_MDP_pong`, `spm_MDP_generate`, `spm_faster_structure_learning`,
+   `spm_rgm_group`, `spm_dir_MI`).
+3. ``# 3. Current setup and issues`` — ordered pipeline start-to-finish with
+   validated points marked, and with checkpoint/flags annotated at the exact
+   locations where temporary bypasses occur and why.
+4. ``# 4. Test Lanes and current evaluation`` — concise lane A–E definitions,
+   followed by a three-paragraph broad evaluation of present progress and next
+   classes of work.
+
+**Intent clarified in the new doc:** temporary Engine hooks are provisional
+diagnostic scaffolding for investigated bottlenecks, not final runtime design.
+
+**Modified:** ``logs\log_0.md`` (this entry).
+
+**Shared files touched:** none.
+
 **Blockers / notes:** `conda` env `rgms` initially lacked `pytest`, `numpy`, and `scipy`; installed via `pip` into `rgms` so oracle tests could run. No changes to `matlab_compat.py` or `tests/helpers/`.
 
 **Oracle:** `pytest tests\oracle\test_spm_dir_norm.py` — all tests passed.
@@ -1359,3 +1387,154 @@ duplicate “pinned diagnosis” bullet in §1.2.5 with pointer to §1.2.6.
 
 **Modified:** ``structure_learning_plan_week2.md`` (§1.2.6 bottleneck narrative + §16
 revision row). **Shared files touched:** none.
+
+---
+
+## Iteration — resume exhaustive gate after ``spm_dir_MI`` marginal sums
+
+**Command (PowerShell):** ``conda activate rgms``, checkpoint on,
+``RGMS_FSL_RGM_MATLAB_EIG=1``, ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1``, no ``LINK_DIR_MI``.
+``pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail``.
+
+**Result:** **FAIL** — same first canonical mismatch ``MDP{1}.ss.ID{1,2}(1, 58)``.
+``[SS-LINK-DIAG]`` unchanged: ``python_mi=0``, MATLAB ``spm_dir_MI`` on Python ``a`` =
+``~8.88e-16``, linked ``a`` bytes match. So **only** tightening ``_spm_H`` (earlier)
+did **not** clear the gate; **NumPy ``np.sum`` on marginals was not** the smoking
+gun either.
+
+**Code:** ``python_src\spm_dir_MI.py`` — added MATLAB-like **sequential** reductions:
+``_marginals_sum_matlab_like`` (replacing ``np.sum`` for ``sum(a,2)`` /
+``sum(a,1)``), ``_sum_all_matlab_like`` for ``sum(a,'all')``, and matching
+``_sum_axis1_matlab_like`` / ``_sum_axis0_matlab_like`` for ``sum(A,2)`` /
+``sum(A,1)`` on ``big_a`` in the ``c`` / ``h`` cost branches.
+
+**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py`` → **7 passed**.
+
+**Interpretation:** Remaining gap is almost certainly **``psi`` / float64
+cancellation inside ``H(col)+H(row)-H(joint)``** (SciPy digamma vs MATLAB ``psi`` at
+this scale), not marginal assembly from ``np.sum``. **Next coherent options:** (1)
+run exhaustive with ``RGMS_FSL_LINK_DIR_MI_MATLAB=1`` to confirm whether **any**
+non-``spm_dir_MI`` tree fields still diverge when link MI is MATLAB; (2) targeted
+MATLAB vs SciPy ``psi`` comparison on the failing marginal vectors (needs saving or
+logging ``a``); (3) extended-precision experiment **only** if approved for this
+lane.
+
+**Shared files touched:** none.
+
+---
+
+## Iteration — exhaustive with ``LINK_DIR_MI_MATLAB`` (downstream isolation)
+
+**Command:** checkpoint + ``RGMS_FSL_RGM_MATLAB_EIG=1`` +
+``RGMS_FSL_RGM_MATLAB_MI_PUSH=1`` + ``RGMS_FSL_LINK_DIR_MI_MATLAB=1``;
+``pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail``.
+
+**Result:** **1 passed** in ~9m24s. So when stream-link ``ss.ID`` / ``ss.IE`` values
+use MATLAB ``spm_dir_MI`` on each linked ``a``, the **full** nested ``MDP`` tree
+matches MATLAB **canonical bytes** on this checkpoint—no further divergence observed
+past the native ``spm_dir_MI`` scalar on that gate.
+
+**Notes:** ``notes\andrew Python Matlab Translation Issues.md`` — new short section
+documenting the near-zero ``spm_dir_MI`` / ``ss.ID`` finding and the isolation role
+of ``LINK_DIR_MI``.
+
+**Modified:** ``notes\andrew Python Matlab Translation Issues.md``, ``logs\log_0.md``
+(this entry). **Shared files touched:** none.
+
+---
+
+## Iteration — ``psi`` vs SciPy on checkpoint link ``a`` (``MDP{2}.a{21}``)
+
+**Inspected:** ``matlab_src\spm_dir_MI.m``, ``spm_psi.m``; ``python_src\spm_dir_MI.py``,
+``spm_psi.py``.
+
+**Added:** ``tests\oracle\test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy``
+— loads ``fsl_snippet_t1000_matlab_inputs.mat``, runs MATLAB
+``spm_faster_structure_learning(O_fsl_sx,S_fsl_sx,9)``, pulls ``full(MDP{2}.a{21})``,
+compares MATLAB vs SciPy ``psi`` on all arguments feeding the three ``spm_H``
+calls, compares MATLAB ``sum(v.*psi(v+1))`` vs Python sequential / NumPy sum for
+the column marginal, and locks reproduction ``spm_dir_MI(py)==0`` vs MATLAB
+tiny nonzero.
+
+**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py`` → **8 passed**.
+
+**Finding:** On this matrix, **``max|psi_ml - psi_scipy| < 1e-14``** on the sampled
+``z`` set, and the **column** marginal inner sum matches MATLAB — so the
+**``spm_psi``** helper is **irrelevant** to ``spm_dir_MI``’s ``spm_H`` (different
+formula). Remaining MI gap is **not** a coarse SciPy-vs-MATLAB ``psi`` mismatch on
+those scalars; follow-up is **cancellation across the three ``H`` terms** (and
+possibly row/joint inner paths not isolated by the single-marginal check).
+
+**Modified:** ``tests\oracle\test_spm_dir_MI.py``, ``notes\andrew Python Matlab Translation Issues.md``,
+``logs\log_0.md``. **Shared files touched:** none.
+
+---
+
+## Iteration — ``structure_learning_plan_week2.md`` harness policy + status
+
+**Modified:** ``structure_learning_plan_week2.md`` — new **§1.2.5.1** (tiered table:
+where Python exhaustive harness **departs** from native by env; Engine only after
+documented investigation / **numeric-policy** framing—not ad hoc patching).
+Tightened **§1.2.5** operational rule; **earliest byte boundary** bullets point to
+§1.2.5.1; **current code status** (native ``spm_dir_MI`` work, psi probe test,
+EIG+MI_PUSH vs +LINK exhaustive outcomes). **§16** change policy references §1.2.5.1.
+
+**Shared files touched:** none.
+
+---
+
+## Iteration — Lane-B enablement and first Lane-B vs Lane-C bottleneck compare
+
+**Goal:** enable and exercise **Lane-B** (`MI_PUSH=1`, `EIG=0`) before deeper
+Lane-B vs Lane-C discussions.
+
+**Modified:** ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py``:
+
+- Removed the prior fail-fast guard that blocked ``MI_PUSH`` without ``EIG``.
+- ``_assert_rgm_group_streams_exact`` now accepts ``rgm_mi_override_fn`` and uses
+  MATLAB MI override for Step-6 MI checkpoints when provided (so Step-6 reflects
+  the same lane as the later FSL call).
+- Added a clear Lane-B diagnostic print in exhaustive test when MI_PUSH is on and
+  EIG is off.
+- Updated exhaustive docstring to document Lane-B (`MI` only) vs Lane-C (`MI+eig`).
+
+**Validation (post-edit):**
+
+- ``pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **5 passed**.
+
+**Lane run outputs (checkpoint exhaustive):**
+
+1. **Lane-B** (`USE_CHECKPOINT=1`, ``MI_PUSH=1``, ``EIG`` off, ``LINK`` off):
+   **FAIL** at **`spm_rgm_group stream 1 group 2`** canonical bytes (spectral lane).
+2. **Lane-C** (`USE_CHECKPOINT=1`, ``MI_PUSH=1``, ``EIG=1``, ``LINK`` off):
+   **FAIL** at **`MDP{1}.ss.ID{1,2}(1,58)`** with `[SS-LINK-DIAG]` showing
+   linked ``a`` bytes match and native ``spm_dir_MI`` `0` vs MATLAB `~8.88e-16`.
+
+**Interpretation:** MATLAB MI **alone** (Lane-B) does not clear the Step-6 eig
+bottleneck; adding MATLAB eig (Lane-C) advances the bottleneck to link-MI /
+``spm_dir_MI``.
+
+**Plan sync:** ``structure_learning_plan_week2.md`` updated so §1.2.5.1 now
+reflects Lane-B support and explicit lane bottleneck snapshot.
+
+**Shared files touched:** none.
+
+---
+
+## Iteration — Lane taxonomy lock-in (A/B/C/D/E)
+
+**Modified:** ``structure_learning_plan_week2.md`` §1.2.5.1 to permanently lock
+the lane taxonomy and avoid future naming drift:
+
+- Added canonical names **Lane A/B/C/D/E** with explicit rule “do not rename.”
+- Clarified that **A–D** are exhaustive-flag lanes on
+  ``test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle``.
+- Clarified **Lane E** is the non-exhaustive subset
+  (``-k "not exhaustive_exact_oracle"``), with explicit purpose and limits.
+- Updated lane table labels from generic env tiers to lane names and exact flags.
+- Added lane outcome snapshot text and refreshed revision history row.
+
+**Why:** preserve operational clarity across long gaps and prevent ambiguity when
+interpreting future run results.
+
+**Shared files touched:** none.
