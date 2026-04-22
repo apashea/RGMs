@@ -14,6 +14,23 @@
 
 ---
 
+## Iteration — minimal MATLAB-line literal fix in concise plan
+
+**Modified:** ``notes\structure_learning_plan_week2_22APR2026.md`` (Section 3 only,
+minimal edits) to replace ellipsized placeholders with the exact snippet lines:
+
+- ``rng(2)``
+- ``[GDP,~,~,~,RGB] = spm_MDP_pong(Nr,Nc,Nd,true,0);``
+- ``PDP = spm_MDP_generate(GDP);``
+- ``MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);``
+
+No section structure changes, no additional content expansion beyond these literal
+line substitutions.
+
+**Shared files touched:** none.
+
+---
+
 ## Iteration — new concise Week-2 plan document (22APR2026)
 
 **Created:** ``notes\structure_learning_plan_week2_22APR2026.md`` as a shorter,

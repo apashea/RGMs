@@ -46,24 +46,24 @@ Primary test files involved (full paths):
 
 Ordered pipeline (from the original snippet):
 
-- `rng(...)` / replay setup for comparable random trajectories.  
+- `rng(2)` / replay setup for comparable random trajectories.  
   **Validated.** We use MATLAB `twister` + buffered draws replayed into Python so
   the generated path can be compared before blaming SL internals.
 
-- `spm_MDP_pong(...)` (build game generative process and ids).  
+- `[GDP,~,~,~,RGB] = spm_MDP_pong(Nr,Nc,Nd,true,0);` (build game generative process and ids).  
   **Validated** for the snippet branch used by these tests.
 
 - Build `S` and helper semantics (`spm_get_hits`, `spm_get_miss` meaning).  
   **Validated for the non-visual lane used here.** This stage is not the current
   parity blocker.
 
-- `spm_MDP_generate(...)` then slice `PDP.O(:,1:k)` / `PDP.O(:,1:1000)`.  
+- `PDP = spm_MDP_generate(GDP);` then slice `PDP.O(:,1:k)` / `PDP.O(:,1:1000)`.  
   **Validated.** Pre-SL `O` window parity gates are passing in current setup.
 
 - Visual loop (`spm_figure`, `imshow`, `drawnow`).  
   **Out of scope** for this non-visual parity lane; not part of current bottleneck.
 
-- Enter `spm_faster_structure_learning(...)`:
+- `MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);`:
   - Grouping internals via `spm_rgm_group`:
     - MI assembly lane (`spm_MDP_MI` calls on runtime `o_sub`).  
       **Partially bridged for isolation when needed.** Temporary flag
