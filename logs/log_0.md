@@ -1280,7 +1280,10 @@ pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_
 **Outcome (with both ``EIG`` and ``MI_PUSH`` on checkpoint):** exhaustive tree
 compare advances past prior ``MDP{1}.a{3}`` / ``G`` layout issues; current
 earliest observed mismatch moves to **`MDP{1}.ss.ID{1,2}(1, 58)`** canonical bytes
-(stream-link / ``spm_dir_MI`` lane — outside ``spm_rgm_group``).
+(stream-link / ``spm_dir_MI`` lane — outside ``spm_rgm_group``). **Why those
+Engine flags existed:** see ``structure_learning_plan_week2.md`` **§1.2.6**
+(EIG eigenpair / MI slice / link ``spm_dir_MI`` bottlenecks)—do not infer from
+flags alone that “everything matches Python.”
 
 **Oracle spot-checks:** ``pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py``
 and FSL tests excluding the xfail exhaustive — **pass** after these edits.
@@ -1331,3 +1334,28 @@ MATLAB returns ~``1e-16`` on **byte-identical** linked ``a`` (not ``_link_stream
 **Shared files touched:** none.
 
 **Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **12 passed**.
+
+**Plan sync:** ``structure_learning_plan_week2.md`` §1.2.5 — operational rule:
+Engine bridges (EIG, MI_PUSH, optional ``LINK_DIR_MI`` / ``link_dir_mi_fn``) are
+**provisional** (review + isolation **only**); passing exhaustive tests with flags
+≠ “Python transliteration complete”; later **Python-only** decisions required per
+site. Fixed §8.10 ``spm_dir_MI`` row (ported). Later edit: added **§1.2.6**
+(bottleneck detail)—net plan growth deliberate for context retention; shortened
+duplicate “pinned diagnosis” bullet in §1.2.5 with pointer to §1.2.6.
+
+**Bottlenecks (why each Engine hook exists — mirror of plan §1.2.6):**
+
+1. **``RGMS_FSL_RGM_MATLAB_EIG``:** Step-6 / ``spm_rgm_group`` byte mismatch (snippet:
+   often stream **1** group **2**); **iter 2** spectral loop diverges—SciPy ``eig``
+   vs MATLAB ``eig(...,'nobalance')``, **ULP ties** in ``sort(abs(e(:,jmax)),...)``,
+   **eigenvector column order** / LAPACK vs MATLAB. Hook injects MATLAB eigenpairs.
+2. **``RGMS_FSL_RGM_MATLAB_MI_PUSH``:** After EIG, still need to know if **Python-built
+   ``MI`` from each ``o_sub``** matches MATLAB’s ``spm_MDP_MI`` path for that slice
+   when chasing full tree—hook rebuilds ``MI`` in MATLAB per call (**slow**).
+3. **``RGMS_FSL_LINK_DIR_MI_MATLAB``:** After EIG+MI_PUSH, ``ss.ID`` / ``ss.IE`` gate;
+   ``[SS-LINK-DIAG]`` showed **same ``a`` bytes** but Python ``spm_dir_MI(a)=0`` vs
+   MATLAB ``~1e-16``—**``spm_dir_MI`` / ``_spm_H``** cancellation, not
+   ``_link_streams``. Hook isolates downstream if link MI equals MATLAB.
+
+**Modified:** ``structure_learning_plan_week2.md`` (§1.2.6 bottleneck narrative + §16
+revision row). **Shared files touched:** none.
