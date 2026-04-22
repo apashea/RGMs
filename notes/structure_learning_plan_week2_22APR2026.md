@@ -25,39 +25,76 @@ The immediate translation goal is Python-native parity for this chain, with MATL
 
 # 3. Current setup and issues
 
-Ordered execution path (current harness) from start to finish:
+This section follows the original MATLAB snippet order and marks each stage as
+validated vs bottleneck, with temporary hooks/checkpoints annotated inline.
 
-1. Build MATLAB reference inputs and run MATLAB reference `spm_faster_structure_learning` for oracle comparison.  
-   - Status: **validated harness pattern** (reference side).
-   - Note: This is oracle construction, not target runtime design.
+Python files involved in this chain (full paths):
 
-2. Rebuild Python `PDP.O` with replay-controlled randomness and compare pre-SL windows.  
-   - Status: **validated** (generation/slice parity gates pass in current setup).
+- `C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\spm_MDP_pong.py`
+- `C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\spm_MDP_generate.py`
+- `C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\spm_faster_structure_learning.py`
+- `C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\spm_rgm_group.py`
+- `C:\Users\andre\.cursor\RGMs\python_src\spm_MDP_MI.py`
+- `C:\Users\andre\.cursor\RGMs\python_src\spm_dir_MI.py`
 
-3. Enter Python `spm_faster_structure_learning` and evaluate grouping internals (`spm_rgm_group`).  
-   - Native issue A: spectral lane mismatch in grouping (Step-6-style checkpoint context), associated with eig ordering/tie sensitivity under MATLAB vs SciPy numerics.
-   - Temporary bypass flag: `RGMS_FSL_RGM_MATLAB_EIG=1` (inject MATLAB eig for grouping calls).
-   - Temporary bypass flag: `RGMS_FSL_RGM_MATLAB_MI_PUSH=1` (rebuild MI in MATLAB per runtime `o_sub`; can be used with or without EIG for lane isolation).
+Primary test files involved (full paths):
 
-4. Continue through linking and write `ss.ID/ss.IE` via `spm_dir_MI(a_mat)`.  
-   - Native issue B: on the failing linked matrix, Python computes exact `0.0` while MATLAB keeps `~8.88e-16`, despite linked `a` matching bytes.
-   - Diagnostic evidence: `[SS-LINK-DIAG]` confirms this is not `_link_streams` matrix assembly.
-   - Temporary bypass flag: `RGMS_FSL_LINK_DIR_MI_MATLAB=1` (MATLAB `spm_dir_MI` only at link storage).
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\test_spm_dir_MI.py`
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`
+- `C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_MDP_generate.py`
 
-5. Exhaustive nested canonical-byte compare.  
-   - Checkpoint system (`RGMS_FSL_USE_CHECKPOINT`, optional refresh) reduces rerun cost by reusing prepared `O_fsl_sx`/`S_fsl_sx` + `o_sl` artifacts.
-   - Purpose of checkpoint: speed and reproducibility during bottleneck isolation, not behavior change.
+Ordered pipeline (from the original snippet):
 
-What is already validated in practice:
+- `rng(...)` / replay setup for comparable random trajectories.  
+  **Validated.** We use MATLAB `twister` + buffered draws replayed into Python so
+  the generated path can be compared before blaming SL internals.
 
-- Pre-SL replay-controlled generation/slice gates are validated.
-- Lane-B vs Lane-C separation is validated (MI-only does not clear spectral bottleneck; adding eig bridge advances the failure boundary).
-- Link-lane isolation is validated (with MI+EIG+LINK bridge, exhaustive checkpoint passes).
+- `spm_MDP_pong(...)` (build game generative process and ids).  
+  **Validated** for the snippet branch used by these tests.
 
-What remains unresolved natively:
+- Build `S` and helper semantics (`spm_get_hits`, `spm_get_miss` meaning).  
+  **Validated for the non-visual lane used here.** This stage is not the current
+  parity blocker.
 
-- Spectral grouping parity without MATLAB eig bridge.
-- Link `spm_dir_MI` near-cancellation parity without MATLAB link bridge.
+- `spm_MDP_generate(...)` then slice `PDP.O(:,1:k)` / `PDP.O(:,1:1000)`.  
+  **Validated.** Pre-SL `O` window parity gates are passing in current setup.
+
+- Visual loop (`spm_figure`, `imshow`, `drawnow`).  
+  **Out of scope** for this non-visual parity lane; not part of current bottleneck.
+
+- Enter `spm_faster_structure_learning(...)`:
+  - Grouping internals via `spm_rgm_group`:
+    - MI assembly lane (`spm_MDP_MI` calls on runtime `o_sub`).  
+      **Partially bridged for isolation when needed.** Temporary flag
+      `RGMS_FSL_RGM_MATLAB_MI_PUSH=1` rebuilds MI in MATLAB to test whether MI
+      assembly is the active blocker.
+    - Spectral/eigen grouping lane (group partition from eigensystem).  
+      **Current native bottleneck A.** MATLAB vs SciPy eig ordering/tie behavior
+      causes earliest group mismatch in native lanes. Temporary flag
+      `RGMS_FSL_RGM_MATLAB_EIG=1` injects MATLAB `eig(...,'nobalance')`.
+
+  - Later link stage (`_link_streams`) writes `ss.ID` / `ss.IE` via `spm_dir_MI(a_mat)`.  
+    **Current native bottleneck B (later than grouping).** For the failing linked
+    matrix, linked `a` bytes match MATLAB, but Python `spm_dir_MI(a)=0` while
+    MATLAB gives `~8.88e-16` (near-cancellation lane). Temporary flag
+    `RGMS_FSL_LINK_DIR_MI_MATLAB=1` uses MATLAB `spm_dir_MI` only at this link-storage
+    call site.
+
+- Exhaustive nested canonical-byte compare (full tree gate).  
+  Checkpoint controls:
+  - `RGMS_FSL_USE_CHECKPOINT=1`
+  - `RGMS_FSL_REFRESH_CHECKPOINT=1` (optional rebuild)  
+  Checkpoint purpose is **speed/reproducibility only** (reuse `O_fsl_sx/S_fsl_sx`
+  and `o_sl`), not algorithmic behavior change.
+
+Current validated status at this progress point:
+
+- Replay-controlled pre-SL stages are validated.
+- Bottleneck ordering is validated: grouping (`spm_rgm_group`) bottleneck appears
+  before link `spm_dir_MI`; they are distinct.
+- With full temporary bridges at known bottlenecks (Lane D), exhaustive checkpoint
+  passes; this confirms no additional unknown downstream blocker in that mode.
 
 
 # 4. Test Lanes and current evaluation
