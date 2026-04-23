@@ -14,6 +14,272 @@
 
 ---
 
+## Lane sequence rerun (ordered A -> B -> C -> D), with per-run logging
+
+### Lane A run (immediate log after run)
+
+**Command (PowerShell):**
+
+```text
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+Remove-Item Env:RGMS_FSL_RGM_MATLAB_EIG -ErrorAction SilentlyContinue
+Remove-Item Env:RGMS_FSL_RGM_MATLAB_MI_PUSH -ErrorAction SilentlyContinue
+Remove-Item Env:RGMS_FSL_LINK_DIR_MI_MATLAB -ErrorAction SilentlyContinue
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q --tb=short
+```
+
+**Result:** FAIL
+
+**First failing boundary:** `spm_rgm_group stream 1 group 2: canonical byte mismatch`
+
+**Exact timing/output details captured:**
+
+- `[TIMER] checkpoint load+matlab fsl: 4.64s`
+- Lane summary: `1 failed in 17.31s`
+- `MI(1,24)` decomposition:
+  - `t1_m=-0.88285455661930445`
+  - `t1_m_alt=-0.88285455661930445`
+  - `t1_p=-0.88285455661930434`
+  - `delta=-1.1102230246251565e-16`
+- `spm_log` first diff index:
+  - `idx 25`
+  - `log_mat=-0.35524739194754706`
+  - `log_py=-0.35524739194754701`
+- Spectral debug (`iter2`) exact diagnostics:
+  - `matlab |lambda| top6=[0.12745723619666624, 0.11263227928944787, 0.11263227928944787, 0.112102263262888, 0.10895394951776309, 0.10895394951776304]`
+  - `gap12=1.482e-02`
+  - `scipy argmax(1-based)=1 |lam|=0.12745723619666624 spacing=2.776e-17`
+  - `mat_jmax=99`, `py_jmax=1`
+  - `principal col max|diff| after phase align: 9.992e-16`
+  - `|e| top2 mat=[0.22694877740697983, 0.2269487774069798]`
+  - `|e| top2 py_raw=[0.22694877740698036, 0.22694877740698036]`
+  - `delta_top1=-5.274e-16`
+  - `sort order diverges at rank pos 1: mat_idx=74 py_idx=38`
+  - `max_ulps=36.000`, `max|am-ap|=9.992e-16`
+  - `mat_rank1 1-based=74: am=0.22694877740697983 ap=0.2269487774069803 delta=-4.718e-16 ulps=17.000`
+  - `py_rank1 1-based=38: am=0.22694877740697977 ap=0.22694877740698036 delta=-5.829e-16 ulps=21.000`
+
+**Interpretation (Lane A):** earliest failure remains bottleneck #2 (spectral sorting/eig lane in `spm_rgm_group`) with known ULP-level ordering sensitivity.
+
+**Shared files touched:** none.
+
+---
+
+### Lane B run (immediate log after run)
+
+**Command (PowerShell):**
+
+```text
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+Remove-Item Env:RGMS_FSL_RGM_MATLAB_EIG -ErrorAction SilentlyContinue
+$env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1'
+Remove-Item Env:RGMS_FSL_LINK_DIR_MI_MATLAB -ErrorAction SilentlyContinue
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q --tb=short
+```
+
+**Result:** FAIL
+
+**First failing boundary:** `spm_rgm_group stream 1 group 2: canonical byte mismatch`
+
+**Exact timing/output details captured:**
+
+- `[TIMER] checkpoint load+matlab fsl: 7.88s`
+- `[DIAG] Lane B enabled: MATLAB MI push with Python/SciPy eig (diagnostic ablation, provisional only).`
+- Lane summary: `1 failed in 619.67s (0:10:19)`
+- `group diag stream 1 g2`:
+  - `mat=[81, 64, 42, 90, 92, 94, 14, 16, 20]`
+  - `py=[42, 81, 64, 55, 68, 31, 35, 38, 53]`
+  - `py_from_matMI_eigh=[81, 42, 64, 38, 53, 14, 16, 20, 31]`
+  - `py_from_matMI_eig=[42, 64, 81, 55, 53, 92, 51, 77, 35]`
+  - `py_from_matMI_eig_quick=[42, 64, 81, 55, 53, 92, 51, 77, 35]`
+  - `py_from_matMI_scipy_eig=[42, 64, 81, 55, 53, 92, 51, 77, 35]`
+  - `py_from_matMI_power=[81, 64, 42, 14, 22, 35, 31, 53, 29]`
+- `matlab spectral dbg`: `iter1 i_len=108 j=[25, 13, 37, 49, 61, 73, 1, 85, 97] | iter2 i_len=99 j=[74, 58, 38, 82, 84, 86, 12, 14, 18]`
+- `python spectral dbg`:
+  - `eigh=[[25, 13, 37, 49, 61, 73, 1, 85, 97], [81, 42, 64, 38, 53, 14, 16, 20, 31]]`
+  - `eig=[[25, 13, 37, 49, 61, 73, 1, 85, 97], [42, 64, 81, 55, 53, 92, 51, 77, 35]]`
+  - `eig_quick=[[25, 13, 37, 49, 61, 73, 1, 85, 97], [42, 64, 81, 55, 53, 92, 51, 77, 35]]`
+  - `scipy_eig=[[25, 13, 37, 49, 61, 73, 1, 85, 97], [42, 64, 81, 55, 53, 92, 51, 77, 35]]`
+  - `power=[[25, 13, 37, 49, 61, 73, 1, 85, 97], [81, 64, 42, 14, 22, 35, 31, 53, 29]]`
+- `iter2` exact values:
+  - `|lambda| top6=[0.12745723619666624, 0.11263227928944787, 0.11263227928944787, 0.112102263262888, 0.10895394951776309, 0.10895394951776304]`
+  - `gap12=1.482e-02`
+  - `scipy argmax(1-based)=1 |lam|=0.12745723619666624 spacing=2.776e-17`
+  - `mat_jmax=99`, `py_jmax=1`
+  - `principal col max|diff| after phase align: 9.992e-16`
+  - `|e| top2 mat=[0.22694877740697983, 0.2269487774069798]`
+  - `|e| top2 py_raw=[0.22694877740698036, 0.22694877740698036]`
+  - `delta_top1=-5.274e-16`
+  - `sort divergence: mat_idx=74 py_idx=38`
+  - `max_ulps=36.000`, `max|am-ap|=9.992e-16`
+  - `mat_rank1 1-based=74: am=0.22694877740697983 ap=0.2269487774069803 delta=-4.718e-16 ulps=17.000`
+  - `py_rank1 1-based=38: am=0.22694877740697977 ap=0.22694877740698036 delta=-5.829e-16 ulps=21.000`
+
+**Interpretation (Lane B):** enabling MATLAB MI push does not clear the spectral ordering bottleneck; first failure remains bottleneck #2 in `spm_rgm_group`.
+
+**Shared files touched:** none.
+
+---
+
+### Lane C run (immediate log after run)
+
+**Command (PowerShell):**
+
+```text
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+$env:RGMS_FSL_RGM_MATLAB_EIG='1'
+$env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1'
+Remove-Item Env:RGMS_FSL_LINK_DIR_MI_MATLAB -ErrorAction SilentlyContinue
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q --tb=short
+```
+
+**Result:** FAIL
+
+**First failing boundary:** `MDP{1}.ss.ID{1,2}(1, 58): canonical byte mismatch`
+
+**Exact timing/output details captured:**
+
+- `[TIMER] checkpoint load+matlab fsl: 6.20s`
+- `[TIMER] rgm_group checkpoints: 609.38s`
+- `[TIMER] python spm_faster_structure_learning: 557.21s`
+- Lane summary: `1 failed in 1187.49s (0:19:47)`
+- `[SS-LINK-DIAG] key=(1, 58)`:
+  - `matlab_mi=8.8817841970012523e-16`
+  - `python_mi=0`
+  - `linked a MDP{2}.a{21} max|diff|=0.000e+00`
+  - `shape_mat=(2, 441)`, `shape_py=(2, 441)`
+  - `linked a bytes match: True`
+  - `spm_dir_MI(Python a)=0 (stored ss.ID py=0)`
+  - `spm_dir_MI(MATLAB on Python a)=8.8817841970012523e-16`
+  - `Python vs MATLAB-on-Python-a MI delta=-8.882e-16`
+  - `MATLAB ss.ID stored=8.8817841970012523e-16 vs MATLAB(spm_dir_MI(py a)) delta=0.000e+00`
+
+**Interpretation (Lane C):** bottlenecks #1/#2 are bypassed sufficiently to advance to bottleneck #3 (later link `spm_dir_MI` lane).
+
+**Shared files touched:** none.
+
+---
+
+### Lane D run (immediate log after run)
+
+**Command (PowerShell, one line as executed in terminal capture):**
+
+```text
+cd C:\Users\andre\.cursor\RGMs ; conda activate rgms ; $env:RGMS_FSL_USE_CHECKPOINT='1' ; $env:RGMS_FSL_RGM_MATLAB_EIG='1' ; $env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1' ; $env:RGMS_FSL_LINK_DIR_MI_MATLAB='1' ; pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q --tb=short 2>&1
+```
+
+**Environment flags (explicit):** `USE_CHECKPOINT=1`, `RGMS_FSL_RGM_MATLAB_EIG=1`, `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=1`.
+
+**Result:** PASS
+
+**pytest summary line (verbatim from capture):** `. [100%]` then `1 passed in 1322.02s (0:22:02)`.
+
+**Process timing (from terminal metadata):** `elapsed_ms: 1386754` (~23.1 min wall from shell wrapper); pytest-reported duration **1322.02 s** (~22.0 min).
+
+**Stdout detail note:** the background capture contained only the progress dot, the pass line, and no additional `[TIMER]` / `[DIAG]` lines in the recorded stream (quiet mode + minimal tee). For lane-to-lane timing comparison, prefer pytest’s `1 passed in …s` and the shell `elapsed_ms` above.
+
+**Interpretation (Lane D):** with MATLAB `spm_dir_MI` applied on linked stream tensors in `_link_streams`, the full exhaustive oracle completes on this checkpoint—consistent with Lane C’s failure being isolated to native `spm_dir_MI` vs MATLAB on identical `a` bytes.
+
+**Cross-lane snapshot (this rerun):**
+
+| Lane | EIG | MI_PUSH | LINK | Outcome | First boundary / note | Pytest wall (reported) |
+|------|-----|---------|------|-----------|------------------------|-------------------------|
+| A | off | off | off | FAIL | `spm_rgm_group` stream 1 group 2 (canonical bytes) | ~17.3 s |
+| B | off | on | off | FAIL | same as A (spectral / group order) | ~619.7 s (~10m20s) |
+| C | on | on | off | FAIL | `MDP{1}.ss.ID(1,58)`; `[SS-LINK-DIAG]` MI 0 vs ~8.88e-16 | ~1187.5 s (~19m48s) |
+| D | on | on | on | PASS | (none — full tree) | 1322.02 s (~22m02s) |
+
+**Shared files touched:** none.
+
+---
+
+### Lane E run (immediate log after run)
+
+**Lane definition source:** `structure_learning_plan_week2.md` section 1.2.5.1 (`-k "not exhaustive_exact_oracle"`; non-exhaustive subset lane).
+
+**Pre-run triage and control setup:**
+
+- Verified active-process state before rerun: no visible `python` / `pytest` / `MATLAB` processes.
+- Enforced strict wall-clock cap per user instruction: **10 minutes maximum**.
+- Used controlled launcher (`Start-Process` + `WaitForExit(600000)` + forced stop on timeout) so hangs cannot exceed cap.
+- Captured full stdout/stderr to timestamped temp logs for exact transcription.
+
+**Controlled command (PowerShell wrapper execution):**
+
+```text
+cmd.exe /c "conda run -n rgms pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py -k \"not exhaustive_exact_oracle\" -v --tb=short"
+```
+
+**Result:** PASS (completed within timeout)
+
+**Run-control metadata (exact):**
+
+- `LANE_E_TIMEOUT=False`
+- `LANE_E_ELAPSED_SEC=57.83`
+- stdout log: `C:\Users\andre\AppData\Local\Temp\lane_e_20260423_063347_stdout.log`
+- stderr log: `C:\Users\andre\AppData\Local\Temp\lane_e_20260423_063347_stderr.log` (empty)
+
+**Full pytest stdout (verbatim):**
+
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.11.15, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\andre\anaconda3\envs\rgms\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\andre\.cursor\RGMs
+collecting ... collected 6 items / 1 deselected / 5 selected
+
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_two_level_oracle PASSED [ 20%]
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_pdp_o_slice_integration_oracle PASSED [ 40%]
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_pdp_o_slice_T12_k8_oracle PASSED [ 60%]
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_oracle PASSED [ 80%]
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity PASSED [100%]
+
+============================== warnings summary ===============================
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity
+  C:\Users\andre\.cursor\RGMs\python_src\spm_log.py:12: RuntimeWarning: divide by zero encountered in log
+    A = np.maximum(np.log(A), -32.0)
+
+tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity
+  C:\Users\andre\.cursor\RGMs\python_src\spm_MDP_MI.py:51: RuntimeWarning: invalid value encountered in divide
+    dEdA = spm_log(A / (_sum_dim(A, 2) @ _sum_dim(A, 1))) - 1
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 5 passed, 1 deselected, 2 warnings in 53.92s =================
+```
+
+**Interpretation (Lane E):** non-exhaustive control subset is healthy and fast on this machine (all five selected tests pass in ~54s, total wrapped elapsed ~58s), with no hang under strict 10-minute enforcement.
+
+**Post-run safety check:** verified no lingering `python` / `pytest` / `MATLAB` / `conda` / `cmd` processes from this run.
+
+**Shared files touched:** none.
+
+---
+
+
+
+## Iteration - clarify three bottlenecks in concise plan (ordered + lane mapping)
+
+**Modified:** ``notes\structure_learning_plan_week2_22APR2026.md`` Sections 3 and 4.
+
+- Added explicit numbered bottlenecks (in execution order):
+  1) `spm_MDP_MI` lane inside `spm_rgm_group`,
+  2) spectral sorting lane inside `spm_rgm_group`,
+  3) later link `spm_dir_MI` lane in `_link_streams`.
+- Updated ordered pipeline bullets so each bottleneck call site is labeled with
+  its number and temporary isolation flag.
+- Added lane-to-bottleneck interpretation mapping (A/B/C/D/E) so team readers
+  can directly map each lane to which bottlenecks are bypassed vs still active.
+
+**Why:** remove residual ambiguity about where each issue occurs and ensure section
+3 ordering and section 4 lane evaluation use the same three-bottleneck model.
+
+**Shared files touched:** none.
+
+---
+
 ## Iteration — minimal MATLAB-line literal fix in concise plan
 
 **Modified:** ``notes\structure_learning_plan_week2_22APR2026.md`` (Section 3 only,
@@ -1555,3 +1821,9 @@ the lane taxonomy and avoid future naming drift:
 interpreting future run results.
 
 **Shared files touched:** none.
+
+
+
+
+
+
