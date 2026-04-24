@@ -176,12 +176,14 @@ Current validated status at this progress point:
 - With all three temporary replacements active (Lane D), exhaustive checkpoint
   passes; this is evidence of bottleneck localization, not evidence that the
   full path is already fully Python-native.
-- **Latest rerun evidence (2026-04-24, Lane A only):** exhaustive selector with
-  checkpoint and no MATLAB replacements for `spm_rgm_group`/`spm_dir_MI` fails
-  at `spm_rgm_group stream 1 group 2: canonical byte mismatch` (`1 failed in
-  42.62s`). Emitted diagnostics again show tiny MI/log deltas and iter2 ordering
-  divergence (`mat_idx=74` vs `py_idx=38`, `max|am-ap|~9.992e-16`, `max_ulps~36`),
-  consistent with the current ordering of bottlenecks.
+- **Ground-truth lane confirmation (2026-04-24 Lane A rerun):** with
+  `RGMS_FSL_USE_CHECKPOINT=1` and no temporary replacements at
+  `spm_MDP_MI`/eig/`spm_dir_MI` call sites, the exhaustive selector fails at
+  `spm_rgm_group stream 1 group 2: canonical byte mismatch` (`1 failed in 42.62s`).
+  Diagnostics reconfirm the same operation-level signature as prior runs:
+  `MI(1,24)` tiny delta (`-1.1102230246251565e-16`), first `spm_log` diff at
+  index 25, and iter2 ordering divergence (`mat_idx=74` vs `py_idx=38`,
+  `max|am-ap|=9.992e-16`, `max_ulps=36`).
 
 
 # 4. Test Lanes and current evaluation
@@ -210,8 +212,10 @@ Lane configurations:
 
 Lane-to-bottleneck interpretation (current evidence from `log_0.md` lane reruns):
 
-- **Lane A:** first failure occurs in `spm_rgm_group` group bytes, so downstream
-  link-time `spm_dir_MI` is not yet the first failing operation in this lane.
+- **Lane A (reconfirmed 2026-04-24):** first failure occurs in
+  `spm_rgm_group` group bytes (`stream 1 group 2`), with MI/log tiny deltas and
+  iter2 ordering divergence diagnostics; downstream link-time `spm_dir_MI` is
+  therefore not yet the first failing operation in this lane.
 - **Lane B:** replacing `spm_MDP_MI` operation alone does not clear first failure;
   first failure remains in `spm_rgm_group` group ordering output.
 - **Lane C:** replacing both `spm_MDP_MI` and eig operations moves first failure
@@ -221,13 +225,12 @@ Lane-to-bottleneck interpretation (current evidence from `log_0.md` lane reruns)
 - **Lane E:** provides non-exhaustive regression information only; do not use it
   as standalone evidence for full exhaustive bottleneck classification.
 
-Lane rerun update status (for this validation cycle):
+Validation-cycle status (must stay synchronized with lane reruns):
 
-- **2026-04-24 Lane A rerun:** completed and reconfirmed in-scope first failure at
-  `spm_rgm_group stream 1 group 2` with the same diagnostic signature as prior runs.
-- **Lane B/C/D/E reruns:** pending in this cycle; document statements for those lanes
-  currently reflect last completed evidence in `log_0.md` and must be re-confirmed
-  immediately after each new lane run.
+- Completed in this cycle: **Lane A** (reconfirmed; details above).
+- Pending in this cycle: **Lane B/C/D/E** (their statements remain based on the
+  most recent prior completed evidence and must be refreshed immediately after
+  each rerun).
 
 Current progress toward end goal is substantial but intentionally staged. The
 team can now isolate and discuss specific function-level operations by lane using
@@ -362,5 +365,6 @@ state in one place with exact call sites, flags, mismatch evidence, and lane mea
 
 - `2026-04-24` Lane A rerun (no MATLAB replacements at `spm_MDP_MI`/eig/`spm_dir_MI`
   call sites) reconfirmed first mismatch at `spm_rgm_group stream 1 group 2` on the
-  exhaustive selector, with iter2 ordering divergence diagnostics and no movement
-  of first failure to link-time `spm_dir_MI` in that lane.
+  exhaustive selector, with `MI(1,24)` tiny delta + `spm_log` index-25 diff +
+  iter2 ordering divergence diagnostics, and no movement of first failure to
+  link-time `spm_dir_MI` in that lane.
