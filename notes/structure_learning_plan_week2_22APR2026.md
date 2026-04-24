@@ -9,6 +9,60 @@ We are translating and validating the non-visual structure-learning path of this
 
 The immediate translation goal is Python-native parity for this chain, with MATLAB Engine used only as provisional diagnostic scaffolding where native byte parity is currently blocked by investigated numerical issues.
 
+The full code snippet we are translating is the first portion of the simulation script in the spm library `\toolbox\DEM\DEM_AtariIII.m` (where we are ignoring the commented-out visualization-specific code as we are focused on reproducing and validating translations the models, operational logic, and results):
+```
+% set up and preliminaries
+%--------------------------------------------------------------------------
+rng(2)
+
+% Get game: i.e., generative process (as a partially observed MDP)
+%==========================================================================
+Nr = 12;                                     % number of rows
+Nc = 9;                                      % number of columns
+Sc = 9;                                      % scaling
+Nd = 4;                                      % random initial conditions
+C  = 32;                                     % log cost
+
+% get game in MDP form
+%--------------------------------------------------------------------------
+[GDP,~,~,~,RGB] = spm_MDP_pong(Nr,Nc,Nd,true,0);
+
+% size of streams
+%--------------------------------------------------------------------------
+S      = ones(4,3);
+S(1,:) = [Nr,Nc,1];                          % sensory stream
+S(2,:) = [1 1 1];                            % reward  stream                 
+S(3,:) = [1 1 1];                            % cost    stream
+S(4,:) = [1 1 1];                            % policy  stream
+
+% reward and cost functions [of outcomes]
+%--------------------------------------------------------------------------
+spm_get_hits = @(o,id) find(o(id.reward,:)    > 1);
+spm_get_miss = @(o,id) find(o(id.contraint,:) > 1);
+
+% Generate (probabilistic) outcomes under random actions
+%==========================================================================
+%spm_figure('GetWin','Gameplay'); clf
+
+GDP.tau = 1;                                 % smoothness of random paths
+GDP.T   = 10000;                             % training length
+PDP     = spm_MDP_generate(GDP);             % generate play
+
+% illustrate sequence of random play
+%---------------------------------------------------------------------------
+%con   = PDP.id.control;
+%for t = 1:128
+%    subplot(2,1,1)
+%    imshow(spm_O2rgb(PDP.O(:,t),RGB))
+%    subplot(4,3,8)
+%    imshow(PDP.O{con,t}')
+%    drawnow
+%end
+
+% initial structure learning: grouping operators (iA,iB,iC,...)
+%==========================================================================
+MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);
+```
 
 # 2. Purpose of code
 
@@ -25,15 +79,24 @@ The immediate translation goal is Python-native parity for this chain, with MATL
 
 # 3. Current setup and issues
 
-This section follows the original MATLAB snippet order and marks each stage as
-validated vs bottleneck, with temporary hooks/checkpoints annotated inline.
+This section follows the ordered MATLAB snippet and states exactly where current
+Python-vs-MATLAB mismatches occur in that order. Scope statements in this section
+are explicit: when a statement refers to Lane A/B/C/D outcomes, it refers to the
+exhaustive selector in `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py`
+function `test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle`.
 
-Three currently tracked bottlenecks (in execution order):
+Current bottlenecks (ordered by where they occur in the pipeline):
 
-1. `spm_rgm_group` internal MI assembly (`spm_MDP_MI` on runtime `o_sub` slices).
-2. `spm_rgm_group` internal spectral sorting/selection (`eig` column ordering +
-   `sort(abs(e(:,jmax)),'descend')` sensitivity under near ties).
-3. Later `_link_streams` call to `spm_dir_MI(a_mat)` when writing `ss.ID/ss.IE`.
+1. `spm_faster_structure_learning` -> `spm_rgm_group` -> MI matrix construction
+   from runtime `o_sub`, using `spm_MDP_MI` (Python native path in
+   `python_src/spm_MDP_MI.py`).
+2. `spm_faster_structure_learning` -> `spm_rgm_group` -> eigen decomposition and
+   group ordering at MATLAB-equivalent operations `[e,v] = eig(MI(i,i),...)` and
+   `sort(abs(e(:,jmax)),'descend')` (Python native path in
+   `python_src/toolbox/DEM/spm_rgm_group.py` using SciPy eig + Python sorting).
+3. `spm_faster_structure_learning` -> `_link_streams` -> `spm_dir_MI(a_mat)` when
+   writing stream-link scalar maps `ss.ID` and `ss.IE` (Python native path in
+   `python_src/spm_dir_MI.py`).
 
 Python files involved in this chain (full paths):
 
@@ -53,42 +116,47 @@ Primary test files involved (full paths):
 
 Ordered pipeline (from the original snippet):
 
-- `rng(2)` / replay setup for comparable random trajectories.  
-  **Validated.** We use MATLAB `twister` + buffered draws replayed into Python so
-  the generated path can be compared before blaming SL internals.
+- `rng(2)` in snippet intent (harness currently uses `rng(0,'twister')`) and
+  replay setup for comparable random trajectories.  
+  **Scope and status:** generation parity is controlled by replaying MATLAB random
+  draws into Python for the tested path. This is a temporary intervention to hold
+  `PDP.O` input comparable while downstream bottlenecks are isolated.
 
 - `[GDP,~,~,~,RGB] = spm_MDP_pong(Nr,Nc,Nd,true,0);` (build game generative process and ids).  
-  **Validated** for the snippet branch used by these tests.
+  **Scope and status:** validated for the snippet branch used by this subproject’s
+  oracle harness and current test lanes.
 
 - Build `S` and helper semantics (`spm_get_hits`, `spm_get_miss` meaning).  
-  **Validated for the non-visual lane used here.** This stage is not the current
-  parity blocker.
+  **Scope and status:** validated for the non-visual path under test. This stage
+  is not the current first-failure source in Lane A/B/C/D outcomes.
 
 - `PDP = spm_MDP_generate(GDP);` then slice `PDP.O(:,1:k)` / `PDP.O(:,1:1000)`.  
-  **Validated.** Pre-SL `O` window parity gates are passing in current setup.
+  **Scope and status:** pre-structure-learning `PDP.O` parity gates pass in the
+  current harness configuration. This comparability currently depends on MATLAB
+  random-draw replay and is therefore not yet fully Python-native RNG behavior.
 
 - Visual loop (`spm_figure`, `imshow`, `drawnow`).  
   **Out of scope** for this non-visual parity lane; not part of current bottleneck.
 
 - `MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);`:
   - Grouping internals via `spm_rgm_group`:
-    - MI assembly lane (`spm_MDP_MI` calls on runtime `o_sub`).  
-      **Current bottleneck #1.** This is the first internal lane where MI
-      reconstruction may diverge before eig is applied. Temporary flag
-      `RGMS_FSL_RGM_MATLAB_MI_PUSH=1` rebuilds MI in MATLAB so we can isolate
-      this lane (Lane B/C use this).
-    - Spectral/eigen grouping lane (group partition from eigensystem).  
-      **Current bottleneck #2.** Even when MI is aligned, MATLAB vs SciPy eig
-      ordering/tie behavior can change selected group members. Temporary flag
-      `RGMS_FSL_RGM_MATLAB_EIG=1` injects MATLAB `eig(...,'nobalance')` to
-      isolate this lane.
+    - `spm_MDP_MI` operation on runtime `o_sub` slices.  
+      **Current bottleneck #1.** Temporary flag
+      `RGMS_FSL_RGM_MATLAB_MI_PUSH=1` replaces Python `spm_MDP_MI`-derived MI
+      matrix construction with MATLAB MI matrix construction for each active
+      `o_sub` in `spm_rgm_group`.
+    - Eigen decomposition and ranking operation used for group selection.  
+      **Current bottleneck #2.** Temporary flag `RGMS_FSL_RGM_MATLAB_EIG=1`
+      replaces Python/SciPy eig output with MATLAB `eig(...,'nobalance')`
+      output in `spm_rgm_group`, isolating the eigenpair-and-ordering step.
 
-  - Later link stage (`_link_streams`) writes `ss.ID` / `ss.IE` via `spm_dir_MI(a_mat)`.  
-    **Current bottleneck #3 (later than grouping).** For the failing linked
-    matrix, linked `a` bytes match MATLAB, but Python `spm_dir_MI(a)=0` while
-    MATLAB gives `~8.88e-16` (near-cancellation lane). Temporary flag
-    `RGMS_FSL_LINK_DIR_MI_MATLAB=1` uses MATLAB `spm_dir_MI` only at this link-storage
-    call site.
+  - Later link stage (`_link_streams`) writes `ss.ID` / `ss.IE` via `spm_dir_MI(a_mat)`.
+    **Current bottleneck #3 (later than `spm_rgm_group`).** In observed Lane C
+    first-failure evidence, the linked matrix bytes match exactly, but stored
+    `ss.ID` scalar differs at key `(1,58)`: MATLAB `spm_dir_MI(a_mat)` returns
+    `8.8817841970012523e-16` while Python `spm_dir_MI(a_mat)` returns `0.0`.
+    Temporary flag `RGMS_FSL_LINK_DIR_MI_MATLAB=1` replaces this specific
+    link-time `spm_dir_MI` scalar operation with MATLAB.
 
 - Exhaustive nested canonical-byte compare (full tree gate).  
   Checkpoint controls:
@@ -99,38 +167,70 @@ Ordered pipeline (from the original snippet):
 
 Current validated status at this progress point:
 
-- Replay-controlled pre-SL stages are validated.
-- Bottleneck ordering is validated as: `spm_MDP_MI` lane -> spectral sorting lane ->
-  later link `spm_dir_MI` lane; these are distinct.
-- With full temporary bridges at known bottlenecks (Lane D), exhaustive checkpoint
-  passes; this confirms no additional unknown downstream blocker in that mode.
+- Replay-controlled pre-`spm_faster_structure_learning` comparability is validated
+  for the tested harness path; this still includes a MATLAB random-draw replay
+  intervention.
+- Bottleneck ordering in exhaustive Lane A/B/C/D evidence is currently:
+  `spm_MDP_MI` operation in `spm_rgm_group` -> eig/ordering operation in
+  `spm_rgm_group` -> link-time `spm_dir_MI` operation in `_link_streams`.
+- With all three temporary replacements active (Lane D), exhaustive checkpoint
+  passes; this is evidence of bottleneck localization, not evidence that the
+  full path is already fully Python-native.
 
 
 # 4. Test Lanes and current evaluation
 
 Lane configurations:
 
-- **Lane A:** exhaustive test with `EIG=0, MI_PUSH=0, LINK=0` (native baseline lane).
-- **Lane B:** exhaustive test with `EIG=0, MI_PUSH=1, LINK=0` (MATLAB MI, Python eig).
-- **Lane C:** exhaustive test with `EIG=1, MI_PUSH=1, LINK=0` (MATLAB MI + MATLAB eig, native link `spm_dir_MI`).
-- **Lane D:** exhaustive test with `EIG=1, MI_PUSH=1, LINK=1` (MATLAB MI + MATLAB eig + MATLAB link `spm_dir_MI`).
-- **Lane E:** non-exhaustive subset in this file via `-k "not exhaustive_exact_oracle"` (fast regression lane; not a bottleneck-classification lane).
+- **Lane A:** exhaustive selector with `RGMS_FSL_RGM_MATLAB_EIG=0`,
+  `RGMS_FSL_RGM_MATLAB_MI_PUSH=0`, `RGMS_FSL_LINK_DIR_MI_MATLAB=0` (native
+  `spm_rgm_group` and native link-time `spm_dir_MI`).
+- **Lane B:** exhaustive selector with `RGMS_FSL_RGM_MATLAB_EIG=0`,
+  `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=0`
+  (MATLAB replacement for `spm_MDP_MI` operation in `spm_rgm_group`; eig and
+  link-time `spm_dir_MI` remain native Python).
+- **Lane C:** exhaustive selector with `RGMS_FSL_RGM_MATLAB_EIG=1`,
+  `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=0`
+  (MATLAB replacement for `spm_MDP_MI` and eig operations in `spm_rgm_group`;
+  link-time `spm_dir_MI` remains native Python).
+- **Lane D:** exhaustive selector with `RGMS_FSL_RGM_MATLAB_EIG=1`,
+  `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=1`
+  (MATLAB replacement for all three currently tracked operations:
+  `spm_MDP_MI` in `spm_rgm_group`, eig in `spm_rgm_group`, and link-time
+  `spm_dir_MI` in `_link_streams`).
+- **Lane E:** non-exhaustive subset in this same file via
+  `-k "not exhaustive_exact_oracle"`; this lane is for quick regression coverage
+  and is not a full exhaustive bottleneck-classification lane.
 
-Lane-to-bottleneck interpretation (current evidence):
+Lane-to-bottleneck interpretation (current evidence from `log_0.md` lane reruns):
 
-- **Lane A:** native baseline; can fail at bottleneck #1 and/or #2 before reaching #3.
-- **Lane B (`MI_PUSH` only):** bypasses bottleneck #1 signal source (MI assembly via MATLAB),
-  but still exposes bottleneck #2 (spectral sorting with Python eig).
-- **Lane C (`MI_PUSH+EIG`):** bypasses #1 and #2 for isolation and advances to bottleneck #3.
-- **Lane D (`MI_PUSH+EIG+LINK`):** bypasses all three currently known bottleneck call sites;
-  checkpoint exhaustive passing here means no additional unknown downstream blocker in this mode.
-- **Lane E:** does not classify bottlenecks; it is only a quick non-exhaustive regression subset.
+- **Lane A:** first failure occurs in `spm_rgm_group` group bytes, so downstream
+  link-time `spm_dir_MI` is not yet the first failing operation in this lane.
+- **Lane B:** replacing `spm_MDP_MI` operation alone does not clear first failure;
+  first failure remains in `spm_rgm_group` group ordering output.
+- **Lane C:** replacing both `spm_MDP_MI` and eig operations moves first failure
+  to link-time `spm_dir_MI` storage (`ss.ID` mismatch at key `(1,58)`).
+- **Lane D:** replacing `spm_MDP_MI`, eig, and link-time `spm_dir_MI` yields
+  exhaustive pass on checkpointed inputs.
+- **Lane E:** provides non-exhaustive regression information only; do not use it
+  as standalone evidence for full exhaustive bottleneck classification.
 
-Current progress toward end goal is substantial but intentionally staged. The harness can now move bottlenecks forward in a controlled way, and lane definitions are stable enough to avoid the prior ambiguity around what is native vs temporarily bridged. In practical terms, we are no longer searching blindly; we can deliberately select a lane and know what class of issue it is expected to expose.
+Current progress toward end goal is substantial but intentionally staged. The
+team can now isolate and discuss specific function-level operations by lane using
+shared terminology (`spm_MDP_MI`, eig operation inside `spm_rgm_group`, and
+link-time `spm_dir_MI`) instead of ambiguous shorthand.
 
-At a broad level, the first unresolved class is spectral grouping parity (native eig path) and the second unresolved class is link-time `spm_dir_MI` near-cancellation. These are adjacent in the pipeline but analytically separable, and the lane outcomes already prove that separation: Lane B remains blocked in grouping, Lane C advances to link MI, and Lane D clears the tree under full provisional bridging.
+The unresolved operations are currently:
+1) native eig/ordering behavior in `spm_rgm_group`, and
+2) native link-time `spm_dir_MI` near-cancellation behavior when writing `ss.ID/ss.IE`.
+These are separable by lane evidence (Lane B still fails in `spm_rgm_group`,
+Lane C moves first failure to link-time `spm_dir_MI`, Lane D passes with all
+three temporary replacements active).
 
-Going forward, the main work is to convert this lane-based diagnostic certainty into Python-native closure decisions: either achieve stricter numeric equivalence in those two lanes or settle explicit numeric policy where 1:1 float64 parity is not realistically recoverable. The key guardrail is unchanged: temporary Engine hooks remain investigative scaffolding and must not be mistaken for final architecture.
+Going forward, closure criteria remain explicit: temporary MATLAB interventions
+are investigative scaffolding, and completion requires documented, Python-native
+behavior at these operations plus clear scope statements for what each passing
+test selector proves.
 
 
 # 5. Lane-by-lane execution table (A/B/C/D/E) and scientific interpretation
@@ -218,3 +318,28 @@ Note on exact harness syntax: in this test harness the MATLAB seed call used for
 - Therefore boundary movement across A->B->C->D is causal evidence, not just incidental test noise.
 - Observed pattern supports this bottleneck chain: native grouping/spectral lane first, then link-time `spm_dir_MI` near-cancellation lane.
 - Lane E is a fast non-exhaustive control subset; useful for regression hygiene, but not a replacement for exhaustive lane classification evidence.
+
+# 6. Python-native versus MATLAB interventions
+
+This section is the consolidated reference for every place the current structure-learning
+subproject still uses MATLAB as a replacement or source of truth during execution.
+Unlike `logs\log_0.md` (chronological run log), this table captures the current
+state in one place with exact call sites, flags, mismatch evidence, and lane meaning.
+
+| Ordered pipeline stage / call site | Python-native behavior (target) | Current MATLAB intervention (temporary) | Activation mechanism and files | Detailed mismatch / bottleneck evidence motivating intervention | Lanes where active | What a pass/fail means in this scope |
+|---|---|---|---|---|---|---|
+| `rng(2)` in MATLAB snippet intent (harness currently uses `rng(0,'twister')`) and subsequent `spm_MDP_generate` random draws | Python should eventually use native RNG semantics with a settled reproducibility policy and produce acceptable parity through Python-native behavior. | MATLAB generates a random draw buffer; Python consumes that buffer by patching `numpy.random.rand` replay order. This is a controlled replacement of Python RNG output stream. | In `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py`: `_matlab_rand_buf_twister_np(...)` + `_rand_replay_callable(...)` + `with patch("numpy.random.rand", ...)` around `spm_MDP_generate(...)`. | Upstream stochastic variance must be removed before downstream SL bottlenecks can be attributed correctly. Without replay control, failures in `spm_faster_structure_learning` cannot be cleanly interpreted because `PDP.O` input differs first. | Used in generation-integrated tests and in exhaustive non-checkpoint rebuild path. Not an A/B/C/D flag by itself. | Pass in this scope means upstream `PDP.O` comparability is controlled for diagnostic isolation. It does **not** mean RNG semantics are fully Python-native yet. |
+| `MDP = spm_faster_structure_learning(...)` -> inside `spm_rgm_group`: MI matrix construction via `spm_MDP_MI` on runtime `o_sub` slices | Native path computes MI in Python: `spm_rgm_group` builds `p = r_cells[i] @ r_cells[j].T`, then `_spm_mdp_mi_scalar(p)` -> `spm_MDP_MI(p)` in `python_src/spm_MDP_MI.py`. | MATLAB builds MI matrix for each current `o_sub` and injects it into Python `spm_rgm_group` as `mi_override`. This replaces native `spm_MDP_MI` use for grouping decisions. | Flag `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`. Harness creates `rgm_mi_override_fn` via `_make_rgm_mi_override_fn_matlab(...)`; passed through `spm_faster_structure_learning(..., rgm_mi_override_fn=...)` in `python_src/toolbox/DEM/spm_faster_structure_learning.py`; consumed as `mi_override` in `python_src/toolbox/DEM/spm_rgm_group.py`. | Lane A/B evidence shows early mismatch around grouping path. In Lane A, first failure is `spm_rgm_group stream 1 group 2: canonical byte mismatch`, with MI decomposition diagnostics (example `MI(1,24)` delta around `-1.11e-16`) showing MI/eig sensitivity zone. Lane B (MI override on, eig native) still fails same boundary, proving `spm_MDP_MI` replacement alone is insufficient. | B, C, D (off in A and E by default). | Pass with this bridge active only proves downstream can proceed when MATLAB `spm_MDP_MI` values are injected. Fail with this bridge active means residual divergence is elsewhere (observed: eig ordering still diverges in Lane B). |
+| `MDP = spm_faster_structure_learning(...)` -> inside `spm_rgm_group`: eigen decomposition and group ordering (`[e,v]=eig(...)`, `sort(abs(e(:,jmax)),'descend')`) | Native path uses SciPy eig pipeline in `spm_rgm_group.py` (`spla.eig`) and Python sorting logic intended to mirror MATLAB ordering. | MATLAB `eig(...,'nobalance')` is called per active MI block and returned eigenpairs are injected into Python `spm_rgm_group` via `eig_pair` callback. | Flag `RGMS_FSL_RGM_MATLAB_EIG=1`. Harness `_make_matlab_rgm_eig_pair(...)`; passed via `spm_faster_structure_learning(..., rgm_eig_pair=...)`; used in `spm_rgm_group(..., eig_pair=...)`. | Lane A/B diagnostics show ULP-level near-tie ordering mismatch in iter2: same MI block yields different rank-1 selection (`mat_idx=74` vs `py_idx=38`) with tiny magnitude deltas (`max|am-ap| ~ 9.992e-16`, `max_ulps ~ 36`). Lane C moves first failure away from `spm_rgm_group` to later link stage, confirming this intervention clears the grouping-order bottleneck. | C, D (off in A/B/E by default). | Pass with this bridge active indicates grouping divergence is specifically tied to native eig/ordering behavior. It does **not** by itself validate native Python eig parity has been solved. |
+| `MDP = spm_faster_structure_learning(...)` -> `_link_streams` writes `ss.ID` / `ss.IE` via `spm_dir_MI(a_mat)` | Native path computes link MI in Python with `spm_dir_MI(a_mat)` from `python_src/spm_dir_MI.py` when storing stream-link metadata. | MATLAB `spm_dir_MI` is called on each linked `a_mat` and returned scalar is used instead of native Python scalar for `ss.ID` / `ss.IE`. | Flag `RGMS_FSL_LINK_DIR_MI_MATLAB=1`. Harness creates `link_dir_mi_fn` via `_make_matlab_link_dir_mi_fn(...)`; passed into `spm_faster_structure_learning(..., link_dir_mi_fn=...)`; consumed by `_link_streams` `_stream_link_mi(...)` in `python_src/toolbox/DEM/spm_faster_structure_learning.py`. | Lane C first failure is explicit at `MDP{1}.ss.ID{1,2}(1,58): canonical byte mismatch`. Diagnostic details: linked matrix bytes match (`MDP{2}.a{21}` exact), but scalar differs: MATLAB `spm_dir_MI(...) = 8.8817841970012523e-16` while Python stores `0.0`; delta `-8.882e-16`. This identifies a near-cancellation numeric discrepancy at link-storage MI, not a matrix-construction mismatch. | D (off in A/B/C/E by default). | Pass with this bridge (Lane D) means full exhaustive tree parity can be achieved when link-time MI scalar is MATLAB-sourced. It proves bottleneck localization, not final native closure. |
+| Exhaustive test input provisioning (`RGMS_FSL_USE_CHECKPOINT=1`) before calling Python/MATLAB `spm_faster_structure_learning` | Full native pipeline run would regenerate inputs each run from the ordered snippet path. | Checkpoint loads prebuilt `o_sl` and MATLAB `O_fsl_sx/S_fsl_sx` to skip expensive replay-generation and hold deterministic inputs fixed. | Flag `RGMS_FSL_USE_CHECKPOINT=1` (optional rebuild with `RGMS_FSL_REFRESH_CHECKPOINT=1`) in `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py`; artifacts under `tests/oracle/toolbox/DEM/_checkpoint_data/`. | Not a numeric bottleneck itself; it is a reproducibility and runtime control. It prevents upstream stochastic or runtime drift from obscuring downstream bottleneck diagnosis and allows lane-to-lane comparability. | Common in A/B/C/D runs in this phase. | Pass/fail under checkpoint scope is about the SL and compare path on fixed inputs. It does not independently validate full upstream generation path on every run. |
+
+### Scope clarification for team use
+
+- A/B/C/D lane outcomes are statements about the exhaustive selector  
+  `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle`.
+- `file.py::test_name` means "test function `test_name` inside `file.py`", not a separate file.
+- Any claim of "validated" must state whether it is:
+  1) upstream generation parity scope,  
+  2) exhaustive SL-on-fixed-input scope, or  
+  3) non-exhaustive regression subset scope (Lane E).
