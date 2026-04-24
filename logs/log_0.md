@@ -1876,3 +1876,139 @@ pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_
 **Shared files touched:** none.
 
 ---
+
+### Lane B rerun (immediate log after run)
+
+**Scope:** exhaustive selector `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` on checkpointed inputs.
+
+**Command (PowerShell):**
+
+```text
+cd C:\Users\andre\.cursor\RGMs
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+Remove-Item Env:RGMS_FSL_RGM_MATLAB_EIG -ErrorAction SilentlyContinue
+$env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1'
+Remove-Item Env:RGMS_FSL_LINK_DIR_MI_MATLAB -ErrorAction SilentlyContinue
+$env:RGMS_FSL_TIMING='1'
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -vv -s --tb=short
+```
+
+**Result:** FAIL.
+
+**First failing boundary (this scope):** `spm_rgm_group stream 1 group 2: canonical byte mismatch`.
+
+**Key evidence:**
+
+- `[DIAG] Lane B enabled: MATLAB MI push with Python/SciPy eig ...`
+- group mismatch remains at stream 1 group 2 (`mat=[81,64,42,...]` vs `py=[42,81,64,...]`).
+- iter2 ordering divergence persists (`mat_idx=74` vs `py_idx=38`, `max|am-ap|=9.992e-16`, `max_ulps=36`).
+- pytest summary: `1 failed in 471.84s (0:07:51)`.
+
+**Evidence artifact:** `C:\Users\andre\AppData\Local\Temp\lane_b_20260424_123736.log`.
+
+**Immediate interpretation (bounded to this selector):** replacing the `spm_MDP_MI`
+operation alone does not move first failure past `spm_rgm_group` ordering output.
+
+**Shared files touched:** none.
+
+---
+
+### Lane C rerun (immediate log after run)
+
+**Scope:** exhaustive selector `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` on checkpointed inputs.
+
+**Command (PowerShell):**
+
+```text
+cd C:\Users\andre\.cursor\RGMs
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+$env:RGMS_FSL_RGM_MATLAB_EIG='1'
+$env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1'
+Remove-Item Env:RGMS_FSL_LINK_DIR_MI_MATLAB -ErrorAction SilentlyContinue
+$env:RGMS_FSL_TIMING='1'
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -vv -s --tb=short
+```
+
+**Result:** FAIL.
+
+**First failing boundary (this scope):** `MDP{1}.ss.ID{1,2}(1, 58): canonical byte mismatch`.
+
+**Key evidence:**
+
+- `[TIMER] checkpoint load+matlab fsl: 5.36s`
+- `[TIMER] rgm_group checkpoints: 441.23s`
+- `[TIMER] python spm_faster_structure_learning: 503.32s`
+- `[SS-LINK-DIAG] ... matlab_mi=8.8817841970012523e-16 python_mi=0`
+- `[SS-LINK-DIAG] linked a bytes match: True` for `MDP{2}.a{21}`
+- `[SS-LINK-DIAG] spm_dir_MI(Python a)=0` and `spm_dir_MI(MATLAB on Python a)=8.8817841970012523e-16`
+- pytest summary: `1 failed in 964.44s (0:16:04)`.
+
+**Evidence artifact:** `C:\Users\andre\AppData\Local\Temp\lane_c_20260424_134602.log`.
+
+**Immediate interpretation (bounded to this selector):** with `spm_MDP_MI` + eig replacements active, first mismatch remains in link-time `spm_dir_MI` storage (`ss.ID`) and not in earlier `spm_rgm_group` grouping output.
+
+**Shared files touched:** none.
+
+---
+
+### Lane D rerun (immediate log after run)
+
+**Scope:** exhaustive selector `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` on checkpointed inputs.
+
+**Command (PowerShell):**
+
+```text
+cd C:\Users\andre\.cursor\RGMs
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+$env:RGMS_FSL_RGM_MATLAB_EIG='1'
+$env:RGMS_FSL_RGM_MATLAB_MI_PUSH='1'
+$env:RGMS_FSL_LINK_DIR_MI_MATLAB='1'
+$env:RGMS_FSL_TIMING='1'
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -vv -s --tb=short
+```
+
+**Result:** PASS.
+
+**Key timings:**
+
+- `[TIMER] checkpoint load+matlab fsl: 6.00s`
+- `[TIMER] rgm_group checkpoints: 437.45s`
+- `[TIMER] python spm_faster_structure_learning: 497.30s`
+- `[TIMER] mdp tree exhaustive compare: 3.03s`
+- `[TIMER] total exhaustive gate: 943.79s`
+- pytest summary: `1 passed in 955.71s (0:15:55)`
+
+**Evidence artifact:** `C:\Users\andre\AppData\Local\Temp\lane_d_20260424_141025.log`.
+
+**Immediate interpretation (bounded to this selector):** with MATLAB replacements for `spm_MDP_MI`, eig, and link-time `spm_dir_MI`, exhaustive canonical-byte tree compare passes on checkpointed inputs.
+
+**Shared files touched:** none.
+
+---
+
+### Lane E rerun (immediate log after run)
+
+**Scope:** non-exhaustive subset in `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py` via pytest `-k "not exhaustive_exact_oracle"` (exhaustive gate `test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` deselected). No Lane A–D bridge env vars (`RGMS_FSL_RGM_MATLAB_MI_PUSH`, `RGMS_FSL_RGM_MATLAB_EIG`, `RGMS_FSL_LINK_DIR_MI_MATLAB`) were set for this run.
+
+**Command (PowerShell):**
+
+```text
+cd C:\Users\andre\.cursor\RGMs
+conda activate rgms
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -vv --tb=short
+```
+
+**Result:** PASS.
+
+**Pytest summary:** `5 passed, 1 deselected, 2 warnings in 49.32s`.
+
+**Evidence artifact (tee capture):** `C:\Users\andre\AppData\Local\Temp\lane_e_20260424_144752.log`.
+
+**Immediate interpretation (bounded to this selector):** the five included non-exhaustive oracle checks in this file remain green; this does not certify exhaustive native parity (Lanes A–C still characterize native gaps; Lane D remains the MATLAB-bridged exhaustive reference pass).
+
+**Shared files touched:** none.
+
+---
