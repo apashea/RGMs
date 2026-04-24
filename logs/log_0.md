@@ -1827,3 +1827,52 @@ interpreting future run results.
 
 
 
+
+## Lane validation cycle (2026-04-24) — ordered rerun for document coherence
+
+### Lane A rerun (immediate log after run)
+
+**Scope:** exhaustive selector `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` on checkpointed inputs.
+
+**Command (PowerShell):**
+
+```text
+cd C:\Users\andre\.cursor\RGMs
+conda activate rgms
+$env:RGMS_FSL_USE_CHECKPOINT='1'
+Remove-Item Env:RGMS_FSL_RGM_MATLAB_EIG -ErrorAction SilentlyContinue
+Remove-Item Env:RGMS_FSL_RGM_MATLAB_MI_PUSH -ErrorAction SilentlyContinue
+Remove-Item Env:RGMS_FSL_LINK_DIR_MI_MATLAB -ErrorAction SilentlyContinue
+$env:RGMS_FSL_TIMING='1'
+pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -vv -s --tb=short
+```
+
+**Flags active/inactive:**
+
+- Active: `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_TIMING=1`
+- Inactive: `RGMS_FSL_RGM_MATLAB_EIG`, `RGMS_FSL_RGM_MATLAB_MI_PUSH`, `RGMS_FSL_LINK_DIR_MI_MATLAB`
+
+**Result:** FAIL
+
+**First failing boundary (this scope):** `spm_rgm_group stream 1 group 2: canonical byte mismatch`.
+
+**Key emitted diagnostics (verbatim highlights):**
+
+- `[TIMER] checkpoint load+matlab fsl: 6.41s`
+- `[DIAG] MI(1,24) t1_m=-0.88285455661930445 t1_m_alt=-0.88285455661930445 t1_p=-0.88285455661930434 delta=-1.1102230246251565e-16`
+- `[DIAG] MI(1,24) first spm_log diff at idx 25: log_mat=-0.35524739194754706, log_py=-0.35524739194754701`
+- `[DIAG] group diag stream 1 g2: mat=[81, 64, 42, 90, 92, 94, 14, 16, 20] py=[42, 81, 64, 55, 68, 31, 35, 38, 53] ...`
+- `[DIAG] iter2 sort order diverges at rank pos 1: mat_idx=74 py_idx=38 |mat|=0.22694877740697983 |py|=0.22694877740698036`
+- `[DIAG] iter2 |e| vec ULP on first-16 sort ranks (union mat/py): max_ulps=36.000 max|am-ap|=9.992e-16`
+- Failure trace root: `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py:325 in _assert_exact_canon`
+- pytest summary: `1 failed in 42.62s`
+
+**Evidence artifact:** full stdout capture at `C:\Users\andre\AppData\Local\Temp\lane_a_20260424_112750.log`.
+
+**Immediate interpretation (bounded to this selector):**
+
+- Current run remains consistent with prior Lane A classification: first boundary stays in `spm_rgm_group` group output (`group 2`) before link-time `spm_dir_MI` storage is reached as first failure.
+
+**Shared files touched:** none.
+
+---

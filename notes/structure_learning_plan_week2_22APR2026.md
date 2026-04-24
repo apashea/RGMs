@@ -176,6 +176,12 @@ Current validated status at this progress point:
 - With all three temporary replacements active (Lane D), exhaustive checkpoint
   passes; this is evidence of bottleneck localization, not evidence that the
   full path is already fully Python-native.
+- **Latest rerun evidence (2026-04-24, Lane A only):** exhaustive selector with
+  checkpoint and no MATLAB replacements for `spm_rgm_group`/`spm_dir_MI` fails
+  at `spm_rgm_group stream 1 group 2: canonical byte mismatch` (`1 failed in
+  42.62s`). Emitted diagnostics again show tiny MI/log deltas and iter2 ordering
+  divergence (`mat_idx=74` vs `py_idx=38`, `max|am-ap|~9.992e-16`, `max_ulps~36`),
+  consistent with the current ordering of bottlenecks.
 
 
 # 4. Test Lanes and current evaluation
@@ -214,6 +220,14 @@ Lane-to-bottleneck interpretation (current evidence from `log_0.md` lane reruns)
   exhaustive pass on checkpointed inputs.
 - **Lane E:** provides non-exhaustive regression information only; do not use it
   as standalone evidence for full exhaustive bottleneck classification.
+
+Lane rerun update status (for this validation cycle):
+
+- **2026-04-24 Lane A rerun:** completed and reconfirmed in-scope first failure at
+  `spm_rgm_group stream 1 group 2` with the same diagnostic signature as prior runs.
+- **Lane B/C/D/E reruns:** pending in this cycle; document statements for those lanes
+  currently reflect last completed evidence in `log_0.md` and must be re-confirmed
+  immediately after each new lane run.
 
 Current progress toward end goal is substantial but intentionally staged. The
 team can now isolate and discuss specific function-level operations by lane using
@@ -343,3 +357,10 @@ state in one place with exact call sites, flags, mismatch evidence, and lane mea
   1) upstream generation parity scope,  
   2) exhaustive SL-on-fixed-input scope, or  
   3) non-exhaustive regression subset scope (Lane E).
+
+### Latest ground-truth run deltas to apply to this section
+
+- `2026-04-24` Lane A rerun (no MATLAB replacements at `spm_MDP_MI`/eig/`spm_dir_MI`
+  call sites) reconfirmed first mismatch at `spm_rgm_group stream 1 group 2` on the
+  exhaustive selector, with iter2 ordering divergence diagnostics and no movement
+  of first failure to link-time `spm_dir_MI` in that lane.
