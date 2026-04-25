@@ -37,6 +37,7 @@ def spm_faster_structure_learning(
     rgm_eig_pair: Optional[Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]] = None,
     rgm_mi_override_fn: Optional[Callable[[List[Any], int], np.ndarray]] = None,
     link_dir_mi_fn: Optional[Callable[[np.ndarray], float]] = None,
+    link_mi_probe_fn: Optional[Callable[[dict], None]] = None,
 ):
     """RG structure learning — Pass 1 mirror of ``spm_faster_structure_learning.m``.
 
@@ -162,7 +163,15 @@ def spm_faster_structure_learning(
                         n_cells[(i_e, col_k)] = np.array([bool(np.asarray(p_t).ravel()[0])], dtype=bool)
 
         if n > 1:
-            _link_streams(mdp_n, mdp_h[n - 2], ng, sg, link_dir_mi_fn=link_dir_mi_fn)
+            _link_streams(
+                mdp_n,
+                mdp_h[n - 2],
+                ng,
+                sg,
+                link_dir_mi_fn=link_dir_mi_fn,
+                link_mi_probe_fn=link_mi_probe_fn,
+                lev_prev=n - 1,
+            )
 
         if int(np.max(ng)) < 2 and n > 1:
             mdp_h.append(mdp_n)
@@ -238,6 +247,8 @@ def _link_streams(
     sg: list[np.ndarray | None],
     *,
     link_dir_mi_fn: Optional[Callable[[np.ndarray], float]] = None,
+    link_mi_probe_fn: Optional[Callable[[dict], None]] = None,
+    lev_prev: Optional[int] = None,
 ) -> None:
     def _stream_link_mi(a_mat: np.ndarray) -> float:
         if link_dir_mi_fn is not None:
@@ -276,7 +287,22 @@ def _link_streams(
                 mdp_prev["id"]["D"][fj - 1] = list(mdp_prev["id"]["D"][fj - 1]) + [gi]
                 _ss_store(mdp_prev["ss"]["D"], sj, sj, fj, fj, gj)
                 _ss_store(mdp_prev["ss"]["D"], si, sj, fi, fj, gi)
-                _ss_store_mi(mdp_prev["ss"]["ID"], si, sj, fi, fj, _stream_link_mi(a_mat))
+                mi_id = _stream_link_mi(a_mat)
+                _ss_store_mi(mdp_prev["ss"]["ID"], si, sj, fi, fj, mi_id)
+                if link_mi_probe_fn is not None:
+                    link_mi_probe_fn(
+                        {
+                            "kind": "ID",
+                            "lev": int(lev_prev) if lev_prev is not None else None,
+                            "si": int(si),
+                            "sj": int(sj),
+                            "fi": int(fi),
+                            "fj": int(fj),
+                            "gi": int(gi),
+                            "a_mat": np.array(a_mat, dtype=np.float64, copy=True),
+                            "python_mi": float(mi_id),
+                        }
+                    )
 
                 gi = len(mdp_n["a"]) + 1
                 gj = int(np.asarray(mdp_prev["id"]["E"][fj - 1]).ravel()[0])
@@ -294,7 +320,22 @@ def _link_streams(
                 mdp_prev["id"]["E"][fj - 1] = list(mdp_prev["id"]["E"][fj - 1]) + [gi]
                 _ss_store(mdp_prev["ss"]["E"], sj, sj, fj, fj, gj)
                 _ss_store(mdp_prev["ss"]["E"], si, sj, fi, fj, gi)
-                _ss_store_mi(mdp_prev["ss"]["IE"], si, sj, fi, fj, _stream_link_mi(a_mat))
+                mi_ie = _stream_link_mi(a_mat)
+                _ss_store_mi(mdp_prev["ss"]["IE"], si, sj, fi, fj, mi_ie)
+                if link_mi_probe_fn is not None:
+                    link_mi_probe_fn(
+                        {
+                            "kind": "IE",
+                            "lev": int(lev_prev) if lev_prev is not None else None,
+                            "si": int(si),
+                            "sj": int(sj),
+                            "fi": int(fi),
+                            "fj": int(fj),
+                            "gi": int(gi),
+                            "a_mat": np.array(a_mat, dtype=np.float64, copy=True),
+                            "python_mi": float(mi_ie),
+                        }
+                    )
 
 
 def _append_linked_likelihood(mdp_n: dict, a_mat: np.ndarray, fi: int, si: int, sj: int) -> None:

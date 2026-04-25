@@ -1,16 +1,914 @@
 # RGMs migration log (log_0)
 
-## Iteration — `spm_dir_norm` (Phase 0)
+## Iteration ??? `spm_dir_norm` (Phase 0)
 
 **Inspected:** `rgms-rules.mdc`, `AGENTS.md`, migration docs, `Python Matlab Translation Issues.md`; template Python modules and oracle tests under `python_src/` and `tests/oracle/`; `tests/conftest.py`, `tests/helpers/matlab_engine.py`, `tests/helpers/compare.py`.
 
-**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_norm.m` → `matlab_src\spm_dir_norm.m` (file was absent in `matlab_src`).
+**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_norm.m` ??? `matlab_src\spm_dir_norm.m` (file was absent in `matlab_src`).
 
 **Created:** `python_src\spm_dir_norm.py`, `tests\oracle\test_spm_dir_norm.py`.
 
 **Modified:** `python_src\spm_dir_norm.py` (cell input handling: avoid NumPy stacking a list of same-shaped `ndarray` cells into a numeric tensor; use explicit `dtype=object` buffer and `np.errstate` around divide to mirror MATLAB `rdivide` before zero-column overwrite).
 
 **Shared files touched:** none.
+
+---
+
+### candidate classes A/B/C bounded batch (2026-04-25, replay-only)
+
+**Objective:** execute candidate classes A/B/C against the full replay corpus (`24` records across `4` workload files) without long-lane reruns.
+
+**Control fix applied:**
+
+- Discovered stale env contamination (`RGMS_DIR_MI_EXPERIMENT_ROW_ULP=1`) before first A/B/C replay.
+- Re-ran baseline and all candidates after explicitly unsetting all experiment flags.
+
+**Code change (`python_src\spm_dir_MI.py`):**
+
+- Added deterministic pairwise reduction helper:
+  - `_pairwise_sum(vals)`
+- Added env-gated candidate controls in `_spm_H`:
+  - `RGMS_DIR_MI_EXPERIMENT_FSUM` (candidate A: compensated accumulation via `math.fsum`)
+  - `RGMS_DIR_MI_EXPERIMENT_PAIRWISE` (candidate B: pairwise reduction for `a0` and inner sum)
+  - `RGMS_DIR_MI_EXPERIMENT_ALT_ORDER` (candidate C: alternate `_spm_H` float grouping; **promoted to default** 2026-04-25 — see subsection “Promoted `_spm_H` float evaluation”; use `RGMS_DIR_MI_LEGACY_SPM_H_EVAL=1` for the old grouping)
+- Existing `RGMS_DIR_MI_EXPERIMENT_SHAPE_SUM` remains available but was not part of this A/B/C batch conclusion.
+
+**Replay results after clean env reset:**
+
+- Clean baseline:
+  - per file `records=6 mismatches=5 max_abs_diff=8.882e-16`
+  - aggregate `total_records=24 total_mismatches=20 max_abs_diff=8.882e-16`
+
+- Candidate A (`FSUM`):
+  - no improvement vs baseline (`20/24` mismatches).
+
+- Candidate B (`PAIRWISE`):
+  - no improvement vs baseline (`20/24` mismatches).
+
+- Candidate C (`ALT_ORDER`):
+  - improved to `12/24` mismatches (same `max_abs_diff=8.882e-16`).
+  - per workload file: `records=6 mismatches=3`.
+  - stable per-record pattern across all files:
+    - remaining mismatches: `idx 1 (ID 1,58)`, `idx 2 (IE 1,58)`, `idx 3 (ID 1,59)`
+    - newly matching under candidate C: `idx 4`, `idx 5`, `idx 6`.
+
+**Interpretation:**
+
+- A/B are non-productive on this corpus.
+- C materially reduces mismatches but is still not full equivalence.
+- C therefore qualifies as a serious candidate for next-stage decision/testing, but not final closure.
+
+**Post-run hygiene:**
+
+- Cleared all experiment env flags in shell session after evaluation.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### candidates D/E batch and C/D/E comparison (2026-04-25, replay-only)
+
+**Objective:** implement and evaluate the two remaining accumulation-shape candidates (extended-precision `a0` / inner sum vs stable `np.dot` inner term) while retaining candidate C (`ALT_ORDER`) as a peer for comparison. Same replay corpus as the A/B/C batch: `24` records across `4` workload pickles under `tests\oracle\toolbox\DEM\_checkpoint_data\`.
+
+**Hygiene:** before each run, all `RGMS_DIR_MI_EXPERIMENT_*` variables were removed from the process environment so prior shell state could not bias results.
+
+**Code change (`python_src\spm_dir_MI.py`, `_spm_H` experiment chain after `PAIRWISE`):**
+
+- `RGMS_DIR_MI_EXPERIMENT_LDACC` (candidate D): accumulate `a0` and the inner sum \(\sum a_i \psi(a_i+1)\) in `np.longdouble`; `psi` is still evaluated in float64; final `a0` and `s` are cast to `float` before the existing `psi(a0+1) - s/a0` path.
+- `RGMS_DIR_MI_EXPERIMENT_DOT` (candidate E): keep sequential `a0` over float64 `av` elements; compute the inner sum as `np.dot(av64, psi(av64+1.0))` with both operands as float64 vectors.
+
+**Replay summary (canonical float64 byte equality vs stored MATLAB scalar per record):**
+
+| mode | env flag | total mismatches / 24 | max abs diff (oracle print) |
+|------|----------|------------------------|----------------------------|
+| baseline | (all experiment flags off) | 20 | 8.882e-16 |
+| C | `RGMS_DIR_MI_EXPERIMENT_ALT_ORDER` | 12 | 8.882e-16 |
+| D | `RGMS_DIR_MI_EXPERIMENT_LDACC` | 20 | 8.882e-16 |
+| E | `RGMS_DIR_MI_EXPERIMENT_DOT` | 24 | 1.776e-15 |
+
+**Per-file pattern (unchanged from A/B/C log for baseline/C; new rows for D/E):**
+
+- Baseline and D: each file `records=6 mismatches=5` (aggregate `20/24`).
+- C: each file `mismatches=3` (aggregate `12/24`); stable keys `idx 1 ID(1,58)`, `idx 2 IE(1,58)`, `idx 3 ID(1,59)`.
+- E: each file `mismatches=6` (aggregate `24/24`); inner product path is strictly worse than baseline on byte-wise MATLAB parity for this corpus.
+
+**Interpretation:**
+
+- D does not move the needle vs baseline on this workload; high-precision accumulation of `a0` and the inner sum is not the limiting factor for the remaining MATLAB deltas here.
+- E increases divergence (including max abs diff vs MATLAB), so it is disfavored for link-MI parity work unless paired with other compensations (not pursued here).
+- C remains the only candidate in this batch family that reduces mismatch count; next decisions remain: combine C with other hypotheses, deeper `_spm_H` / `psi` alignment, or a documented scoped tolerance on link-MI assertions (see decision-memory section below).
+
+**Post-run hygiene:** cleared all experiment env flags after evaluation.
+
+**Files modified this subsection:** `python_src\spm_dir_MI.py`, `logs\log_0.md`
+
+---
+
+### Promoted `_spm_H` float evaluation (former candidate C) — 2026-04-25
+
+**Code (`python_src\spm_dir_MI.py`, `_spm_H`):** The final scalar is now computed by default as `(psi(a0+1)*a0 - inner_sum)/a0`, which is algebraically the same as MATLAB’s `psi(a0+1) - sum(a.*psi(a+1))/a0` but uses a different admissible float grouping. The previous Python default `psi(a0+1) - inner_sum/a0` remains available for debugging or bisection via `RGMS_DIR_MI_LEGACY_SPM_H_EVAL=1`.
+
+**Replay check (clean env, no `RGMS_DIR_MI_EXPERIMENT_*`, link workload `fsl_link_mi_workload*.pkl`):** aggregate **`12/24`** mismatches vs stored MATLAB `spm_dir_MI` scalars, **`max_abs_diff=8.882e-16`** — matching the earlier `RGMS_DIR_MI_EXPERIMENT_ALT_ORDER=1` batch. With `RGMS_DIR_MI_LEGACY_SPM_H_EVAL=1`, aggregate returns to **`20/24`** (legacy Python path).
+
+**Env cleanup:** `RGMS_DIR_MI_EXPERIMENT_ALT_ORDER` is no longer read; documentation that referred to it as the switch for this behavior should use the default-on description above or the legacy escape hatch.
+
+**Remaining gap:** twelve records still byte-mismatch MATLAB on this corpus; next work remains targeted diagnosis of those stable keys or a documented scoped tolerance (see decision-memory below).
+
+**Files modified:** `python_src\spm_dir_MI.py`, `logs\log_0.md`
+
+---
+
+### spm_dir_MI decision-memory and policy-justification record (2026-04-25 17:12 UTC-5)
+
+This section is intentionally explicit so future review can justify any final ULP/tolerance scope and explain exactly what assertion boundary is being changed.
+
+#### 1) What function/path is under dispute
+
+- Function: `python_src\spm_dir_MI.py` (`spm_dir_MI` and local `_spm_H`).
+- Pipeline location: link stage inside `python_src\toolbox\DEM\spm_faster_structure_learning.py`:
+  - `_link_streams` builds `a_mat`,
+  - `_stream_link_mi(a_mat)` computes scalar MI,
+  - result stored in `mdp_prev["ss"]["ID"]` / `mdp_prev["ss"]["IE"]`.
+
+#### 2) What “link MI assertion” means (exactly)
+
+- In exhaustive oracle:
+  - `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+  - function `_assert_ss_exact` compares `ss.D`, `ss.E`, `ss.ID`, `ss.IE`.
+- For `ss.ID` and `ss.IE`, scalar comparisons use canonical-byte exactness via `_assert_exact_canon`.
+- Therefore, “link MI assertion” means:
+  - the byte-exact scalar equality check at keys like
+    - `MDP{1}.ss.ID{1,4}(1,60)` etc.,
+  - where MATLAB scalar (`spm_dir_MI` on linked `a`) is compared against Python scalar.
+
+#### 3) Current empirical status (cross-workload replay corpus)
+
+- Workload files:
+  - `fsl_link_mi_workload.pkl`
+  - `fsl_link_mi_workload_A_current.pkl`
+  - `fsl_link_mi_workload_refresh.pkl`
+  - `fsl_link_mi_workload_nocheckpoint.pkl`
+- Aggregate replay baseline (experiment flags off):
+  - `total_records=24`
+  - `mismatches=20`
+  - `matches=4`
+  - `max_abs_diff=8.882e-16`
+- Input parity check (captured `a_mat` vs MATLAB `MDP{lev+1}.a{gi}`) confirmed byte-equal for the examined workload records.
+
+#### 4) Mismatch family summary (from replay decomposition)
+
+- Dominant mismatch family (`count=16`):
+  - Python `h_row` one ULP below MATLAB,
+  - Python `h_flat` equals MATLAB `h_flat`,
+  - MATLAB row-flat differs by one ULP, Python row-flat does not.
+- Secondary mismatch family (`count=4`):
+  - additional one-ULP drift in `h_col` (observed with larger `a` shape class).
+- Match families (`count=4`) still present under same broad setup.
+
+#### 5) Experiments already attempted
+
+- Row-ULP nudge experiment (`RGMS_DIR_MI_EXPERIMENT_ROW_ULP`):
+  - can fix subset of records,
+  - not comprehensive at Lane C level.
+- Shape-sum candidate (`RGMS_DIR_MI_EXPERIMENT_SHAPE_SUM`):
+  - no mismatch reduction on 24-record replay corpus.
+
+#### 6) Why policy language must be explicit
+
+Any final tolerance/ULP policy at link assertion boundary must specify:
+
+- **Scope target:** only `ss.ID` / `ss.IE` scalar compare in `_assert_ss_exact`, or broader.
+- **Metric:** byte equality vs ULP bound vs absolute/relative tolerance.
+- **Threshold:** exact numeric bound (e.g., <= 1 ULP or abs <= X).
+- **Rationale:** observed stable backend-level ULP drift, byte-equal input parity, and replay evidence.
+- **Risk statement:** whether threshold/branch logic downstream can be affected.
+- **Verification:** replay corpus + milestone Lane C/Lane D outcomes.
+
+#### 7) Operational rule to avoid circular debugging
+
+- Use workload replay (`test_spm_dir_MI_link_workload_checkpoint_fast_replay_oracle`) as default `spm_dir_MI` iteration gate.
+- Only run full Lane C/Lane D for milestone confirmation or intentional workload refresh.
+- Do not treat ad hoc single-key fixes as policy without replay-corpus evidence.
+
+
+### bounded batch steps 2-4 (cross-workload taxonomy + principled candidate) — 2026-04-25
+
+**Scope:** execute steps 2-4 as one bounded batch using existing workload checkpoints only (no long-lane reruns).
+
+**Control correction applied first:**
+
+- Found shell env contamination from prior experiments:
+  - `RGMS_DIR_MI_EXPERIMENT_ROW_ULP=1`
+  - `RGMS_DIR_MI_EXPERIMENT_STATS=1`
+- Explicitly unset experiment flags before baseline taxonomy/evaluation.
+
+**Step 2 — strict baseline taxonomy over all workload files (24 records total):**
+
+- Files scanned:
+  - `fsl_link_mi_workload.pkl`
+  - `fsl_link_mi_workload_A_current.pkl`
+  - `fsl_link_mi_workload_refresh.pkl`
+  - `fsl_link_mi_workload_nocheckpoint.pkl`
+- Per-record decomposition compared (MATLAB vs Python):
+  - `h_col`, `h_row`, `h_flat`
+  - MI scalar byte match/mismatch
+  - ULP deltas
+- Baseline summary (clean flags):
+  - `total_records=24`
+  - `mismatches=20`, `matches=4`
+  - `max_abs_diff=8.882e-16`
+- Family counts:
+  - `(hcol_ulp=0, hrow_ulp=1, hflat_ulp=0, rowflat_m_ulp=1, rowflat_p_ulp=0, mismatch=1)` -> `16`
+  - `(0,1,1,0,0,0)` -> `4`
+  - `(2,1,1,0,0,1)` -> `4`
+
+**Step 3 — implemented one principled numeric candidate (env-gated):**
+
+- File: `python_src\spm_dir_MI.py`
+- New candidate flag: `RGMS_DIR_MI_EXPERIMENT_SHAPE_SUM=1`
+- Candidate behavior:
+  - In `_spm_H`, for vector-shaped 2D inputs (`1xN` or `Nx1`), compute `a0` and inner sum using MATLAB-style first-non-singleton `sum` axis semantics before scalarization.
+  - Default behavior unchanged when flag is off.
+
+**Step 4 — evaluate candidate across all workload files (fast replay gate):**
+
+- Baseline replay (flag off):
+  - per file `records=6 mismatches=5 max_abs_diff=8.882e-16`
+  - total `records=24 mismatches=20 max_abs_diff=8.882e-16`
+- Candidate replay (flag on):
+  - per file `records=6 mismatches=5 max_abs_diff=8.882e-16`
+  - total `records=24 mismatches=20 max_abs_diff=8.882e-16`
+
+**Conclusion from this bounded batch:**
+
+- The principled candidate `RGMS_DIR_MI_EXPERIMENT_SHAPE_SUM` produced **no mismatch reduction** on the captured cross-workload corpus.
+- Candidate is retained as env-gated experiment only (non-default), with no behavior change in default path.
+
+**Post-batch hygiene:**
+
+- Cleared experiment env flags from shell session:
+  - `RGMS_DIR_MI_EXPERIMENT_SHAPE_SUM`
+  - `RGMS_DIR_MI_EXPERIMENT_ROW_ULP`
+  - `RGMS_DIR_MI_EXPERIMENT_STATS`
+  - `RGMS_DIR_MI_TRACE`
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### pkl files for testing spm_dir_MI (2026-04-25 13:15 UTC-5)
+
+This section is a stable map of the workload/checkpoint files and related code paths used for `spm_dir_MI` isolation, replay, and milestone validation.
+
+- `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_link_mi_workload.pkl`
+  - Captured link-input workload (`a_mat` + metadata + MATLAB MI reference).
+  - Primary replay dataset for fast `spm_dir_MI` checks.
+
+- `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_link_mi_workload_A_current.pkl`
+  - Tagged workload capture from current scenario.
+  - Adds coverage beyond a single artifact.
+
+- `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_link_mi_workload_refresh.pkl`
+  - Tagged workload capture after checkpoint refresh.
+  - Validates behavior stability across regenerated checkpoint inputs.
+
+- `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_link_mi_workload_nocheckpoint.pkl`
+  - Tagged workload capture from non-checkpoint generation path.
+  - Validates behavior is not checkpoint-only artifact.
+
+- `tests/oracle/test_spm_dir_MI.py`
+  - Contains `test_spm_dir_MI_link_workload_checkpoint_fast_replay_oracle`.
+  - This test replays all `fsl_link_mi_workload*.pkl` files and is the default fast iteration gate.
+
+- `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py`
+  - Contains workload capture mode:
+    - `RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD=1`
+    - optional `RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD_TAG=<tag>`
+  - Used only when intentionally refreshing/expanding workload captures.
+
+- `python_src/toolbox/DEM/spm_faster_structure_learning.py`
+  - Source of `a_mat` at `_link_streams -> _stream_link_mi(a_mat)`.
+  - Probe hook captures exact `spm_dir_MI` inputs at call boundary.
+
+- `python_src/spm_dir_MI.py`
+  - Kernel under investigation.
+  - Iterative debugging should run against replay workload first.
+
+- `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_snippet_t1000_o_sl.pkl`
+- `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_snippet_t1000_matlab_inputs.mat`
+  - Upstream snippet checkpoints used by exhaustive lane setup.
+  - Needed for full-lane milestone runs, not for routine fast replay iteration.
+
+- `logs/log_0.md`
+  - Canonical chronology and operating notes.
+  - This section documents the file map to prevent context loss.
+
+
+### bounded sequence 1-5 completion (2026-04-25)
+
+**Step 1 (verify workload files):** confirmed in `tests\oracle\toolbox\DEM\_checkpoint_data\`:
+
+- `fsl_link_mi_workload.pkl`
+- `fsl_link_mi_workload_A_current.pkl`
+- `fsl_link_mi_workload_refresh.pkl`
+- `fsl_link_mi_workload_nocheckpoint.pkl`
+
+No missing capture artifact remained.
+
+**Step 2 (run one missing long capture if needed):** skipped correctly (none missing).
+
+**Step 3 (aggregate fast replay):**
+
+- Command:
+  - `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_workload_checkpoint_fast_replay_oracle -q -s`
+- Result:
+  - file `fsl_link_mi_workload.pkl`: `records=6 mismatches=3 max_abs_diff=8.882e-16`
+  - file `fsl_link_mi_workload_A_current.pkl`: `records=6 mismatches=3 max_abs_diff=8.882e-16`
+  - file `fsl_link_mi_workload_nocheckpoint.pkl`: `records=6 mismatches=3 max_abs_diff=8.882e-16`
+  - file `fsl_link_mi_workload_refresh.pkl`: `records=6 mismatches=3 max_abs_diff=8.882e-16`
+  - total: `records=24 mismatches=12 max_abs_diff=8.882e-16`
+  - runtime: ~0.50s
+
+**Step 4 (operator note):** this block is the operator note.  
+**Rule:** use workload replay test as default `spm_dir_MI` iteration gate; run long captures only to intentionally refresh/expand workload artifacts.
+
+**Step 5 (return to bottleneck focus):** checkpoint loop is now closed for this sequence; next action should remain fast workload-driven `spm_dir_MI` numeric work.
+
+**Files read this iteration:** `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### deep review: input/output structure + comparison coverage (2026-04-25)
+
+**Goal of this review:** answer how deeply link-MI inputs/outputs are understood and how comprehensive current comparison is, before proceeding with broader principled numeric work.
+
+**Captured workload structure (`fsl_link_mi_workload.pkl`):**
+
+- `records=6` total.
+- `kind` values: `ID`, `IE`.
+- `lev` values: only `1` in this capture.
+- `si/sj` pairs: `(1,2)`, `(1,3)`, `(1,4)`.
+- `fi/fj` keys: `(1,58)`, `(1,59)`, `(1,60)`.
+- `gi` indices: `21..26`.
+- `a_mat` shapes: `(2,441)`, `(3,441)`, `(9,441)`.
+
+**Why exactly 6 records (not a hard cap):**
+
+- For this checkpointed run/state, link stage generated 3 stream pairs (`sj=2,3,4` with `si=1`), and each pair produced 2 MI stores (`ID` + `IE`) with one `(fi,fj)` pair each.
+- So `3 * 2 = 6` records here; future captures can have more if stream/group cardinalities differ.
+
+**Comprehensiveness check 1 — input parity for all records (Python capture vs MATLAB MDP source):**
+
+- Audited every captured record by pulling MATLAB `full(MDP_fsl_snip_exact{lev+1}.a{gi})`.
+- Result for all 6/6 records: `bytes_match=True`, `max_abs=0`.
+- This confirms scalar mismatches are not from mismatched `a_mat` inputs in this workload.
+
+**Comprehensiveness check 2 — full decomposition taxonomy on all records (MATLAB vs Python):**
+
+- Computed per record:
+  - `h_col`, `h_row`, `h_flat` in MATLAB and Python
+  - scalar MI delta (`matlab_mi - python_mi`)
+- Key pattern observed:
+  - Python `h_row` is consistently one ULP below MATLAB (`5.6728234299905225` vs `5.6728234299905234`) in all records.
+  - For idx `1,2,3,4`, MATLAB `h_flat` is one ULP lower than MATLAB `h_row`; for idx `5,6`, MATLAB `h_flat` equals MATLAB `h_row`.
+  - `h_col` sometimes matches exactly and sometimes differs by one ULP (notably idx5).
+- Net deltas:
+  - zero at idx `1,3,6`
+  - `+8.882e-16` at idx `2,4,5`
+
+**Implication for principled approach:**
+
+- The residual class is not only the earlier “`h_col==0` and `h_row==h_flat`” trigger.
+- Current mismatch behavior involves a broader, record-dependent combination of one-ULP shifts in `h_col` and row/flat terms.
+- This supports pursuing a broader numeric-principled method over narrow heuristics.
+
+**Temporary-file note (for iteration reporting):**
+
+- Created and deleted one temporary audit script:
+  - created: `tests\oracle\toolbox\DEM\_checkpoint_data\_audit_link_parity_tmp.py`
+  - deleted in same iteration after use.
+
+**Files read this iteration:** none
+
+**Files created:** `tests\oracle\toolbox\DEM\_checkpoint_data\_audit_link_parity_tmp.py` (temporary; deleted same iteration)  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** `tests\oracle\toolbox\DEM\_checkpoint_data\_audit_link_parity_tmp.py`  
+**Shared files touched:** no  
+
+---
+
+### workload replay pattern analysis (post-checkpoint, 2026-04-25)
+
+**Objective:** use new link-input checkpoint to quantify mismatch pattern across all captured `spm_dir_MI` calls without rerunning Lane C.
+
+**Fast analysis against `fsl_link_mi_workload.pkl` (6 records):**
+
+- Baseline Python (`RGMS_DIR_MI_EXPERIMENT_ROW_ULP` off):
+  - `mismatches=5/6`, `max_abs_diff=8.882e-16`.
+  - Per-record:
+    - idx1 `ID(1,58)` mismatch (trigger condition true)
+    - idx2 `IE(1,58)` mismatch (trigger false)
+    - idx3 `ID(1,59)` mismatch (trigger true)
+    - idx4 `IE(1,59)` mismatch (trigger false)
+    - idx5 `ID(1,60)` mismatch (trigger false)
+    - idx6 `IE(1,60)` match
+
+- Experimental row-ULP on:
+  - `mismatches=3/6`, `max_abs_diff=8.882e-16`.
+  - Fixed idx1/idx3; remaining mismatches idx2/idx4/idx5.
+
+**Term-pattern probe on remaining mismatches:**
+
+- For idx2/idx4/idx5:
+  - `h_row == h_flat` still true
+  - `h_col` nonzero
+  - MATLAB-Python MI delta remains `+8.882e-16`.
+- Across all six records, `h_row == h_flat` is true, so that predicate alone cannot separate match/mismatch cases.
+
+**Replay oracle check with experiment on:**
+
+- `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_workload_checkpoint_fast_replay_oracle -q -s`
+  - output: `records=6 mismatches=3 max_abs_diff=8.882e-16`
+  - run time: ~0.27s.
+
+**Interpretation:**
+
+- New checkpoint enables seconds-fast evidence loops as intended.
+- Current row-ULP experiment is confirmed non-comprehensive on full captured workload.
+- Remaining mismatch signature does not separate cleanly with current simple predicates, reinforcing need for explicit next policy choice (broader principled numeric path vs tolerance contract) after this quantification.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### useful link-input checkpoint added for `spm_dir_MI` isolation (2026-04-25)
+
+**Purpose:** eliminate repeated full Lane C reruns for kernel-level `spm_dir_MI` debugging by checkpointing the **actual** `_stream_link_mi` input matrices (`a_mat`).
+
+**Why this boundary is correct:**
+
+- Previous checkpoint (`o_sl`/`O_fsl_sx`) still required rerunning full grouping + hierarchy before link MI.
+- New checkpoint captures `a_mat` exactly at `_link_streams -> _stream_link_mi(a_mat) -> spm_dir_MI(a_mat)`.
+- This is the true input boundary for the function under debug.
+
+**Code changes:**
+
+1. `python_src\toolbox\DEM\spm_faster_structure_learning.py`
+   - Added optional kwarg: `link_mi_probe_fn`.
+   - `_link_streams` now accepts `link_mi_probe_fn` and `lev_prev`.
+   - On each ID/IE link-MI store, probe receives:
+     - `kind`, `lev`, `si/sj`, `fi/fj`, `gi`
+     - exact `a_mat` copy
+     - computed `python_mi`
+   - No behavior change when probe is not provided.
+
+2. `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+   - Added env-gated capture mode:
+     - `RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD=1`
+   - During exhaustive Lane C run, captures all link-MI calls and computes MATLAB `spm_dir_MI` on each captured `a_mat`.
+   - Saves payload to:
+     - `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_link_mi_workload.pkl`
+   - Prints summary:
+     - `[DIR-MI-WORKLOAD] saved <n> records ...`
+
+3. `tests\oracle\test_spm_dir_MI.py`
+   - Added fast replay test:
+     - `test_spm_dir_MI_link_workload_checkpoint_fast_replay_oracle`
+   - Loads captured workload checkpoint and replays Python `spm_dir_MI(a_mat)` against stored MATLAB reference values.
+   - Reports records/mismatch count/max abs diff in seconds.
+
+**Validation run sequence:**
+
+1. Fast replay test before capture:
+   - skipped (checkpoint absent) in 0.25s.
+
+2. One capture Lane C run (`USE_CHECKPOINT=1`, `MI_PUSH=1`, `EIG=1`, native link MI, `RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD=1`):
+   - exhaustive test still fails at expected ULP boundary (`MDP{1}.ss.ID{1,4}(1,60)`).
+   - workload successfully saved with **6 records**.
+   - run time: **756.79s** (~12:36).
+
+3. Fast replay after capture:
+   - `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_workload_checkpoint_fast_replay_oracle -q -s`
+   - **PASS** in **0.29s**
+   - output: `records=6 mismatches=3 max_abs_diff=8.882e-16`.
+
+**Resulting workflow improvement:**
+
+- You can now iterate on `spm_dir_MI` using the captured link workload in sub-second to second-scale runs, without rerunning full Lane C each edit.
+- Full Lane C/Lane D remains milestone validation only.
+
+**Files read this iteration:** `python_src\toolbox\DEM\spm_faster_structure_learning.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `tests\oracle\test_spm_dir_MI.py`.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\spm_faster_structure_learning.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `tests\oracle\test_spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Lane C coverage quantification for row-ULP experiment (2026-04-25)
+
+**Objective:** answer evidence questions on comprehensiveness and overhead with a full integration run while keeping the experimental nudge non-default.
+
+**Code changes (minimal, diagnostic-only):**
+
+1. `python_src\spm_dir_MI.py`
+   - Added optional stats counters (env-gated by `RGMS_DIR_MI_EXPERIMENT_STATS`):
+     - `one_arg_calls`
+     - `row_ulp_triggered`
+   - Added helper functions:
+     - `reset_experiment_stats()`
+     - `get_experiment_stats()`
+   - No behavior change unless stats flag is enabled.
+
+2. `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+   - Exhaustive test now resets stats at start (when stats flag enabled).
+   - Prints summary after Python SL phase:
+     - `[DIR-MI-STATS] one_arg_calls=... row_ulp_triggered=...`
+
+**Validation run (checkpointed Lane C with experiment+stats):**
+
+- Env:
+  - `RGMS_FSL_USE_CHECKPOINT=1`
+  - `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`
+  - `RGMS_FSL_RGM_MATLAB_EIG=1`
+  - `RGMS_DIR_MI_EXPERIMENT_ROW_ULP=1`
+  - `RGMS_DIR_MI_EXPERIMENT_STATS=1`
+  - `RGMS_FSL_LINK_DIR_MI_MATLAB` unset
+- Command:
+  - `pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q --tb=short`
+- Result: **FAIL** in **941.57s** at
+  - `MDP{1}.ss.ID{1,4}(1,60): canonical byte mismatch`
+- Captured stats:
+  - `[DIR-MI-STATS] one_arg_calls=6 row_ulp_triggered=2`
+- Diagnostic line at failing key:
+  - MATLAB `2.1597428651816468`
+  - Python `2.1597428651816459`
+  - delta `-8.882e-16`
+  - linked `a` bytes match: `True`.
+
+**Interpretation:**
+
+- Experimental nudge is **not comprehensive** for Lane C (failure moved to a different key with same ULP-class delta).
+- Trigger coverage in this run was partial (`2/6` one-arg calls), reinforcing that current condition is too narrow as a default fix.
+- Added stats path is lightweight and purely diagnostic; integration runtime remained in expected Lane C range.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### spm_dir_MI experimental row-ULP ablation (2026-04-25)
+
+**Objective:** test a minimal reversible hypothesis for the dumped-fixture residual: MATLAB row term appears one ULP above flat term; Python row/flat terms are equal.
+
+**Pre-ablation probe:**
+
+- One-off check on dumped fixture confirmed:
+  - baseline Python recombination = `0`
+  - forcing `h_row` one ULP up gives `8.8817841970012523e-16` (same magnitude/class as MATLAB MI).
+
+**Code change (opt-in only):** `python_src\spm_dir_MI.py`
+
+- Added env helper `_env_flag`.
+- Added experimental gate in one-arg MI path before recombination:
+  - `RGMS_DIR_MI_EXPERIMENT_ROW_ULP=1`
+  - condition: `h_col == 0`, `h_row == h_flat`, and only when `c/h` absent.
+  - action: `h_row = nextafter(h_row, +inf)` (one ULP increment).
+- Default behavior unchanged when flag is off.
+
+**Fast experimental oracle:** `tests\oracle\test_spm_dir_MI.py`
+
+- Added `test_spm_dir_MI_link_diag_dump_row_ulp_experiment_fast_oracle`:
+  - loads latest dumped link fixture,
+  - computes MATLAB `spm_dir_MI` on same matrix,
+  - sets `RGMS_DIR_MI_EXPERIMENT_ROW_ULP=1` (via `monkeypatch`) and asserts Python experimental MI matches MATLAB within `1e-15`.
+
+**Validation runs:**
+
+1. Baseline fast dump oracle:
+   - `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q`
+   - **PASS** in 5.00s.
+
+2. Experimental fast dump oracle:
+   - `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_row_ulp_experiment_fast_oracle -q`
+   - **PASS** in 3.62s.
+
+3. Existing checkpoint link oracle:
+   - `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy -q`
+   - **PASS** in 6.00s.
+
+**Interpretation:**
+
+- The one-ULP row adjustment reproduces MATLAB MI on the known dumped fixture under a strictly opt-in flag.
+- This remains an experiment, not a settled default behavior/policy.
+- Fast-loop isolation remains intact; no Lane C/D rerun was required for this ablation step.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `tests\oracle\test_spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### fast oracle bit-signature hardening (2026-04-25)
+
+**Objective:** lock the exact dumped-fixture mismatch signature as a fast invariant for future `spm_dir_MI` ablations.
+
+**Code change:** `tests\oracle\test_spm_dir_MI.py` (`test_spm_dir_MI_link_diag_dump_fast_oracle`)
+
+- Added decomposition component pulls for both MATLAB and Python:
+  - `a0_row`, `a0_flat`
+  - `inner_row = sum(v.*psi(v+1))` for row marginal
+  - `inner_flat` for flat marginal
+  - `h_col`, `h_row`, `h_flat`, `e_terms`
+- Added invariant assertions for the current known signature on the dumped fixture:
+  - MATLAB: `h_row` is exactly **one ULP above** `h_flat`.
+  - Python: `h_row` and `h_flat` are byte-equal.
+  - MATLAB `a0_row == a0_flat` (500 on this fixture).
+  - MATLAB `inner_row != inner_flat` while Python `inner_row == inner_flat`.
+- Existing assertions retained:
+  - MATLAB decomposition recombines to MATLAB `spm_dir_MI`.
+  - parent/subprocess Python equality.
+  - MATLAB tiny nonzero vs Python zero + scalar byte mismatch class.
+
+**Fast validation:**
+
+- `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q -s`  
+  **PASS** in 4.14s.
+- `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy -q`  
+  **PASS** in 5.82s.
+
+**Interpretation:**
+
+- The fixture-level residual signature is now encoded in a seconds-fast test, so future kernel edits can be judged against exact component behavior, not just final MI scalar.
+- This supports precise, low-latency iteration toward reproducing MATLAB’s row/flat one-ULP asymmetry.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### fast fixture MATLAB decomposition pin-down (2026-04-25)
+
+**Objective:** identify exactly which `spm_H` term carries MATLAB’s tiny residual on the dumped failing link matrix.
+
+**Code change:** `tests\oracle\test_spm_dir_MI.py`
+
+- Extended `test_spm_dir_MI_link_diag_dump_fast_oracle` to compute MATLAB-side decomposition terms directly on dumped `a`:
+  - `h_col = spm_H(sum(a,2))`
+  - `h_row = spm_H(sum(a,1))`
+  - `h_flat = spm_H(a(:))`
+  - `e_terms = h_col + h_row - h_flat`
+- Added assertion that MATLAB decomposition recombines back to MATLAB `spm_dir_MI` on the same matrix.
+- Kept existing mismatch-class assertions (MATLAB tiny nonzero vs Python zero; byte mismatch).
+
+**Fast tests:**
+
+1. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q -s`
+   - **PASS** in 4.30s.
+
+2. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy -q -s`
+   - **PASS** in 5.96s.
+
+**Direct decomposition probe output (same dump, path-aligned MATLAB Engine call):**
+
+- Dump: `lev1_s1_2_k1_58_g21_B2_diag_pull_70eb08afc10f.npy`
+- MATLAB:
+  - `h_col = 0`
+  - `h_row = 5.6728234299905234`
+  - `h_flat = 5.6728234299905225`
+  - `mi = 8.8817841970012523e-16`
+- Python:
+  - `h_col = 0`
+  - `h_row = 5.6728234299905225`
+  - `h_flat = 5.6728234299905225`
+  - `mi = 0`
+
+**Interpretation:**
+
+- The residual is now localized to a **row-vs-flat ULP split** in MATLAB (`h_row` one ULP above `h_flat`), while Python currently has exact equality for those two terms.
+- Column branch is zero on both sides for this fixture; current mismatch class is no longer attributable to column-only cancellation.
+- This gives a concrete next ablation target: reproduce MATLAB’s row/flat asymmetry in Python `_spm_H` evaluation path on this matrix class.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### spm_dir_MI alternate-precision trace comparison (2026-04-25)
+
+**Objective:** determine whether a tiny nonzero appears under alternate accumulation/precision in `_spm_H`, without changing function behavior.
+
+**Code change:** `python_src\spm_dir_MI.py`
+
+- Added trace-only diagnostics (active only under `RGMS_DIR_MI_TRACE=1`):
+  - `out_fsum`: `_spm_H` reconstructed using `math.fsum` accumulation.
+  - `out_longdouble`: `_spm_H` estimate via `np.longdouble` accumulation path (with SciPy `psi` still float64-backed).
+- Return value remains the existing float64 path (`out`).
+
+**Fast runs (trace on):**
+
+1. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q -s`
+   - **PASS** in 3.57s.
+   - Trace highlights:
+     - `n=2` (column marginal): `out=0`, `out_fsum=0`, `out_longdouble=0`.
+     - `n=441` and `n=882`: `out=5.6728234299905225`, while
+       `out_fsum=out_longdouble=5.6728234299905242` (small ULP shift).
+     - Final recombination still `e_base=0`.
+
+2. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy -q -s`
+   - **PASS** in 5.82s.
+   - Same signature as above.
+
+**Interpretation:**
+
+- Alternate accumulation changes row/flat entropy values by tiny ULP amounts, but both move together, so their difference still cancels.
+- The column branch remains exactly zero across default/`fsum`/longdouble traces for this fixture class.
+- This further narrows focus to how MATLAB preserves a tiny residual where Python currently yields exact zero in the one-arg MI path.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### spm_dir_MI `_spm_H` micro-trace (2026-04-25)
+
+**Objective:** determine whether the tiny residual is lost inside `_spm_H` or only at final MI recombination.
+
+**Code change:** `python_src\spm_dir_MI.py`
+
+- Extended existing `RGMS_DIR_MI_TRACE` path with `_spm_H` internals:
+  - vector length `n`
+  - `a0`
+  - `psi(a0+1)`
+  - `inner = sum(a_i * psi(a_i+1))`
+  - `inner/a0`
+  - `_spm_H` output
+- No behavioral change when trace flag is off.
+
+**Fast runs (trace on):**
+
+1. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q -s`
+   - **PASS** in 3.72s
+   - key trace on dumped fixture:
+     - `_spm_H(col)` (`n=2`): `psi(a0+1)=6.2156077650889916`, `inner/a0=6.2156077650889916`, `out=0`
+     - `_spm_H(row)` (`n=441`): `out=5.6728234299905225`
+     - `_spm_H(flat)` (`n=882`): `out=5.6728234299905225`
+     - MI recombination: `e_base=0`
+
+2. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy -q -s`
+   - **PASS** in 6.09s
+   - same `_spm_H` signature and final recombination (`0`).
+
+**Interpretation:**
+
+- For this matrix class, zero emerges already in `_spm_H(col)` via exact cancellation at displayed precision (`psi(a0+1)` equals `inner/a0`), while `_spm_H(row)` and `_spm_H(flat)` also match.
+- This keeps focus on subtle kernel numeric behavior in `spm_dir_MI` (not pipeline wiring), and supports continuing fast-loop ablations before any long lane reruns.
+
+**Files read this iteration:** none
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### spm_dir_MI kernel trace pass (2026-04-25)
+
+**Objective:** continue fast-loop isolation on `spm_dir_MI` without rerunning full Lane C/D.
+
+**Code change (minimal):** `python_src\spm_dir_MI.py`
+
+- Added env-gated trace (`RGMS_DIR_MI_TRACE`) only.
+- Trace prints:
+  - `shape`
+  - `h_col = spm_H(sum(a,2))`
+  - `h_row = spm_H(sum(a,1))`
+  - `h_flat = spm_H(a(:))`
+  - recombined `e_base = h_col + h_row - h_flat`
+  - optional `c` / `h` term increments
+  - final return scalar
+- No behavioral/path changes when flag is off.
+
+**Fast-loop runs (trace enabled):**
+
+1. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q -s`
+   - **PASS** in 3.79s
+   - trace on dumped failing fixture (`2x441`):
+     - `h_col=0`
+     - `h_row=5.6728234299905225`
+     - `h_flat=5.6728234299905225`
+     - `e_base=0`
+     - `return e=0`
+
+2. `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy -q -s`
+   - **PASS** in 5.98s
+   - same trace signature (`h_col=0`, `h_row==h_flat`, `e_base=0`, `return e=0`)
+
+**Interpretation (current):**
+
+- On the known failing link matrix class, Python’s MI collapse to exact zero occurs at recombination (`h_col + h_row - h_flat`) with `h_col` printing as zero and `h_row`/`h_flat` matching at displayed precision.
+- This is consistent with the existing fast fixture mismatch class (MATLAB tiny nonzero vs Python zero) and keeps the investigation focused on `spm_dir_MI` kernel numerics.
+
+**Files read this iteration:** `Python Matlab Translation Issues.md`, `notes\andrew Python Matlab Translation Issues.md`.
+
+**Files created:** none  
+**Files modified:** `python_src\spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### spm_dir_MI fast-loop enablement (2026-04-25, follow-up)
+
+**Goal:** avoid repeated full Lane C/D reruns during `spm_dir_MI` kernel isolation while preserving exact Lane definitions for milestone checks.
+
+**Edits (minimal/scope-limited):**
+
+1. `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+   - Fixed dump-path defaulting in `_dump_link_matrix_if_enabled` so unset/blank `RGMS_FSL_LINK_MI_DUMP_DIR` now correctly falls back to:
+     `tests\oracle\toolbox\DEM\_tmp_link_mi\`
+   - This prevents accidental writes to cwd and stabilizes fixture location.
+
+2. `tests\oracle\test_spm_dir_MI.py`
+   - Added `_latest_link_diag_dump(repo)` (loads latest `*B2_diag_pull*.npy` from `_tmp_link_mi`).
+   - Added `_spm_dir_mi_subprocess_from_npy(...)` (fresh Python process check on same dumped bytes).
+   - Added `test_spm_dir_MI_link_diag_dump_fast_oracle`:
+     - compares parent vs subprocess on dump (must match),
+     - asserts current mismatch class persists on this fixture (MATLAB tiny nonzero vs Python zero + scalar byte mismatch),
+     - runs quickly and skips with explicit message if no dump exists.
+
+**Validation runs:**
+
+- `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q`
+  - before seeding dump: **skipped** in 3.40s (expected).
+
+- Lane C seed run (checkpoint + MI_PUSH + EIG + native link MI + `RGMS_FSL_LINK_MI_DUMP=1`):
+  - command: exhaustive selector (`--runxfail -q --tb=short`)
+  - result: **FAIL** at expected boundary `MDP{1}.ss.ID{1,2}(1,58)` in **712.22s**.
+  - dump now persisted at:
+    `tests\oracle\toolbox\DEM\_tmp_link_mi\lev1_s1_2_k1_58_g21_B2_diag_pull_70eb08afc10f.npy`
+  - hash: `70eb08afc10f726e33d1085e2a7ac8e8408ea0b42063abbf3f44277e89d4fa62`
+
+- Fast diagnostic loop after seeding:
+  - `pytest tests/oracle/test_spm_dir_MI.py::test_spm_dir_MI_link_diag_dump_fast_oracle -q`
+  - result: **PASS** in **4.36s**.
+
+- Lane D safety recheck (checkpoint + MI_PUSH + EIG + LINK_DIR_MI_MATLAB):
+  - command: exhaustive selector (`--runxfail -q --tb=short`)
+  - result: **PASS** in **621.53s** (~10:21).
+
+**Interpretation for workflow:**
+
+- Day-to-day `spm_dir_MI` debugging can now use the new fast test (~seconds) on a fixed failing fixture.
+- Lane C and Lane D remain unchanged and are still available as exact long-run milestone gates.
+
+**Files read this iteration:** `tests\oracle\test_spm_dir_MI.py`, `python_src\spm_dir_MI.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `tests\oracle\test_spm_dir_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
 
 ---
 
@@ -179,9 +1077,9 @@ cd C:\Users\andre\.cursor\RGMs ; conda activate rgms ; $env:RGMS_FSL_USE_CHECKPO
 
 **Process timing (from terminal metadata):** `elapsed_ms: 1386754` (~23.1 min wall from shell wrapper); pytest-reported duration **1322.02 s** (~22.0 min).
 
-**Stdout detail note:** the background capture contained only the progress dot, the pass line, and no additional `[TIMER]` / `[DIAG]` lines in the recorded stream (quiet mode + minimal tee). For lane-to-lane timing comparison, prefer pytest’s `1 passed in …s` and the shell `elapsed_ms` above.
+**Stdout detail note:** the background capture contained only the progress dot, the pass line, and no additional `[TIMER]` / `[DIAG]` lines in the recorded stream (quiet mode + minimal tee). For lane-to-lane timing comparison, prefer pytest???s `1 passed in ???s` and the shell `elapsed_ms` above.
 
-**Interpretation (Lane D):** with MATLAB `spm_dir_MI` applied on linked stream tensors in `_link_streams`, the full exhaustive oracle completes on this checkpoint—consistent with Lane C’s failure being isolated to native `spm_dir_MI` vs MATLAB on identical `a` bytes.
+**Interpretation (Lane D):** with MATLAB `spm_dir_MI` applied on linked stream tensors in `_link_streams`, the full exhaustive oracle completes on this checkpoint???consistent with Lane C???s failure being isolated to native `spm_dir_MI` vs MATLAB on identical `a` bytes.
 
 **Cross-lane snapshot (this rerun):**
 
@@ -190,7 +1088,7 @@ cd C:\Users\andre\.cursor\RGMs ; conda activate rgms ; $env:RGMS_FSL_USE_CHECKPO
 | A | off | off | off | FAIL | `spm_rgm_group` stream 1 group 2 (canonical bytes) | ~17.3 s |
 | B | off | on | off | FAIL | same as A (spectral / group order) | ~619.7 s (~10m20s) |
 | C | on | on | off | FAIL | `MDP{1}.ss.ID(1,58)`; `[SS-LINK-DIAG]` MI 0 vs ~8.88e-16 | ~1187.5 s (~19m48s) |
-| D | on | on | on | PASS | (none — full tree) | 1322.02 s (~22m02s) |
+| D | on | on | on | PASS | (none ??? full tree) | 1322.02 s (~22m02s) |
 
 **Shared files touched:** none.
 
@@ -280,7 +1178,7 @@ tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_
 
 ---
 
-## Iteration — minimal MATLAB-line literal fix in concise plan
+## Iteration ??? minimal MATLAB-line literal fix in concise plan
 
 **Modified:** ``notes\structure_learning_plan_week2_22APR2026.md`` (Section 3 only,
 minimal edits) to replace ellipsized placeholders with the exact snippet lines:
@@ -297,7 +1195,7 @@ line substitutions.
 
 ---
 
-## Iteration — new concise Week-2 plan document (22APR2026)
+## Iteration ??? new concise Week-2 plan document (22APR2026)
 
 **Created:** ``notes\structure_learning_plan_week2_22APR2026.md`` as a shorter,
 focused planning artifact replacing the cluttered structure of the older week-2
@@ -305,14 +1203,14 @@ plan for active operational use.
 
 **Requested structure implemented exactly:**
 
-1. ``# 1. Plan`` — translation scope and immediate objective.
-2. ``# 2. Purpose of code`` — paragraph-level meaning of each key function
+1. ``# 1. Plan`` ??? translation scope and immediate objective.
+2. ``# 2. Purpose of code`` ??? paragraph-level meaning of each key function
    (`spm_MDP_pong`, `spm_MDP_generate`, `spm_faster_structure_learning`,
    `spm_rgm_group`, `spm_dir_MI`).
-3. ``# 3. Current setup and issues`` — ordered pipeline start-to-finish with
+3. ``# 3. Current setup and issues`` ??? ordered pipeline start-to-finish with
    validated points marked, and with checkpoint/flags annotated at the exact
    locations where temporary bypasses occur and why.
-4. ``# 4. Test Lanes and current evaluation`` — concise lane A–E definitions,
+4. ``# 4. Test Lanes and current evaluation`` ??? concise lane A???E definitions,
    followed by a three-paragraph broad evaluation of present progress and next
    classes of work.
 
@@ -325,15 +1223,15 @@ diagnostic scaffolding for investigated bottlenecks, not final runtime design.
 
 **Blockers / notes:** `conda` env `rgms` initially lacked `pytest`, `numpy`, and `scipy`; installed via `pip` into `rgms` so oracle tests could run. No changes to `matlab_compat.py` or `tests/helpers/`.
 
-**Oracle:** `pytest tests\oracle\test_spm_dir_norm.py` — all tests passed.
+**Oracle:** `pytest tests\oracle\test_spm_dir_norm.py` ??? all tests passed.
 
 ---
 
-**Note:** Created `notes\andrew Python Matlab Translation Issues.md` — branch-specific translation issues file: copies settled content from repo-root `Python Matlab Translation Issues.md` and adds a settled section on MATLAB cell semantics vs naïve `np.asarray` (from the `spm_dir_norm` iteration). Repo-root `Python Matlab Translation Issues.md` was not modified.
+**Note:** Created `notes\andrew Python Matlab Translation Issues.md` ??? branch-specific translation issues file: copies settled content from repo-root `Python Matlab Translation Issues.md` and adds a settled section on MATLAB cell semantics vs na?ve `np.asarray` (from the `spm_dir_norm` iteration). Repo-root `Python Matlab Translation Issues.md` was not modified.
 
 ---
 
-## Iteration — `spm_vec` (Phase 0, Tier 0 item 0.6)
+## Iteration ??? `spm_vec` (Phase 0, Tier 0 item 0.6)
 
 **Inspected:** `rgms-rules.mdc`, `AGENTS.md`, `Migration Plan.md`, `Migration Tactics.md`, `notes\andrew Python Matlab Translation Issues.md`, this log; templates `python_src\spm_log.py`, `spm_cat.py`, `spm_sum.py`, `spm_dir_norm.py`, `spm_cross.py`, `spm_dot.py`; oracle tests `test_spm_log.py`, `test_spm_cat.py`, `test_spm_sum.py`, `test_spm_dir_norm.py`; `tests\conftest.py`, `tests\helpers\matlab_engine.py`, `tests\helpers\compare.py`; MATLAB source `C:\Users\andre\Documents\MATLAB\spm-main\spm_vec.m` (and `spm_unvec.m` for staging only).
 
@@ -347,13 +1245,13 @@ diagnostic scaffolding for investigated bottlenecks, not final runtime design.
 
 **Temporary / debug files:** none created or deleted.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_vec.py` — 9 passed. No conda packages installed or environment mutation for this iteration.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_vec.py` ??? 9 passed. No conda packages installed or environment mutation for this iteration.
 
-**Not done this pass:** `spm_unvec` (Python and oracle) — awaiting explicit transition after review.
+**Not done this pass:** `spm_unvec` (Python and oracle) ??? awaiting explicit transition after review.
 
 ---
 
-## Iteration — `spm_unvec` (Phase 0, Tier 0 item 0.7)
+## Iteration ??? `spm_unvec` (Phase 0, Tier 0 item 0.7)
 
 **Inspected:** `rgms-rules.mdc`, `AGENTS.md`, `Migration Plan.md`, `Migration Tactics.md`, `notes\andrew Python Matlab Translation Issues.md`, this log; `matlab_src\spm_unvec.m`, `python_src\spm_vec.py`, `spm_dir_norm.py`, `spm_cat.py`; `tests\oracle\test_spm_vec.py`, `test_spm_dir_norm.py`, `test_spm_cat.py` (partial); `tests\conftest.py`, `tests\helpers\matlab_engine.py`, `tests\helpers\compare.py`; `matlab_src\spm_length.m` (reference only for private `_spm_length` mirroring).
 
@@ -369,15 +1267,15 @@ diagnostic scaffolding for investigated bottlenecks, not final runtime design.
 
 **Implementation notes:** `spm_unvec.py` includes a file-local `_spm_length` matching `spm_length.m` (not yet ported as its own module), duplicates `_cell_as_object_array` / `_iscell` patterns aligned with `spm_vec` and Andrew-branch cell rules; leaf templates use `as_matlab_array` for raw 1-D numeric/logical so row-vector orientation matches MATLAB `(1,n)` unvec output.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_unvec.py` — 10 passed. No conda or tooling changes.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_unvec.py` ??? 10 passed. No conda or tooling changes.
 
 ---
 
-## Iteration — evaluation: canonical vs `misc\depr` (`spm_dir_norm`, `spm_vec`, `spm_unvec`)
+## Iteration ??? evaluation: canonical vs `misc\depr` (`spm_dir_norm`, `spm_vec`, `spm_unvec`)
 
 **Inspected (read-only where noted):** `matlab_src\spm_dir_norm.m`, `spm_vec.m`, `spm_unvec.m`; canonical `python_src\spm_dir_norm.py`, `spm_vec.py`, `spm_unvec.py`; `tests\oracle\test_spm_dir_norm.py`, `test_spm_vec.py`, `test_spm_unvec.py`; alternative `misc\depr\spm_dir_norm.py`, `spm_vec.py`, `spm_unvec.py` and paired `misc\depr\test_*.py`; `matlab_compat.py` (for `as_matlab_array` / `full` coherence).
 
-**Executed:** `git branch --show-current` (on `andrew`); `conda activate rgms`; `python -m pytest tests\oracle\test_spm_dir_norm.py tests\oracle\test_spm_vec.py tests\oracle\test_spm_unvec.py` — **11 passed**; ad-hoc `importlib` load of `misc\depr` modules vs canonical on tensor `spm_dir_norm` fixture (depr produced **NaNs**, canonical matched oracle tensor numerics).
+**Executed:** `git branch --show-current` (on `andrew`); `conda activate rgms`; `python -m pytest tests\oracle\test_spm_dir_norm.py tests\oracle\test_spm_vec.py tests\oracle\test_spm_unvec.py` ??? **11 passed**; ad-hoc `importlib` load of `misc\depr` modules vs canonical on tensor `spm_dir_norm` fixture (depr produced **NaNs**, canonical matched oracle tensor numerics).
 
 **Created / deleted:** briefly created `misc\_tmp_matlab_tensor_check.py` during a quoting experiment, **deleted immediately** (misc remains effectively untouched for policy).
 
@@ -387,7 +1285,7 @@ diagnostic scaffolding for investigated bottlenecks, not final runtime design.
 
 ---
 
-## Iteration — deeper spectral-loop isolation (iteration-2 divergence)
+## Iteration ??? deeper spectral-loop isolation (iteration-2 divergence)
 
 **Read:** active Step-6 plan scope in `structure_learning_plan_week2.md`,
 forward-ordered notes in `notes\andrew Python Matlab Translation Issues.md`,
@@ -433,12 +1331,12 @@ checkpoint diagnostics in
 
 ---
 
-## Iteration — thorough bottleneck refresh (Step-6 spectral divergence)
+## Iteration ??? thorough bottleneck refresh (Step-6 spectral divergence)
 
-**Read:** `structure_learning_plan_week2.md` (§1.2 active checklist and current
+**Read:** `structure_learning_plan_week2.md` (?1.2 active checklist and current
 state), `notes\andrew Python Matlab Translation Issues.md` (forward-ordered T11
 rule + snippet-scale scope), `matlab_src\toolbox\DEM\spm_rgm_group.m` (spectral
-loop lines 83–105), `python_src\toolbox\DEM\spm_rgm_group.py`, and active
+loop lines 83???105), `python_src\toolbox\DEM\spm_rgm_group.py`, and active
 checkpointed exhaustive-gate diagnostics in
 `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
 
@@ -453,7 +1351,7 @@ checkpointed exhaustive-gate diagnostics in
 
 - Added deeper group diagnostics:
   - MATLAB spectral-loop trace capture for first two iterations (`i`, `j`,
-    eigenvalue vector) using MATLAB’s own `eig(...,'nobalance')` loop.
+    eigenvalue vector) using MATLAB???s own `eig(...,'nobalance')` loop.
   - Python spectral trace on the same MATLAB `MI` for multiple methods:
     `eigh`, `eig`, `eig`+`quicksort`, and `scipy.linalg.eig`.
   - Added eigenvalue-gap diagnostic for MATLAB iteration 2.
@@ -479,10 +1377,10 @@ checkpointed exhaustive-gate diagnostics in
 
 1. MATLAB and Python spectral iteration **1** agree exactly on selected group.
 2. Divergence starts at spectral iteration **2**.
-3. Running Python grouping on MATLAB’s exact `MI` still diverges at iteration 2
+3. Running Python grouping on MATLAB???s exact `MI` still diverges at iteration 2
    across all tested Python eig/sort variants (`eigh`, `eig`, `scipy eig`,
    quicksort tie path).
-4. MATLAB iteration-2 top eigenvalue gap is not near-zero (`gap12 ≈ 1.48e-02`),
+4. MATLAB iteration-2 top eigenvalue gap is not near-zero (`gap12 ??? 1.48e-02`),
    so the mismatch is not explained by a trivial leading-eigenvalue tie.
 5. Therefore the bottleneck is now tightly localized to MATLAB-vs-Python
    spectral decomposition behavior/ordering in `spm_rgm_group` iteration 2
@@ -492,7 +1390,7 @@ checkpointed exhaustive-gate diagnostics in
 
 ---
 
-## Iteration — earliest-within-MI isolation in Step 6
+## Iteration ??? earliest-within-MI isolation in Step 6
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` and
 active exhaustive terminal outputs.
@@ -513,14 +1411,14 @@ active exhaustive terminal outputs.
   float64 byte level.
 
 **Checks run:**
-- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` → fail at MI scalar checkpoint above.
+- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` ??? fail at MI scalar checkpoint above.
 - lint diagnostics on edited file: no errors.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — Step 6 restart from SL call start (validated Step-5 inputs)
+## Iteration ??? Step 6 restart from SL call start (validated Step-5 inputs)
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
 
@@ -543,7 +1441,7 @@ active exhaustive terminal outputs.
 
 ---
 
-## Iteration — Step 5 closure (`PDP.O(:,1:1000)` and `O(o,:)` slicing)
+## Iteration ??? Step 5 closure (`PDP.O(:,1:1000)` and `O(o,:)` slicing)
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`.
 
@@ -559,14 +1457,14 @@ active exhaustive terminal outputs.
   (`12,9,4,1,0`, `T=1000`, `k=1000`, replay contract).
 
 **Checks run:**
-- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py::test_snippet_sl_input_slice_boundary_oracle -q` → passed.
-- lint diagnostics on edited file → no errors.
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py::test_snippet_sl_input_slice_boundary_oracle -q` ??? passed.
+- lint diagnostics on edited file ??? no errors.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — Step 4 closure (`spm_get_hits` / `spm_get_miss`) on exact branch
+## Iteration ??? Step 4 closure (`spm_get_hits` / `spm_get_miss`) on exact branch
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`.
 
@@ -580,23 +1478,23 @@ active exhaustive terminal outputs.
   Python-computed indices from replay-aligned `pdp["o"]` and `pdp["id"]`.
 
 **Checks run:**
-- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py::test_snippet_helper_semantics_hits_miss_oracle -q` → passed.
-- lint diagnostics on edited test files → no errors.
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py::test_snippet_helper_semantics_hits_miss_oracle -q` ??? passed.
+- lint diagnostics on edited test files ??? no errors.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — `structure_learning_plan_week2.md` coherence rewrite for strict order
+## Iteration ??? `structure_learning_plan_week2.md` coherence rewrite for strict order
 
 **Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`;
-`structure_learning_plan_week2.md` existing §1.2 checklist;
+`structure_learning_plan_week2.md` existing ?1.2 checklist;
 `matlab_src\toolbox\DEM\spm_faster_structure_learning.m` (stream slicing and
 `spm_rgm_group` call context);
 `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` current gates.
 
 **Modified:** `structure_learning_plan_week2.md`:
-- Rewrote **§1.2** as one authoritative strict checklist with the exact
+- Rewrote **?1.2** as one authoritative strict checklist with the exact
   forward-ordered seven-step closure sequence:
   1) RNG contract/preamble,
   2) exact-branch `spm_MDP_pong`,
@@ -605,7 +1503,7 @@ active exhaustive terminal outputs.
   5) exact SL input closure (`PDP.O(:,1:1000)` and `O(o,:)` slicing),
   6) SL internals earliest-first,
   7) exhaustive `MDP` closure.
-- Added explicit “what does not count as progress.”
+- Added explicit ???what does not count as progress.???
 - Added per-cycle run discipline text that enforces restart from Step 1.
 - Added revision-history row noting this coherence reset.
 
@@ -615,21 +1513,21 @@ active exhaustive terminal outputs.
 
 ---
 
-## Iteration — plan cleanup to remove obsolete/redundant content
+## Iteration ??? plan cleanup to remove obsolete/redundant content
 
 **Read:** `structure_learning_plan_week2.md` (active checklist, oracle strategy,
 document-control sections) and `c:\Users\andre\.cursor\rules\rgms-rules.mdc`.
 
 **Modified:** `structure_learning_plan_week2.md` to shorten and deconflict:
-- trimmed obsolete `§1.1` “next focus” bullets; now points to authoritative `§1.2`,
-- updated `§5.1` RNG note to replay-first policy (`twister` + MATLAB draw replay),
-- condensed `§6.3` wording so status does not conflict with strict closure order,
-- removed redundant `§12.1` guardrail (now superseded by `§1.2`),
-- heavily condensed `§16` revision history to major milestones only,
-- removed `§17` appendix dependency matrix to reduce document length.
+- trimmed obsolete `?1.1` ???next focus??? bullets; now points to authoritative `?1.2`,
+- updated `?5.1` RNG note to replay-first policy (`twister` + MATLAB draw replay),
+- condensed `?6.3` wording so status does not conflict with strict closure order,
+- removed redundant `?12.1` guardrail (now superseded by `?1.2`),
+- heavily condensed `?16` revision history to major milestones only,
+- removed `?17` appendix dependency matrix to reduce document length.
 
 **Intent:** keep the up-to-date execution order and next-step policy explicit in
-`§1.2`, while moving detailed chronology to this log file.
+`?1.2`, while moving detailed chronology to this log file.
 
 **Shared files touched:** no.
 
@@ -637,7 +1535,7 @@ document-control sections) and `c:\Users\andre\.cursor\rules\rgms-rules.mdc`.
 
 ---
 
-## Iteration — Step 1 sanity + Step 2/3 exact-branch closures
+## Iteration ??? Step 1 sanity + Step 2/3 exact-branch closures
 
 **Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`,
 `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`,
@@ -657,22 +1555,22 @@ document-control sections) and `c:\Users\andre\.cursor\rules\rgms-rules.mdc`.
   `t=T/2`, `t=T`) across all outcomes to keep runtime tractable.
 
 **Checks run:**
-- Step 1 sanity: `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` → passed.
-- Step 2 exact branch: `pytest ...::test_spm_MDP_pong_na_true_snippet_branch_oracle -q` → passed.
-- Step 3 exact branch: `pytest ...::test_pong_na_true_then_generate_snippet_branch_oracle -q` → passed.
+- Step 1 sanity: `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` ??? passed.
+- Step 2 exact branch: `pytest ...::test_spm_MDP_pong_na_true_snippet_branch_oracle -q` ??? passed.
+- Step 3 exact branch: `pytest ...::test_pong_na_true_then_generate_snippet_branch_oracle -q` ??? passed.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — moved earliest divergence boundary into `spm_rgm_group` MI stage
+## Iteration ??? moved earliest divergence boundary into `spm_rgm_group` MI stage
 
 **Read:** `matlab_src\toolbox\DEM\spm_rgm_group.m`,
 `python_src\toolbox\DEM\spm_rgm_group.py`,
 `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`,
 and exhaustive run terminal outputs.
 
-**Modified:** `python_src\toolbox\DEM\spm_rgm_group.py` — made eigenvector
+**Modified:** `python_src\toolbox\DEM\spm_rgm_group.py` ??? made eigenvector
 component ordering deterministic with stable tie handling
 (`np.argsort(..., kind="mergesort")`) to better mirror MATLAB sort behavior.
 
@@ -689,68 +1587,68 @@ component ordering deterministic with stable tie handling
 
 **Oracle / checks run:**
 - `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` (multiple runs during checkpoint refinement): final earliest failure at `spm_rgm_group stream 1 MI`.
-- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` → passed.
-- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_oracle -q` → passed.
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` ??? passed.
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_oracle -q` ??? passed.
 
 **Shared files touched:** no.
 
-**Findings (summary):** canonical tree is wired to repo policy (`python_src` + `tests\oracle`, MATLAB Engine oracles, `matlab_compat` + `spm_length` usage on `spm_unvec`). `misc\depr` implementations diverge on **Dirichlet tensor** normalization (`spm_dir_norm`) relative to canonical/MATLAB-oracle behavior; `misc\depr\test_*.py` still **`from python_src...` import** — they validate **canonical** code, not the `misc\depr` modules, so the “alternative tests” are misaligned as committed. Recommendation recorded for stakeholders: **keep canonical** as repo truth; treat `misc\depr` as exploratory only unless tests are rewired and tensor semantics fixed.
+**Findings (summary):** canonical tree is wired to repo policy (`python_src` + `tests\oracle`, MATLAB Engine oracles, `matlab_compat` + `spm_length` usage on `spm_unvec`). `misc\depr` implementations diverge on **Dirichlet tensor** normalization (`spm_dir_norm`) relative to canonical/MATLAB-oracle behavior; `misc\depr\test_*.py` still **`from python_src...` import** ??? they validate **canonical** code, not the `misc\depr` modules, so the ???alternative tests??? are misaligned as committed. Recommendation recorded for stakeholders: **keep canonical** as repo truth; treat `misc\depr` as exploratory only unless tests are rewired and tensor semantics fixed.
 
-**Follow-up — `misc\depr` test harness + dual runs:** `pytest` does not load `tests\conftest.py` for paths under `misc\depr\` (not a descendant of `tests\`), so `eng` was unavailable until either a temporary repo-root `conftest.py` (used during evaluation, then removed) or the permanent fix documented in the next iteration. With MATLAB Engine available: **`misc\depr` test files × canonical `python_src` imports** → **19 passed, 5 failed** (failures confined to `test_spm_unvec.py`: sparse template expected a SciPy sparse return with `.toarray()` but canonical returned a dense `ndarray`; nested round-trips compared MATLAB **0-D scalar** shapes to Python **`(1, 1)`** fields). **Same `misc\depr` tests × `misc\depr` implementations** (loaded via a short-lived `_tmp_misc_depr_tests_impl_swap.py` that replaced `sys.modules['python_src.spm_*']` before `pytest.main`, file deleted after) → **24 passed**. Interpretation: the expanded `misc\depr` suite exercises **vec/unvec** edges (sparse output, scalar nesting) where the alternative `spm_unvec` matches those expectations and MATLAB in those scenarios, but that suite **does not include** the canonical **`spm_dir_norm` tensor** oracle; canonical remains necessary for full MATLAB alignment on Dirichlet tensors.
+**Follow-up ??? `misc\depr` test harness + dual runs:** `pytest` does not load `tests\conftest.py` for paths under `misc\depr\` (not a descendant of `tests\`), so `eng` was unavailable until either a temporary repo-root `conftest.py` (used during evaluation, then removed) or the permanent fix documented in the next iteration. With MATLAB Engine available: **`misc\depr` test files ?? canonical `python_src` imports** ??? **19 passed, 5 failed** (failures confined to `test_spm_unvec.py`: sparse template expected a SciPy sparse return with `.toarray()` but canonical returned a dense `ndarray`; nested round-trips compared MATLAB **0-D scalar** shapes to Python **`(1, 1)`** fields). **Same `misc\depr` tests ?? `misc\depr` implementations** (loaded via a short-lived `_tmp_misc_depr_tests_impl_swap.py` that replaced `sys.modules['python_src.spm_*']` before `pytest.main`, file deleted after) ??? **24 passed**. Interpretation: the expanded `misc\depr` suite exercises **vec/unvec** edges (sparse output, scalar nesting) where the alternative `spm_unvec` matches those expectations and MATLAB in those scenarios, but that suite **does not include** the canonical **`spm_dir_norm` tensor** oracle; canonical remains necessary for full MATLAB alignment on Dirichlet tensors.
 
 ---
 
-## Iteration — `misc\depr\conftest.py` (MATLAB Engine fixture for deprecated-side oracle tests)
+## Iteration ??? `misc\depr\conftest.py` (MATLAB Engine fixture for deprecated-side oracle tests)
 
-**Created:** `misc\depr\conftest.py` — re-exports session `eng` from `tests.helpers.matlab_engine` (same surface as `tests\conftest.py`) so `pytest misc\depr\test_*.py` discovers the MATLAB Engine fixture without placing `conftest.py` at repo root.
+**Created:** `misc\depr\conftest.py` ??? re-exports session `eng` from `tests.helpers.matlab_engine` (same surface as `tests\conftest.py`) so `pytest misc\depr\test_*.py` discovers the MATLAB Engine fixture without placing `conftest.py` at repo root.
 
 **Modified:** `logs\log_0.md` (this entry and small clarification in the evaluation paragraph above).
 
 **Shared files touched:** no.
 
-**Check:** `python -m pytest misc\depr\test_spm_unvec.py::test_spm_unvec_matrix_standalone_oracle` — passed under `conda activate rgms`.
+**Check:** `python -m pytest misc\depr\test_spm_unvec.py::test_spm_unvec_matrix_standalone_oracle` ??? passed under `conda activate rgms`.
 
 ---
 
-## Iteration — alternative `spm_unvec` / `spm_vec` wiring (`misc\depr`)
+## Iteration ??? alternative `spm_unvec` / `spm_vec` wiring (`misc\depr`)
 
 **Created:** `misc\__init__.py`, `misc\depr\__init__.py` (empty package markers so `misc.depr.spm_vec` imports resolve from repo root).
 
 **Modified:** `misc\depr\spm_unvec.py` (`from misc.depr.spm_vec import spm_vec`); `misc\depr\test_spm_unvec.py` (imports `spm_unvec` and `spm_vec` from `misc.depr`); `misc\depr\phase0_three_functions_differences_eval.md` (test-suite and `spm_unvec` sections updated for the new wiring and current pytest behavior).
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_unvec.py misc\depr\test_spm_unvec.py` — **14 passed** (four canonical oracle + ten `misc\depr` alternative-stack).
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_unvec.py misc\depr\test_spm_unvec.py` ??? **14 passed** (four canonical oracle + ten `misc\depr` alternative-stack).
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — `misc\depr` tests import only `misc.depr` (dir_norm + vec)
+## Iteration ??? `misc\depr` tests import only `misc.depr` (dir_norm + vec)
 
 **Modified:** `misc\depr\test_spm_dir_norm.py`, `misc\depr\test_spm_vec.py` (`from misc.depr.spm_*`); `misc\depr\phase0_three_functions_differences_eval.md` (test wiring and reproducibility); `logs\log_0.md` (this entry).
 
-**Oracle:** `python -m pytest tests\oracle\test_spm_dir_norm.py tests\oracle\test_spm_vec.py tests\oracle\test_spm_unvec.py misc\depr\test_spm_dir_norm.py misc\depr\test_spm_vec.py misc\depr\test_spm_unvec.py` — **35 passed** (11 canonical + 24 `misc\depr` on alternative stack).
+**Oracle:** `python -m pytest tests\oracle\test_spm_dir_norm.py tests\oracle\test_spm_vec.py tests\oracle\test_spm_unvec.py misc\depr\test_spm_dir_norm.py misc\depr\test_spm_vec.py misc\depr\test_spm_unvec.py` ??? **35 passed** (11 canonical + 24 `misc\depr` on alternative stack).
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — off-diagonal cross tests + eval docs (`misc\depr`)
+## Iteration ??? off-diagonal cross tests + eval docs (`misc\depr`)
 
 **Created:** `misc\depr\test_cross_oracle_on_alternative_spm_dir_norm.py`, `test_cross_oracle_on_alternative_spm_vec.py`, `test_cross_oracle_on_alternative_spm_unvec.py`, `test_cross_misc_depr_on_canonical_spm_dir_norm.py`, `test_cross_misc_depr_on_canonical_spm_vec.py`, `test_cross_misc_depr_on_canonical_spm_unvec.py` (duplicate bodies of `tests\oracle` vs `misc\depr` scenarios with swapped `python_src` / `misc.depr` imports only; **no edits** to original `tests\oracle\` or primary `misc\depr\test_spm_*.py`).
 
 **Modified:** `misc\depr\phase0_three_functions_differences_eval.md` (full cross-matrix section, reproducibility), `misc\depr\phase0_three_functions_differences_eval_CHAT_19apr2026.md` (prepended current-matrix summary + pointer to eval doc), `logs\log_0.md` (this entry).
 
-**Oracle:** `python -m pytest` on the six `test_cross_*` files — **28 passed, 7 failed** (tensor `spm_dir_norm` + struct-heavy `spm_vec` on alternative; five canonical `spm_unvec` expanded cases as documented).
+**Oracle:** `python -m pytest` on the six `test_cross_*` files ??? **28 passed, 7 failed** (tensor `spm_dir_norm` + struct-heavy `spm_vec` on alternative; five canonical `spm_unvec` expanded cases as documented).
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — single eval doc (`misc\depr`)
+## Iteration ??? single eval doc (`misc\depr`)
 
 **Deleted:** `misc\depr\phase0_three_functions_differences_eval.md`, `misc\depr\phase0_three_functions_differences_eval_CHAT_19apr2026.md`.
 
-**Created:** `misc\depr\spm_phase0_canonical_vs_alternative_evaluation.md` — consolidated evaluation (implementations, import boundaries, diagonal + cross tests, recorded **63 passed / 7 failed** on full primary+cross aggregate, per-failure analysis, merge guidance, reproducibility).
+**Created:** `misc\depr\spm_phase0_canonical_vs_alternative_evaluation.md` ??? consolidated evaluation (implementations, import boundaries, diagonal + cross tests, recorded **63 passed / 7 failed** on full primary+cross aggregate, per-failure analysis, merge guidance, reproducibility).
 
 **Modified:** `logs\log_0.md` (this entry).
 
@@ -758,9 +1656,9 @@ component ordering deterministic with stable tie handling
 
 ---
 
-## Iteration — team evaluation note (`misc\depr\phase0_three_functions_differences_eval.md`)
+## Iteration ??? team evaluation note (`misc\depr\phase0_three_functions_differences_eval.md`)
 
-**Created:** `misc\depr\phase0_three_functions_differences_eval.md` — prose evaluation of canonical `python_src` versus alternative `misc\depr` implementations for `spm_dir_norm`, `spm_vec`, and `spm_unvec`, including test-suite overlap, tensor `spm_dir_norm` semantics, sparse and scalar-shape behavior on `spm_unvec`, import wiring, and reproducibility pointers.
+**Created:** `misc\depr\phase0_three_functions_differences_eval.md` ??? prose evaluation of canonical `python_src` versus alternative `misc\depr` implementations for `spm_dir_norm`, `spm_vec`, and `spm_unvec`, including test-suite overlap, tensor `spm_dir_norm` semantics, sparse and scalar-shape behavior on `spm_unvec`, import wiring, and reproducibility pointers.
 
 **Modified:** `logs\log_0.md` (this entry).
 
@@ -768,7 +1666,7 @@ component ordering deterministic with stable tie handling
 
 ---
 
-## Iteration — compact `spm_phase0_canonical_vs_alternative_evaluation.md`
+## Iteration ??? compact `spm_phase0_canonical_vs_alternative_evaluation.md`
 
 **Modified:** `misc\depr\spm_phase0_canonical_vs_alternative_evaluation.md` (single intro + two sentences on cross tests + one `##` section per function).
 
@@ -778,33 +1676,33 @@ component ordering deterministic with stable tie handling
 
 ---
 
-## Iteration — docs: SPM install folder `spm12` → `spm-main`
+## Iteration ??? docs: SPM install folder `spm12` ??? `spm-main`
 
 **Inspected:** repo-wide search for `spm12` in project docs and path strings.
 
-**Modified:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`, `misc\rgms-rules.mdc`, `Migration Plan.md`, `Migration Tactics.md`, `logs\log_0.md` (historical path strings in prior entries), `matlab_custom\dump_rdp_DEM_AtariIII.m`, `matlab_custom\dump_rdp_DEM_chaos_compression.m` — only folder-name segment `spm12` → `spm-main` in path-like references (`spm12/` or `...\spm12\` or `spm12/toolbox`).
+**Modified:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`, `misc\rgms-rules.mdc`, `Migration Plan.md`, `Migration Tactics.md`, `logs\log_0.md` (historical path strings in prior entries), `matlab_custom\dump_rdp_DEM_AtariIII.m`, `matlab_custom\dump_rdp_DEM_chaos_compression.m` ??? only folder-name segment `spm12` ??? `spm-main` in path-like references (`spm12/` or `...\spm12\` or `spm12/toolbox`).
 
 **Shared files touched:** no (`matlab_compat.py` unchanged).
 
-**Left unchanged:** `matlab_custom\spm_rgm_log.md` (prose “spm12 code”, not a `spm12/` path).
+**Left unchanged:** `matlab_custom\spm_rgm_log.md` (prose ???spm12 code???, not a `spm12/` path).
 
 ---
 
-## Iteration — T1 `spm_speye` (Week 2 plan)
+## Iteration ??? T1 `spm_speye` (Week 2 plan)
 
 **Read:** `Python Matlab Translation Issues.md`, `notes\andrew Python Matlab Translation Issues.md`; `C:\Users\andre\Documents\MATLAB\spm-main\spm_speye.m` (source of truth); `tests\helpers\matlab_engine.py`, `tests\helpers\compare.py`, `tests\oracle\test_spm_cov2corr.py` (sparse oracle pattern).
 
 **Copied:** `spm_speye.m` from read-only SPM into `matlab_src\spm_speye.m` (verbatim staging).
 
-**Created:** `python_src\spm_speye.py` (Pass 1: `*args` nargin tail, `_spdiags_ones_k` for `spdiags(ones(m,1),k,m,n)`, `c==1` wrap recursion, `c==2` via CSC column nnz vs MATLAB `find(~any(D))`, square `D^o`); `tests\oracle\test_spm_speye.py` (dense `full(spm_speye(...))` workspace eval — Engine cannot return sparse).
+**Created:** `python_src\spm_speye.py` (Pass 1: `*args` nargin tail, `_spdiags_ones_k` for `spdiags(ones(m,1),k,m,n)`, `c==1` wrap recursion, `c==2` via CSC column nnz vs MATLAB `find(~any(D))`, square `D^o`); `tests\oracle\test_spm_speye.py` (dense `full(spm_speye(...))` workspace eval ??? Engine cannot return sparse).
 
 **Shared files touched:** no (`matlab_compat.py`, `tests\helpers\compare.py` unchanged).
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_speye.py` — 9 passed.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_speye.py` ??? 9 passed.
 
 ---
 
-## Iteration — T2 `spm_kron` (Week 2 plan)
+## Iteration ??? T2 `spm_kron` (Week 2 plan)
 
 **Read:** `notes\andrew Python Matlab Translation Issues.md` (opening / row-vector policy refresh); `C:\Users\andre\Documents\MATLAB\spm-main\spm_kron.m` (source of truth).
 
@@ -814,11 +1712,11 @@ component ordering deterministic with stable tie handling
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_kron.py` — 5 passed.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_kron.py` ??? 5 passed.
 
 ---
 
-## Iteration — T3 `spm_combinations` (Week 2 plan)
+## Iteration ??? T3 `spm_combinations` (Week 2 plan)
 
 **Read:** `notes\andrew Python Matlab Translation Issues.md` (row-vector policy refresh); `C:\Users\andre\Documents\MATLAB\spm-main\spm_combinations.m` (source of truth).
 
@@ -828,41 +1726,41 @@ component ordering deterministic with stable tie handling
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_combinations.py` — 5 passed.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_combinations.py` ??? 5 passed.
 
 ---
 
-## Iteration — T4 `spm_parents` (Week 2 plan)
+## Iteration ??? T4 `spm_parents` (Week 2 plan)
 
 **Read:** `notes\andrew Python Matlab Translation Issues.md` (row-vector policy refresh); `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_parents.m` (source of truth).
 
 **Copied:** `spm_parents.m` from read-only SPM into `matlab_src\toolbox\DEM\spm_parents.m` (verbatim staging).
 
-**Created:** `python_src\toolbox\DEM\spm_parents.py` (Pass 1: `id` dict; `g` MATLAB 1-based; `ff` path with `iscell(Q)` vs numeric `Q(id.ff)`; `fg`/`gg` as `ndarray` row `id.fg(g,[s{:}])` or nested list for `id.fg{g}{s{:}}`; `_cell_multi_get` for 1–2+ indices); `tests\oracle\toolbox\DEM\test_spm_parents.py` (state-independent, `ff`+numeric `fg`/`gg` matrices column-major `reshape`, nested cell `Q`/`fg`/`gg`, `ff` without `fg`/`gg`).
+**Created:** `python_src\toolbox\DEM\spm_parents.py` (Pass 1: `id` dict; `g` MATLAB 1-based; `ff` path with `iscell(Q)` vs numeric `Q(id.ff)`; `fg`/`gg` as `ndarray` row `id.fg(g,[s{:}])` or nested list for `id.fg{g}{s{:}}`; `_cell_multi_get` for 1???2+ indices); `tests\oracle\toolbox\DEM\test_spm_parents.py` (state-independent, `ff`+numeric `fg`/`gg` matrices column-major `reshape`, nested cell `Q`/`fg`/`gg`, `ff` without `fg`/`gg`).
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_parents.py` — 4 passed.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_parents.py` ??? 4 passed.
 
 ---
 
-## Iteration — T5 `spm_MDP_checkX` (Week 2 plan)
+## Iteration ??? T5 `spm_MDP_checkX` (Week 2 plan)
 
 **Read:** `notes\andrew Python Matlab Translation Issues.md`; staged `matlab_src\toolbox\DEM\spm_MDP_checkX.m` (SPM typo fix on default-`B` branch: `ndims(MDP.A{1})` not `ndims(A)`); `python_src\toolbox\DEM\spm_MDP_checkX.py`, `tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py`.
 
-**Modified:** `python_src\toolbox\DEM\spm_MDP_checkX.py` — fixed `C` default branch `append`/`np.asarray(..., dtype=...)` parentheses; synthetic missing-`B` maps to **2-D** `np.eye(n,n)` like MATLAB; after `spm_dir_norm` on each `B{f}`, drop singleton third dimension `(n,n,1)→(n,n)` to match MATLAB’s storage of `ones(n,n,1)`; `tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py` — `_pull_cell_matrix` temp name `rgms_tmp_mx` (MATLAB names cannot start with `_`); grid oracle uses struct indexing `G_out(1,1)` / `G_out(2,1)`; `id.g{1}` compare uses `np.atleast_2d` for Engine 0-d vs `(1,1)` Python. `notes\andrew Python Matlab Translation Issues.md` — new section on Engine eval identifiers, struct vs brace indexing, `B` trailing singleton, 1×1 scalar round-trip.
+**Modified:** `python_src\toolbox\DEM\spm_MDP_checkX.py` ??? fixed `C` default branch `append`/`np.asarray(..., dtype=...)` parentheses; synthetic missing-`B` maps to **2-D** `np.eye(n,n)` like MATLAB; after `spm_dir_norm` on each `B{f}`, drop singleton third dimension `(n,n,1)???(n,n)` to match MATLAB???s storage of `ones(n,n,1)`; `tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py` ??? `_pull_cell_matrix` temp name `rgms_tmp_mx` (MATLAB names cannot start with `_`); grid oracle uses struct indexing `G_out(1,1)` / `G_out(2,1)`; `id.g{1}` compare uses `np.atleast_2d` for Engine 0-d vs `(1,1)` Python. `notes\andrew Python Matlab Translation Issues.md` ??? new section on Engine eval identifiers, struct vs brace indexing, `B` trailing singleton, 1??1 scalar round-trip.
 
 **Shared files touched:** no (`matlab_compat.py`, `tests\helpers\compare.py` unchanged).
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py` — **3 passed**.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_checkX.py` ??? **3 passed**.
 
 ---
 
-## Iteration — T6 `spm_dir_MI` (Week 2 plan)
+## Iteration ??? T6 `spm_dir_MI` (Week 2 plan)
 
-**Read:** `notes\andrew Python Matlab Translation Issues.md`; `structure_learning_plan_week2.md` §8.8; read-only `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_MI.m`; `python_src\spm_log.py`, `spm_cat.py`; `matlab_compat.as_matlab_array`.
+**Read:** `notes\andrew Python Matlab Translation Issues.md`; `structure_learning_plan_week2.md` ?8.8; read-only `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_MI.m`; `python_src\spm_log.py`, `spm_cat.py`; `matlab_compat.as_matlab_array`.
 
-**Copied:** `spm_dir_MI.m` → `matlab_src\spm_dir_MI.m` (verbatim staging).
+**Copied:** `spm_dir_MI.m` ??? `matlab_src\spm_dir_MI.m` (verbatim staging).
 
 **Created:** `python_src\spm_dir_MI.py` (Pass 1: cell recursion; `a(:,:)` as `reshape(..., order='F')` with first row size preserved; local `_spm_H` with `scipy.special.psi`; optional `c` / `h` via sentinel so `spm_dir_MI(a, [], h)` matches MATLAB `nargin > 1`; costs use `spm_log` + matrix forms of `C'*sum(A,2)` and `sum(A,1)*H`; `spm_cat` on `h` with dense `.todense()` when sparse); `tests\oracle\test_spm_dir_MI.py` (7 cases). **Divergence:** multimodal + `h` cell branch uses per-modality `h[g]` (SPM line 25 passes whole `h` and mis-dimensions); oracle for that case uses MATLAB sum of unimodal calls; `_iscell_arg` avoids treating a plain numeric Python list as a modality cell.
 
@@ -870,15 +1768,15 @@ component ordering deterministic with stable tie handling
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_dir_MI.py` — **7 passed**.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\test_spm_dir_MI.py` ??? **7 passed**.
 
 ---
 
-## Iteration — T7 `spm_rgm_group` (Week 2 plan)
+## Iteration ??? T7 `spm_rgm_group` (Week 2 plan)
 
 **Read:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`; read-only `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_rgm_group.m`; `python_src\spm_cat.py`, `spm_MDP_MI.py`, `matlab_src\spm_cat.m` (path); staged `matlab_src\toolbox\DEM\spm_rgm_group.m`.
 
-**Copied:** `spm_rgm_group.m` → `matlab_src\toolbox\DEM\spm_rgm_group.m` (verbatim).
+**Copied:** `spm_rgm_group.m` ??? `matlab_src\toolbox\DEM\spm_rgm_group.m` (verbatim).
 
 **Created:** `python_src\toolbox\DEM\spm_rgm_group.py` (Pass 1: multimodal `kron` via `np.kron`; `spm_cat` row with dense `spm_cat` output; temporal-change flag `np.any` on `diff` along time; symmetric `MI` with `spm_MDP_MI` scalar branch; `np.linalg.eig` + eigenvector sort / `exp(-16)` pruning; `while` partition; final `(G{g}-1)*m` expansion); `tests\oracle\toolbox\DEM\test_spm_rgm_group.py` (4 cases: empty `O`, `No < dx` single group, clustering `dx=3`, `m=2`). MATLAB Engine assigns each `O{o,t}` with `matlab.double(..., size=(Ns,1))` so `spm_cat` matches column layout.
 
@@ -886,276 +1784,276 @@ component ordering deterministic with stable tie handling
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py` — **4 passed**.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py` ??? **4 passed**.
 
 ---
 
-## Iteration — `structure_learning_plan_week2.md` (Week 2 structure-learning plan)
+## Iteration ??? `structure_learning_plan_week2.md` (Week 2 structure-learning plan)
 
 **Inspected:** prior planning thread (MATLAB snippet, SPM dependency graph under `spm-main`, `matlab_src` / `python_src` inventories, topological and snippet-aligned staging).
 
-**Created:** `structure_learning_plan_week2.md` at repo root — full reference for gameplay + `spm_faster_structure_learning` translation: rules pointers, paths, full target script, inventories, SPM file table, per-function dependency sections, port order T1–T12, snippet stages S0–S6, oracle strategy, risks, definition of done, reporting obligations, appendix matrix.
+**Created:** `structure_learning_plan_week2.md` at repo root ??? full reference for gameplay + `spm_faster_structure_learning` translation: rules pointers, paths, full target script, inventories, SPM file table, per-function dependency sections, port order T1???T12, snippet stages S0???S6, oracle strategy, risks, definition of done, reporting obligations, appendix matrix.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — T8 `spm_MDP_generate` (Week 2 plan)
+## Iteration ??? T8 `spm_MDP_generate` (Week 2 plan)
 
 **Read:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`; staged `matlab_src\toolbox\DEM\spm_MDP_generate.m`; `python_src\toolbox\DEM\spm_MDP_generate.py`.
 
-**Modified:** `python_src\toolbox\DEM\spm_MDP_generate.py` — full local `_spm_induction` mirroring `spm_MDP_generate.m` (sparse `spm_kron` Kronecker chain, backwards reachability on `Bf`, `G` maximisation, `32*R` + `_spm_shiftdim_m32`); `_b_matrix_for_u` for MATLAB `B(:,:,u)` when `B` is folded `Ns×Ns`; `id_list` now `copy.deepcopy(mdp["id"])` per model; **critical fix:** prescribed `s`/`u` must not be copied via `s_new.ravel(order="F")[ii]=…` on C-contiguous `zeros` (`.ravel` can be a **copy**), so `s`/`u` were silently cleared and every timestep re-sampled — replaced with whole-matrix slice copy when shapes match `(Nf,T)` else `unravel_index` writes; `G` update uses `np.kron` over factors in `r_fac` order (MATLAB `R*P{r,k}` with `numel(r)==1`); imports `spm_kron` from `python_src`. **Created/extended:** `tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` — (1) minimal single-factor oracle with MATLAB `rand` replay; (2) `Ng=2`, `Nm=2`, no `hid`, `rand(120)` replay including `O{g,t}`; (3) `id.hid` single active factor row (induction exercised) with `rand(40)` replay.
+**Modified:** `python_src\toolbox\DEM\spm_MDP_generate.py` ??? full local `_spm_induction` mirroring `spm_MDP_generate.m` (sparse `spm_kron` Kronecker chain, backwards reachability on `Bf`, `G` maximisation, `32*R` + `_spm_shiftdim_m32`); `_b_matrix_for_u` for MATLAB `B(:,:,u)` when `B` is folded `Ns??Ns`; `id_list` now `copy.deepcopy(mdp["id"])` per model; **critical fix:** prescribed `s`/`u` must not be copied via `s_new.ravel(order="F")[ii]=???` on C-contiguous `zeros` (`.ravel` can be a **copy**), so `s`/`u` were silently cleared and every timestep re-sampled ??? replaced with whole-matrix slice copy when shapes match `(Nf,T)` else `unravel_index` writes; `G` update uses `np.kron` over factors in `r_fac` order (MATLAB `R*P{r,k}` with `numel(r)==1`); imports `spm_kron` from `python_src`. **Created/extended:** `tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` ??? (1) minimal single-factor oracle with MATLAB `rand` replay; (2) `Ng=2`, `Nm=2`, no `hid`, `rand(120)` replay including `O{g,t}`; (3) `id.hid` single active factor row (induction exercised) with `rand(40)` replay.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — `spm_MDP_generate` `s`/`u` init and `hid`/`hif` note.
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? `spm_MDP_generate` `s`/`u` init and `hid`/`hif` note.
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` — **3 passed**.
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` ??? **3 passed**.
 
 **Follow-up:** MATLAB `G(k)=R*P{r,k}` with `numel(r)>1` errors in R2024b Engine on staged `spm_MDP_generate.m`; multi-factor `hif` induction oracles need SPM-side resolution or a MATLAB-only harness before expanding Python oracles beyond single-factor `hif`.
 
 ---
 
-## Iteration — T9 `spm_MDP_pong` (Week 2 plan)
+## Iteration ??? T9 `spm_MDP_pong` (Week 2 plan)
 
 **Read:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`; read-only SPM `spm_MDP_pong.m`; staged mirror and assets.
 
-**Copied / staged:** `spm_MDP_pong.m` → `matlab_src\toolbox\DEM\spm_MDP_pong.m`; downloaded `baseball.png` and `bat.png` from `https://github.com/spm/spm/tree/main/toolbox/DEM` into `matlab_src\toolbox\DEM\` (SPM sprites for `imread`).
+**Copied / staged:** `spm_MDP_pong.m` ??? `matlab_src\toolbox\DEM\spm_MDP_pong.m`; downloaded `baseball.png` and `bat.png` from `https://github.com/spm/spm/tree/main/toolbox/DEM` into `matlab_src\toolbox\DEM\` (SPM sprites for `imread`).
 
-**Modified (MATLAB mirror):** `matlab_src\toolbox\DEM\spm_MDP_pong.m` — after default `Np`, added `nP = zeros(1,Np);` so all six outputs are assigned when `Np==0` (unmodified SPM leaves `nP` unset and the Engine errors on `[MDP,...,nP] = spm_MDP_pong(...)`).
+**Modified (MATLAB mirror):** `matlab_src\toolbox\DEM\spm_MDP_pong.m` ??? after default `Np`, added `nP = zeros(1,Np);` so all six outputs are assigned when `Np==0` (unmodified SPM leaves `nP` unset and the Engine errors on `[MDP,...,nP] = spm_MDP_pong(...)`).
 
-**Created:** `python_src\toolbox\DEM\spm_MDP_pong.py` (Pass 1: physics loop, `Na`/`Np` branches, `spm_dir_norm` on `B`, sparse `D`/`E`, MDP assembly, PNG via PyPNG `asDirect`, scipy `zoom` resize, `RGB.G` / nested `RGB.V` matching MATLAB’s Nr×Nc cell of repeated `V`); `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` (oracle: `cd` to DEM for `imread`; `(4,4,1,0,0)` full MDP+RGB; `(4,4,1,0,1)` with MATLAB `rand` replay via `numpy.random.rand` patch).
+**Created:** `python_src\toolbox\DEM\spm_MDP_pong.py` (Pass 1: physics loop, `Na`/`Np` branches, `spm_dir_norm` on `B`, sparse `D`/`E`, MDP assembly, PNG via PyPNG `asDirect`, scipy `zoom` resize, `RGB.G` / nested `RGB.V` matching MATLAB???s Nr??Nc cell of repeated `V`); `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` (oracle: `cd` to DEM for `imread`; `(4,4,1,0,0)` full MDP+RGB; `(4,4,1,0,1)` with MATLAB `rand` replay via `numpy.random.rand` patch).
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — `spm_MDP_pong` section (`nP`, `RGB.V` cell layout, PNG vs MATLAB `imread`, PyPNG).
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? `spm_MDP_pong` section (`nP`, `RGB.V` cell layout, PNG vs MATLAB `imread`, PyPNG).
 
 **Shared files touched:** no.
 
 **Environment:** `pip install pypng` into conda env **`rgms`** (PNG loading dependency).
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — **2 passed**. `RGB.V` compared with `assert_allclose(..., atol=155)` because MATLAB `imread` applies PNG display/gamma handling; PyPNG decodes raw samples (documented in branch notes).
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` ??? **2 passed**. `RGB.V` compared with `assert_allclose(..., atol=155)` because MATLAB `imread` applies PNG display/gamma handling; PyPNG decodes raw samples (documented in branch notes).
 
 ---
 
-## Iteration — `spm_MDP_pong` refinement (structure-learning focus, RGB oracle deferred)
+## Iteration ??? `spm_MDP_pong` refinement (structure-learning focus, RGB oracle deferred)
 
 **Inspected:** `rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`, `python_src\toolbox\DEM\spm_MDP_pong.py`, `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py`.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — oracle priority for **`MDP`/`id`** vs deferred **`RGB`**; **`Na`** reward/constraint tensor initialization note (match MATLAB `false` + `a(1,:,:)=true`).
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? oracle priority for **`MDP`/`id`** vs deferred **`RGB`**; **`Na`** reward/constraint tensor initialization note (match MATLAB `false` + `a(1,:,:)=true`).
 
-**Modified:** `python_src\toolbox\DEM\spm_MDP_pong.py` — **`Na`** branch: reward and miss likelihoods now use **`zeros((2,...))`** then **`a[0,:,:] = True`** (replacing incorrect **`np.ones`** that set both outcome rows true).
+**Modified:** `python_src\toolbox\DEM\spm_MDP_pong.py` ??? **`Na`** branch: reward and miss likelihoods now use **`zeros((2,...))`** then **`a[0,:,:] = True`** (replacing incorrect **`np.ones`** that set both outcome rows true).
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — default tests no longer assert **`RGB`**; added **`test_spm_MDP_pong_na_true_small_grid_oracle`** `(4,4,1,1,0)`; full RGB check moved to **`test_spm_MDP_pong_rgb_visualization_oracle`** marked **`@pytest.mark.skip`**; **`_assert_mdp_matches`** extended with **`isfield`** checks for **`id.reward`**, **`id.contraint`**, **`id.control`**.
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` ??? default tests no longer assert **`RGB`**; added **`test_spm_MDP_pong_na_true_small_grid_oracle`** `(4,4,1,1,0)`; full RGB check moved to **`test_spm_MDP_pong_rgb_visualization_oracle`** marked **`@pytest.mark.skip`**; **`_assert_mdp_matches`** extended with **`isfield`** checks for **`id.reward`**, **`id.contraint`**, **`id.control`**.
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — **3 passed**, **1 skipped** (RGB visualization oracle).
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` ??? **3 passed**, **1 skipped** (RGB visualization oracle).
 
 ---
 
-## Iteration — documentation (`structure_learning_plan_week2.md`)
+## Iteration ??? documentation (`structure_learning_plan_week2.md`)
 
-**Modified:** `structure_learning_plan_week2.md` — new **§1.1 Next focus (short-term handoff)** (integration oracle **`GDP→spm_MDP_checkX→spm_MDP_generate`** before SL; T10/T11 sequencing notes; optional `(12,9,…)` Pong; refresh **§6 / appendix** when repo catches up; **`spm_figure`** scope reminder); revision history row dated **2026-04-21**.
+**Modified:** `structure_learning_plan_week2.md` ??? new **?1.1 Next focus (short-term handoff)** (integration oracle **`GDP???spm_MDP_checkX???spm_MDP_generate`** before SL; T10/T11 sequencing notes; optional `(12,9,???)` Pong; refresh **?6 / appendix** when repo catches up; **`spm_figure`** scope reminder); revision history row dated **2026-04-21**.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — Pong → `spm_MDP_generate` integration gate (Week 2 §1.1)
+## Iteration ??? Pong ??? `spm_MDP_generate` integration gate (Week 2 ?1.1)
 
-**Goal:** Prove rollout parity for **`spm_MDP_pong` → GDP → `spm_MDP_generate(GDP)`** (with `spm_MDP_checkX` invoked inside generate, as in MATLAB line 48) **before** end-to-end **`spm_faster_structure_learning`** oracles.
+**Goal:** Prove rollout parity for **`spm_MDP_pong` ??? GDP ??? `spm_MDP_generate(GDP)`** (with `spm_MDP_checkX` invoked inside generate, as in MATLAB line 48) **before** end-to-end **`spm_faster_structure_learning`** oracles.
 
-**Read:** `structure_learning_plan_week2.md` §1.1; staged `matlab_src\toolbox\DEM\spm_MDP_generate.m` (local `spm_sample`); `notes\andrew Python Matlab Translation Issues.md` (for post-hoc RNG documentation).
+**Read:** `structure_learning_plan_week2.md` ?1.1; staged `matlab_src\toolbox\DEM\spm_MDP_generate.m` (local `spm_sample`); `notes\andrew Python Matlab Translation Issues.md` (for post-hoc RNG documentation).
 
-**Created:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py` — `spm_MDP_pong(4,4,1,1,0)` with **`Na=true`**, `GDP.T=4`, `GDP.tau=1`; MATLAB reference with **`rng(0,'twister')`** then `spm_MDP_generate(GDP)`; Python run with **`numpy.random.rand`** patched from MATLAB **`rng(0,'twister'); rand(8192,1)`** (explicit **`twister`** so buffer matches reference generator); asserts **`s`**, **`u`**, **`o`**, and every **`O{g,t}`** vs Engine.
+**Created:** `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py` ??? `spm_MDP_pong(4,4,1,1,0)` with **`Na=true`**, `GDP.T=4`, `GDP.tau=1`; MATLAB reference with **`rng(0,'twister')`** then `spm_MDP_generate(GDP)`; Python run with **`numpy.random.rand`** patched from MATLAB **`rng(0,'twister'); rand(8192,1)`** (explicit **`twister`** so buffer matches reference generator); asserts **`s`**, **`u`**, **`o`**, and every **`O{g,t}`** vs Engine.
 
-**Modified:** `python_src\toolbox\DEM\spm_MDP_generate.py` — (1) **Outcome likelihood sampling:** slice **`mdp["A"][g]`** without coercing the whole tensor to **`float64`** so **logical** columns stay **`bool`** and **`_spm_sample`** takes MATLAB’s **logical** path (`find` + `randperm`-equivalent consumption), not the numeric **`rand < cumsum`** path (which desynchronised RNG and policy **`PK`** draws); densify sparse slices with **`toarray()`** only; store **`O`** cells as **`float64`** for **`full(...)`** oracle compares. (2) **`_spm_sample` (bool):** mirror MATLAB **`twister`** stream pairing for local **`spm_sample`**: **`k==1`** uses no scalar **`rand()`**; **`2≤k≤4`** consumes **two** MATLAB-order **`rand()`** scalars then **`floor(r1*k)`** position among **`flatnonzero`** order; **`k≥5`** one **`rand()`**; do **not** use **`np.random.permutation`** for this replay contract. (3) **`O` cell sizing:** second dimension must follow MATLAB **`cell(Nm, max(Ng), T)`** (use **`max(Ng)`**, not **`max(No(g))`**) so **`O{g,t}`** columns are not truncated when **`Ng ≫ max(No)`** (Pong with **`Na=true`**).
+**Modified:** `python_src\toolbox\DEM\spm_MDP_generate.py` ??? (1) **Outcome likelihood sampling:** slice **`mdp["A"][g]`** without coercing the whole tensor to **`float64`** so **logical** columns stay **`bool`** and **`_spm_sample`** takes MATLAB???s **logical** path (`find` + `randperm`-equivalent consumption), not the numeric **`rand < cumsum`** path (which desynchronised RNG and policy **`PK`** draws); densify sparse slices with **`toarray()`** only; store **`O`** cells as **`float64`** for **`full(...)`** oracle compares. (2) **`_spm_sample` (bool):** mirror MATLAB **`twister`** stream pairing for local **`spm_sample`**: **`k==1`** uses no scalar **`rand()`**; **`2???k???4`** consumes **two** MATLAB-order **`rand()`** scalars then **`floor(r1*k)`** position among **`flatnonzero`** order; **`k???5`** one **`rand()`**; do **not** use **`np.random.permutation`** for this replay contract. (3) **`O` cell sizing:** second dimension must follow MATLAB **`cell(Nm, max(Ng), T)`** (use **`max(Ng)`**, not **`max(No(g))`**) so **`O{g,t}`** columns are not truncated when **`Ng ??? max(No)`** (Pong with **`Na=true`**).
 
-**Modified:** `python_src\toolbox\DEM\spm_MDP_checkX.py` — when normalising **`D`/`E`**, if a factor matrix is **sparse CSR**, **`full`** it before **`reshape`** to a dense column (MATLAB **`full`**); avoids failures on sparse **`D`/`E`** from Pong.
+**Modified:** `python_src\toolbox\DEM\spm_MDP_checkX.py` ??? when normalising **`D`/`E`**, if a factor matrix is **sparse CSR**, **`full`** it before **`reshape`** to a dense column (MATLAB **`full`**); avoids failures on sparse **`D`/`E`** from Pong.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — new **§ RNG: `spm_MDP_generate`, logical `A{g}`, `spm_sample`, and MATLAB–Python `rand()` replay** (generator label **`twister`**, logical vs numeric **`spm_sample`**, **`randperm`** stream consumption, **`Np==0`** preamble for buffers, limits of **`rand()`**-only replay).
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? new **? RNG: `spm_MDP_generate`, logical `A{g}`, `spm_sample`, and MATLAB???Python `rand()` replay** (generator label **`twister`**, logical vs numeric **`spm_sample`**, **`randperm`** stream consumption, **`Np==0`** preamble for buffers, limits of **`rand()`**-only replay).
 
-**Modified:** `structure_learning_plan_week2.md` and **`logs\log_0.md`** (this entry) — status through §1.1 gate; §6/§8/revision/appendix refresh for “as of 2026-04-21”.
+**Modified:** `structure_learning_plan_week2.md` and **`logs\log_0.md`** (this entry) ??? status through ?1.1 gate; ?6/?8/revision/appendix refresh for ???as of 2026-04-21???.
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` — **4 passed** (integration + three existing **`spm_MDP_generate`** oracles).
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py tests\oracle\toolbox\DEM\test_spm_MDP_generate.py` ??? **4 passed** (integration + three existing **`spm_MDP_generate`** oracles).
 
 **Next coherent step (not done here):** **`spm_faster_structure_learning` (T11)** and/or **`spm_O2rgb` (T10)** per plan; optionally wire the integration test (and/or generate oracles) as a **mandatory CI** gate.
 
 ---
 
-## Iteration — T11 `spm_faster_structure_learning` (start; rules reread)
+## Iteration ??? T11 `spm_faster_structure_learning` (start; rules reread)
 
-**Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc` (MATLAB source read-only; one-file workflow; `conda activate rgms`; branch **`andrew`**; minimal `matlab_compat` / `tests\helpers` edits; append log); `structure_learning_plan_week2.md` §8.10 / §9 T11; staged `matlab_src\toolbox\DEM\spm_faster_structure_learning.m`.
+**Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc` (MATLAB source read-only; one-file workflow; `conda activate rgms`; branch **`andrew`**; minimal `matlab_compat` / `tests\helpers` edits; append log); `structure_learning_plan_week2.md` ?8.10 / ?9 T11; staged `matlab_src\toolbox\DEM\spm_faster_structure_learning.m`.
 
-**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_faster_structure_learning.m` → `matlab_src\toolbox\DEM\spm_faster_structure_learning.m` (verbatim staging; file was absent in RGMs).
+**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_faster_structure_learning.m` ??? `matlab_src\toolbox\DEM\spm_faster_structure_learning.m` (verbatim staging; file was absent in RGMs).
 
-**Attempted then reverted (do not rely on):** A first-pass Python module with local-helper transliteration and helper-only oracles was drafted; **`spm_unique`** / outcome-cell layout for **`spm_structure_fast`** and sparse index construction for **`spm_group`** did not match MATLAB Engine references on the first try, so **`python_src\toolbox\DEM\spm_faster_structure_learning.py`**, standalone **`spm_structure_fast.m` / `spm_group.m` shims**, and **`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_helpers.py`** were **deleted** to avoid leaving misleading or broken code. No substitute “trust” path was introduced.
-
-**Shared files touched:** no.
-
-**MATLAB smoke (manual, outside pytest):** `spm_faster_structure_learning` on a tiny **`O`** cell (`2×6`) and **`S = [1 1 1 2]`** returns **`numel(MDP) == 2`** with expected top-level fields on **`MDP{1}`** (`a`, `b`, `id`, `ss`, `T`, `G`, `sA`, `sB`, `sC`) — confirms staged `.m` runs under Engine when **`matlab_src`** + DEM are on the path.
-
-**Next coherent steps for T11:** (1) Port **local** `spm_structure_fast` and `spm_group` **inside** `spm_faster_structure_learning.py` (same module per rules), validating each with Engine oracles that call the **parent** `.m` file only (local functions callable from the same file in MATLAB) or by **inlining** the MATLAB reference string in `eng.eval` for that file only — avoid duplicate standalone `.m` unless the team explicitly wants shim files. (2) Port the outer **`for n = 1:8`** body in small slices (single-stream **`size(S,1)==1`** first, then stream linking **`n > 1`**). (3) Add **`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`** starting with **`PDP.O(:,1:k)`**-shaped inputs and small **`k`**, **`rng`** policy aligned with **`notes\andrew Python Matlab Translation Issues.md`** RNG section.
-
----
-
-## Iteration — T11 locals inside `spm_faster_structure_learning.py` (helpers + oracles)
-
-**Read:** `rgms-rules.mdc` (locals in same Python module; oracle vs MATLAB; `tests\oracle` for file-specific logic); staged `matlab_src\toolbox\DEM\spm_faster_structure_learning.m` lines 348–511 (local `spm_structure_fast`, `spm_group`).
-
-**Created:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` — **`_spm_group`**, **`_spm_structure_fast`** (Pass 1); **`spm_faster_structure_learning`** still **`NotImplementedError`** until the outer loop is ported.
-
-**Created (Engine only — not `matlab_src`):** `tests\oracle\toolbox\DEM\matlab_ref\oracle_spm_structure_fast.m`, `oracle_spm_group.m` — verbatim copies of the two **local** MATLAB functions renamed for **`eng.eval`**, because MATLAB Engine cannot call subfunctions inside another file.
-
-**Created:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — oracles: **`oracle_spm_group`** vs **`_spm_group`** for **`[4,4,1,1], d=2`** and default-**`d`** on **`[9,9,1,1]`**; **`oracle_spm_structure_fast`** vs **`_spm_structure_fast`** on a **1×3** outcome row (three **`4×1`** columns). Pull helpers use **`full(...)`** for MATLAB sparse **`a`**/**`b`**; **`b`** shape normalised (**scalar / 2-D / 3-D**) before numeric compare.
+**Attempted then reverted (do not rely on):** A first-pass Python module with local-helper transliteration and helper-only oracles was drafted; **`spm_unique`** / outcome-cell layout for **`spm_structure_fast`** and sparse index construction for **`spm_group`** did not match MATLAB Engine references on the first try, so **`python_src\toolbox\DEM\spm_faster_structure_learning.py`**, standalone **`spm_structure_fast.m` / `spm_group.m` shims**, and **`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_helpers.py`** were **deleted** to avoid leaving misleading or broken code. No substitute ???trust??? path was introduced.
 
 **Shared files touched:** no.
 
-**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — **3 passed**.
+**MATLAB smoke (manual, outside pytest):** `spm_faster_structure_learning` on a tiny **`O`** cell (`2??6`) and **`S = [1 1 1 2]`** returns **`numel(MDP) == 2`** with expected top-level fields on **`MDP{1}`** (`a`, `b`, `id`, `ss`, `T`, `G`, `sA`, `sB`, `sC`) ??? confirms staged `.m` runs under Engine when **`matlab_src`** + DEM are on the path.
 
-**Next coherent step for T11:** Port **`spm_faster_structure_learning`** main body (outer **`n`** loop, **`SPINBLOCK==false`** branch first), then **`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`** with small **`O`** windows and **`S`** as in §12 / integration path.
+**Next coherent steps for T11:** (1) Port **local** `spm_structure_fast` and `spm_group` **inside** `spm_faster_structure_learning.py` (same module per rules), validating each with Engine oracles that call the **parent** `.m` file only (local functions callable from the same file in MATLAB) or by **inlining** the MATLAB reference string in `eng.eval` for that file only ??? avoid duplicate standalone `.m` unless the team explicitly wants shim files. (2) Port the outer **`for n = 1:8`** body in small slices (single-stream **`size(S,1)==1`** first, then stream linking **`n > 1`**). (3) Add **`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`** starting with **`PDP.O(:,1:k)`**-shaped inputs and small **`k`**, **`rng`** policy aligned with **`notes\andrew Python Matlab Translation Issues.md`** RNG section.
 
 ---
 
-## Iteration — T11 main `spm_faster_structure_learning` (Pass 1 + oracle)
+## Iteration ??? T11 locals inside `spm_faster_structure_learning.py` (helpers + oracles)
+
+**Read:** `rgms-rules.mdc` (locals in same Python module; oracle vs MATLAB; `tests\oracle` for file-specific logic); staged `matlab_src\toolbox\DEM\spm_faster_structure_learning.m` lines 348???511 (local `spm_structure_fast`, `spm_group`).
+
+**Created:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` ??? **`_spm_group`**, **`_spm_structure_fast`** (Pass 1); **`spm_faster_structure_learning`** still **`NotImplementedError`** until the outer loop is ported.
+
+**Created (Engine only ??? not `matlab_src`):** `tests\oracle\toolbox\DEM\matlab_ref\oracle_spm_structure_fast.m`, `oracle_spm_group.m` ??? verbatim copies of the two **local** MATLAB functions renamed for **`eng.eval`**, because MATLAB Engine cannot call subfunctions inside another file.
+
+**Created:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? oracles: **`oracle_spm_group`** vs **`_spm_group`** for **`[4,4,1,1], d=2`** and default-**`d`** on **`[9,9,1,1]`**; **`oracle_spm_structure_fast`** vs **`_spm_structure_fast`** on a **1??3** outcome row (three **`4??1`** columns). Pull helpers use **`full(...)`** for MATLAB sparse **`a`**/**`b`**; **`b`** shape normalised (**scalar / 2-D / 3-D**) before numeric compare.
+
+**Shared files touched:** no.
+
+**Oracle:** `conda activate rgms` then `python -m pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? **3 passed**.
+
+**Next coherent step for T11:** Port **`spm_faster_structure_learning`** main body (outer **`n`** loop, **`SPINBLOCK==false`** branch first), then **`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`** with small **`O`** windows and **`S`** as in ?12 / integration path.
+
+---
+
+## Iteration ??? T11 main `spm_faster_structure_learning` (Pass 1 + oracle)
 
 **Read:** staged `matlab_src\toolbox\DEM\spm_faster_structure_learning.m` (outer **`n`**, **`~SPINBLOCK`** path, stream link, termination **`max(Ng)<2 && n>1`**, compression / **`kron`**, **`O = N(i,:)`**); `python_src\spm_vec.py` / `spm_unvec.py`, `spm_dir_norm`, `spm_dir_MI`, `spm_rgm_group`.
 
-**Modified:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` — **`spm_faster_structure_learning`** implemented (not **`NotImplementedError`**): **`dx`/`dt`** padding to length 17 like MATLAB; per-stream **`spm_rgm_group`** + **`spm_unvec(spm_vec(G)+No,G)`**; **`_spm_structure_fast`** with **`gg`** row-wise **`a`** assignment and **`N(iD,:)` / `N(iE,:)`** cells keyed by **`(row, col)`**; stream link block (**`n>1`**) mirroring **`sg{si}(i,f)`** indexing; termination **before** compression when **`max(Ng)<2 && n>1`**; compression + **`id.D`/`id.E`** remap via **`find(ismember(i,...))`** pattern (positions into **`i`**); next-level **`O`** from **`N(i,:)`**. **`SPINBLOCK`** remains **`False`** (else branch not used).
+**Modified:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` ??? **`spm_faster_structure_learning`** implemented (not **`NotImplementedError`**): **`dx`/`dt`** padding to length 17 like MATLAB; per-stream **`spm_rgm_group`** + **`spm_unvec(spm_vec(G)+No,G)`**; **`_spm_structure_fast`** with **`gg`** row-wise **`a`** assignment and **`N(iD,:)` / `N(iE,:)`** cells keyed by **`(row, col)`**; stream link block (**`n>1`**) mirroring **`sg{si}(i,f)`** indexing; termination **before** compression when **`max(Ng)<2 && n>1`**; compression + **`id.D`/`id.E`** remap via **`find(ismember(i,...))`** pattern (positions into **`i`**); next-level **`O`** from **`N(i,:)`**. **`SPINBLOCK`** remains **`False`** (else branch not used).
 
-**Created:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — **`test_spm_faster_structure_learning_two_level_oracle`**: **`2×4`** stochastic columns, **`S=[1,1,1,2]`**, **`dx=16`**, **`dt=2`**; asserts **`numel(MDP)==2`**, level-1 **`a{1:2,1}`**, **`b{1}`**, **`T`**, parity with Engine on **`MDP_out`**.
+**Created:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? **`test_spm_faster_structure_learning_two_level_oracle`**: **`2??4`** stochastic columns, **`S=[1,1,1,2]`**, **`dx=16`**, **`dt=2`**; asserts **`numel(MDP)==2`**, level-1 **`a{1:2,1}`**, **`b{1}`**, **`T`**, parity with Engine on **`MDP_out`**.
 
 **Shared files touched:** no.
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — **4 passed**.
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? **4 passed**.
 
 **Next coherent steps:** widen oracle (more streams / **`n`** before break, **`id`/`ss`** fields); wire **`PDP.O(:,1:k)`** from integration path; optional **`rng`** alignment if script-level replay is required.
 
 ---
 
-## Iteration — T11 `PDP.O(:,1:k)` oracle + plan §6 refresh + `_link_streams` fix
+## Iteration ??? T11 `PDP.O(:,1:k)` oracle + plan ?6 refresh + `_link_streams` fix
 
-**Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md` §1.1 / §6; `notes\andrew Python Matlab Translation Issues.md` (RNG); `test_spm_MDP_pong_generate_integration.py` (replay harness).
+**Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md` ?1.1 / ?6; `notes\andrew Python Matlab Translation Issues.md` (RNG); `test_spm_MDP_pong_generate_integration.py` (replay harness).
 
-**Fixed:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` — **`_link_streams`**: **`spm_dir_norm(MDP{n}.a{gj})`** (current level **`n`**) per staged **`spm_faster_structure_learning.m`** lines 181 and 204 (was incorrectly using **`mdp_prev["a"]`**, causing shape mismatch on multi-stream **`PDP.O`** slice).
+**Fixed:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` ??? **`_link_streams`**: **`spm_dir_norm(MDP{n}.a{gj})`** (current level **`n`**) per staged **`spm_faster_structure_learning.m`** lines 181 and 204 (was incorrectly using **`mdp_prev["a"]`**, causing shape mismatch on multi-stream **`PDP.O`** slice).
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — new **`test_spm_faster_structure_learning_pdp_o_slice_integration_oracle`** (`k=4`, **`S`** from §5 snippet, **`dx=9`**, **`dt=2`**); fixture **`dem_eng_fsl_pdp`** (**`cd`** to DEM like integration); **`_matlab_rand_buf_twister`** + **`patch("numpy.random.rand", ...)`** after MATLAB buffer. MATLAB slice is **`PDP_fsl.O(:,1:k)`** (struct field **`O`**, not **`PDP(:,...)`**).
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? new **`test_spm_faster_structure_learning_pdp_o_slice_integration_oracle`** (`k=4`, **`S`** from ?5 snippet, **`dx=9`**, **`dt=2`**); fixture **`dem_eng_fsl_pdp`** (**`cd`** to DEM like integration); **`_matlab_rand_buf_twister`** + **`patch("numpy.random.rand", ...)`** after MATLAB buffer. MATLAB slice is **`PDP_fsl.O(:,1:k)`** (struct field **`O`**, not **`PDP(:,...)`**).
 
-**Modified:** `structure_learning_plan_week2.md` — **§6.2** (T11 ported + oracle paths), **§6.3** (list **`spm_faster_structure_learning.py`**, T11 test files), revision row.
+**Modified:** `structure_learning_plan_week2.md` ??? **?6.2** (T11 ported + oracle paths), **?6.3** (list **`spm_faster_structure_learning.py`**, T11 test files), revision row.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — RNG subsection **`spm_faster_structure_learning` on `PDP.O(:,1:k)`**.
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? RNG subsection **`spm_faster_structure_learning` on `PDP.O(:,1:k)`**.
 
 **Deleted:** `tests\oracle\toolbox\DEM\_probe_fsl_pdp.py` (temporary probe).
 
 **Shared files touched:** no.
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — all pass.
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? all pass.
 
-**Next coherent steps:** increase **`k`** / add **`id`/`ss`** / **`a{·}`** spot checks; **T10** **`spm_O2rgb`** when RGB numeric parity is in scope; optional CI (§1.1 item 6).
+**Next coherent steps:** increase **`k`** / add **`id`/`ss`** / **`a{?}`** spot checks; **T10** **`spm_O2rgb`** when RGB numeric parity is in scope; optional CI (?1.1 item 6).
 
 ---
 
-## Iteration — plan reconciliation (§6.1 / §1.1 / §10 S0 / appendix) + PDP oracle warning filter
+## Iteration ??? plan reconciliation (?6.1 / ?1.1 / ?10 S0 / appendix) + PDP oracle warning filter
 
-**Read:** `structure_learning_plan_week2.md` (§6.1, §1.1(2), §10 S0, §16 revision, §17 appendix); `test_spm_faster_structure_learning.py`.
+**Read:** `structure_learning_plan_week2.md` (?6.1, ?1.1(2), ?10 S0, ?16 revision, ?17 appendix); `test_spm_faster_structure_learning.py`.
 
-**Modified:** `structure_learning_plan_week2.md` — **§6.1** adds explicit DEM chain line (post–original-glob refresh); **§1.1(2)** states T11 tiered oracle **done** for small **`k`** and points next work at T10 + T11 widening / **`SPINBLOCK`**; **§10 S0** reconciled with **§6.2** (**T11** done, **T10/T12** remain; removed redundant **T7** duplicate phrasing); **§16** — **T11 (locals)** row annotated as historical snapshot; **2026-04-21** revision row **Next** clause no longer implies T11 is unported; reconciliation row tightened.
+**Modified:** `structure_learning_plan_week2.md` ??? **?6.1** adds explicit DEM chain line (post???original-glob refresh); **?1.1(2)** states T11 tiered oracle **done** for small **`k`** and points next work at T10 + T11 widening / **`SPINBLOCK`**; **?10 S0** reconciled with **?6.2** (**T11** done, **T10/T12** remain; removed redundant **T7** duplicate phrasing); **?16** ??? **T11 (locals)** row annotated as historical snapshot; **2026-04-21** revision row **Next** clause no longer implies T11 is unported; reconciliation row tightened.
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — **`@pytest.mark.filterwarnings`** on **`test_spm_faster_structure_learning_pdp_o_slice_integration_oracle`** for **`spm_log`** divide-by-zero and **`spm_MDP_MI`** invalid divide (degenerate Dirichlet slices; MATLAB-equivalent silent handling).
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? **`@pytest.mark.filterwarnings`** on **`test_spm_faster_structure_learning_pdp_o_slice_integration_oracle`** for **`spm_log`** divide-by-zero and **`spm_MDP_MI`** invalid divide (degenerate Dirichlet slices; MATLAB-equivalent silent handling).
 
 **Shared files touched:** no.
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — **5 passed**, warnings summary clean for PDP slice test.
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? **5 passed**, warnings summary clean for PDP slice test.
 
 ---
 
-## Iteration — T11 toward full-chain testing (deeper MDP asserts, wider ``O`` window, ``SPINBLOCK`` sign-off)
+## Iteration ??? T11 toward full-chain testing (deeper MDP asserts, wider ``O`` window, ``SPINBLOCK`` sign-off)
 
-**Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md` §1.1 / §6.3 / §10 S6; `notes\andrew Python Matlab Translation Issues.md` (PDP slice section).
+**Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md` ?1.1 / ?6.3 / ?10 S6; `notes\andrew Python Matlab Translation Issues.md` (PDP slice section).
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — **`SPINBLOCK=false`** as snippet default; **`SPINBLOCK=true`** deferred until a driver + oracle exist; note on **`k`** vs **`GDP.T`** and **`rand`** buffer size for wider windows.
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? **`SPINBLOCK=false`** as snippet default; **`SPINBLOCK=true`** deferred until a driver + oracle exist; note on **`k`** vs **`GDP.T`** and **`rand`** buffer size for wider windows.
 
-**Modified:** `tests\conftest.py` — **`pytest_configure`** registers **`slow`** marker (§12.4).
+**Modified:** `tests\conftest.py` ??? **`pytest_configure`** registers **`slow`** marker (?12.4).
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — **`_assert_s_a_id_de`** ( **`sA(:)`**, first five **`id.D`/`id.E`** factors) on PDP **`k=4`** oracle; new **`test_spm_faster_structure_learning_pdp_o_slice_T12_k8_oracle`** (**`GDP.T=12`**, **`k=8`**, **`rand(16384,1)`**, **`@pytest.mark.slow`**); helpers **`_matlab_id_d_row`** / **`_matlab_id_e_row`**.
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? **`_assert_s_a_id_de`** ( **`sA(:)`**, first five **`id.D`/`id.E`** factors) on PDP **`k=4`** oracle; new **`test_spm_faster_structure_learning_pdp_o_slice_T12_k8_oracle`** (**`GDP.T=12`**, **`k=8`**, **`rand(16384,1)`**, **`@pytest.mark.slow`**); helpers **`_matlab_id_d_row`** / **`_matlab_id_e_row`**.
 
-**Modified:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` — module docstring points **`SPINBLOCK`** policy to branch notes.
+**Modified:** `python_src\toolbox\DEM\spm_faster_structure_learning.py` ??? module docstring points **`SPINBLOCK`** policy to branch notes.
 
-**Modified:** `structure_learning_plan_week2.md` — **§1.1(2)**, **§6.3** (T11 oracle inventory), **§16** revision row.
+**Modified:** `structure_learning_plan_week2.md` ??? **?1.1(2)**, **?6.3** (T11 oracle inventory), **?16** revision row.
 
 **Shared files touched:** `tests\conftest.py` (marker registration only).
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — **6 passed** (default CI can use **`-m "not slow"`**; full chain includes slow tier).
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? **6 passed** (default CI can use **`-m "not slow"`**; full chain includes slow tier).
 
 ---
 
-## Iteration — T11 PDP oracle: assert ``PDP.O(:,1:k)`` before structure learning
+## Iteration ??? T11 PDP oracle: assert ``PDP.O(:,1:k)`` before structure learning
 
 **Read:** `notes\andrew Python Matlab Translation Issues.md` (PDP slice); `test_spm_MDP_pong_generate_integration.py` (**`O{g,t}`** pull pattern).
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — **`_assert_pdp_o_window_matches`**: for **`g = 1:numel(PDP.A)`**, **`t = 1:k`**, **`full(PDP.O{g,t})`** vs Python **`pdp["O"][g-1][t-1]`** after patched **`spm_MDP_generate`**, before **`spm_faster_structure_learning`**; used in **`k=4`** and **`T=12`/`k=8`** tier tests.
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? **`_assert_pdp_o_window_matches`**: for **`g = 1:numel(PDP.A)`**, **`t = 1:k`**, **`full(PDP.O{g,t})`** vs Python **`pdp["O"][g-1][t-1]`** after patched **`spm_MDP_generate`**, before **`spm_faster_structure_learning`**; used in **`k=4`** and **`T=12`/`k=8`** tier tests.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — documents this as the numeric Pong→generate→**`O`**→SL chain check in one path.
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? documents this as the numeric Pong???generate???**`O`**???SL chain check in one path.
 
-**Modified:** `structure_learning_plan_week2.md` — **§6.3** T11 bullet ( **`O`** window assert).
-
-**Shared files touched:** no.
-
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — **6 passed**.
-
----
-
-## Iteration — T10 ``spm_O2rgb`` (stage, Pass 1 port, Engine oracle)
-
-**Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md` §§1.1, 6, 8.7, 9–10, 12.5, 17; `notes\andrew Python Matlab Translation Issues.md`; read-only **`spm-main\toolbox\DEM\spm_O2rgb.m`**.
-
-**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_O2rgb.m` → **`matlab_src\toolbox\DEM\spm_O2rgb.m`** (verbatim).
-
-**Created:** **`python_src\toolbox\DEM\spm_O2rgb.py`** — Pass 1 mirror: column-major **`RGB.G`/`V`** order; **`uint8`** reshape/permute; **`RGB.A`** branch when **`A`** present; multi-column **`O`** when **`RGB.R`** set (**`R==1`** stack; **`R≠1`** inconsistent with staged line 23 — **`ValueError`**).
-
-**Created:** **`tests\oracle\toolbox\DEM\test_spm_O2rgb.py`** — **`spm_O2rgb(PDP_o2.O(:,1),RGB_o2)`** vs Python on MATLAB-exported **`O`** / **`RGB`** after **`spm_MDP_pong(4,4,1,1,0)`** + **`spm_MDP_generate`** (**`T=1`**); **`rgms_tmp_mx`** for cell pulls (underscore-prefixed temps fail Engine **`eval`** here).
-
-**Modified:** `structure_learning_plan_week2.md` — **§1.1(2)**, **§6.1–6.3**, **§8.7**, **§10 S0**, appendix §17, **§16** revision rows.
-
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — **`spm_O2rgb`** Engine temp-name note.
+**Modified:** `structure_learning_plan_week2.md` ??? **?6.3** T11 bullet ( **`O`** window assert).
 
 **Shared files touched:** no.
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_O2rgb.py` — **1 passed**.
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? **6 passed**.
 
 ---
 
-## Iteration — T11 realignment to snippet-scale non-plotting gate (`PDP.O(:,1:1000)`)
+## Iteration ??? T10 ``spm_O2rgb`` (stage, Pass 1 port, Engine oracle)
+
+**Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md` ??1.1, 6, 8.7, 9???10, 12.5, 17; `notes\andrew Python Matlab Translation Issues.md`; read-only **`spm-main\toolbox\DEM\spm_O2rgb.m`**.
+
+**Copied:** `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_O2rgb.m` ??? **`matlab_src\toolbox\DEM\spm_O2rgb.m`** (verbatim).
+
+**Created:** **`python_src\toolbox\DEM\spm_O2rgb.py`** ??? Pass 1 mirror: column-major **`RGB.G`/`V`** order; **`uint8`** reshape/permute; **`RGB.A`** branch when **`A`** present; multi-column **`O`** when **`RGB.R`** set (**`R==1`** stack; **`R???1`** inconsistent with staged line 23 ??? **`ValueError`**).
+
+**Created:** **`tests\oracle\toolbox\DEM\test_spm_O2rgb.py`** ??? **`spm_O2rgb(PDP_o2.O(:,1),RGB_o2)`** vs Python on MATLAB-exported **`O`** / **`RGB`** after **`spm_MDP_pong(4,4,1,1,0)`** + **`spm_MDP_generate`** (**`T=1`**); **`rgms_tmp_mx`** for cell pulls (underscore-prefixed temps fail Engine **`eval`** here).
+
+**Modified:** `structure_learning_plan_week2.md` ??? **?1.1(2)**, **?6.1???6.3**, **?8.7**, **?10 S0**, appendix ?17, **?16** revision rows.
+
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? **`spm_O2rgb`** Engine temp-name note.
+
+**Shared files touched:** no.
+
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_O2rgb.py` ??? **1 passed**.
+
+---
+
+## Iteration ??? T11 realignment to snippet-scale non-plotting gate (`PDP.O(:,1:1000)`)
 
 **Read:** `rgms-rules.mdc`; `structure_learning_plan_week2.md`; `notes\andrew Python Matlab Translation Issues.md`; `python_src\toolbox\DEM\spm_MDP_pong.py`; `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`.
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — added:
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? added:
 - `_matlab_rand_buf_twister_np` (NumPy replay buffer),
 - `_rand_replay_callable` (scalar/shape-aware `numpy.random.rand` replay),
 - `_snippet_s_matrix(nr,nc)` parameters,
-- `test_spm_faster_structure_learning_snippet_scale_T1000_oracle` (**`spm_MDP_pong(12,9,4,1,0)`**, **`GDP.T=1000`**, **`PDP.O(:,1:1000)`**, **`Sc=9`**), matching the non-plotting endpoint of §5.
+- `test_spm_faster_structure_learning_snippet_scale_T1000_oracle` (**`spm_MDP_pong(12,9,4,1,0)`**, **`GDP.T=1000`**, **`PDP.O(:,1:1000)`**, **`Sc=9`**), matching the non-plotting endpoint of ?5.
 
-**Modified:** `python_src\toolbox\DEM\spm_MDP_pong.py` — MATLAB parity fix for dynamic matrix growth on `S(s,:) = r`: when `s` exceeds current rows, append zero rows before assignment (MATLAB auto-expands; NumPy does not).
+**Modified:** `python_src\toolbox\DEM\spm_MDP_pong.py` ??? MATLAB parity fix for dynamic matrix growth on `S(s,:) = r`: when `s` exceeds current rows, append zero rows before assignment (MATLAB auto-expands; NumPy does not).
 
-**Modified:** `structure_learning_plan_week2.md` — §1.1(2) and §10 S0 realigned to current subgoal (defer plotting/`spm_O2rgb(...)` invocation to T12; snippet numeric gate at `spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc)`); §6.3 updated with new snippet-scale T11 oracle; revision row added.
+**Modified:** `structure_learning_plan_week2.md` ??? ?1.1(2) and ?10 S0 realigned to current subgoal (defer plotting/`spm_O2rgb(...)` invocation to T12; snippet numeric gate at `spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc)`); ?6.3 updated with new snippet-scale T11 oracle; revision row added.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — documented snippet-scale T11 oracle and MATLAB-style `S(s,:)` auto-growth requirement in `spm_MDP_pong.py`.
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? documented snippet-scale T11 oracle and MATLAB-style `S(s,:)` auto-growth requirement in `spm_MDP_pong.py`.
 
 **Shared files touched:** no.
 
 **Oracle:**  
-- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` — **3 passed, 1 skipped**  
-- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_oracle` — **1 passed**  
-- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` — **7 passed**
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong.py` ??? **3 passed, 1 skipped**  
+- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_oracle` ??? **1 passed**  
+- `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning_locals.py` ??? **7 passed**
 
 ---
 
-## Iteration — T11 exhaustive canonical-byte comparator (snippet-scale)
+## Iteration ??? T11 exhaustive canonical-byte comparator (snippet-scale)
 
-**Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`; `notes\andrew Python Matlab Translation Issues.md` (RNG/T11 sections); `structure_learning_plan_week2.md` (§1.1, §6.3, §10 S0).
+**Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`; `notes\andrew Python Matlab Translation Issues.md` (RNG/T11 sections); `structure_learning_plan_week2.md` (?1.1, ?6.3, ?10 S0).
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — added exhaustive comparison helpers:
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? added exhaustive comparison helpers:
 - canonical byte normalization (`_canon_bytes`, `_assert_exact_canon`),
 - MATLAB leaf extraction (`_eval_mat_array`, `_matlab_find_map`),
 - exhaustive nested checks (`_assert_mdp_tree_exhaustive_exact`, `_assert_ss_exact`),
@@ -1163,24 +2061,24 @@ component ordering deterministic with stable tie handling
 
 **Result:** first mismatch surfaced at **`MDP{1}.a{5}`** canonical bytes on snippet-scale case (`12x9`, `T=1000`, `k=1000`, `Sc=9`). To keep suite non-blocking while investigating exact state-ordering parity, marked this test **`@pytest.mark.xfail(strict=False)`**.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — recorded exhaustive comparator status and first divergence path.
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? recorded exhaustive comparator status and first divergence path.
 
-**Modified:** `structure_learning_plan_week2.md` — §6.3 and revision history row note exhaustive comparator is present and currently `xfail` with known first mismatch.
+**Modified:** `structure_learning_plan_week2.md` ??? ?6.3 and revision history row note exhaustive comparator is present and currently `xfail` with known first mismatch.
 
 **Shared files touched:** no.
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` — **1 xfailed**.
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` ??? **1 xfailed**.
 
 ---
 
-## Iteration — forward-ordered equivalence guardrail documentation (T11)
+## Iteration ??? forward-ordered equivalence guardrail documentation (T11)
 
 **Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc` (always-apply local rules);
 `structure_learning_plan_week2.md`; `notes\andrew Python Matlab Translation Issues.md`.
 
-**Modified:** `structure_learning_plan_week2.md` — added **§12.1 Forward-ordered equivalence guardrail** for active T11 work: earliest-checkpoint-first triage, no downstream fix before upstream equivalence revalidation, and explicit note that `MDP{1}.a{5}` is a symptom unless prior checkpoints pass.
+**Modified:** `structure_learning_plan_week2.md` ??? added **?12.1 Forward-ordered equivalence guardrail** for active T11 work: earliest-checkpoint-first triage, no downstream fix before upstream equivalence revalidation, and explicit note that `MDP{1}.a{5}` is a symptom unless prior checkpoints pass.
 
-**Modified:** `notes\andrew Python Matlab Translation Issues.md` — added a settled workflow rule section for snippet-scale T11 mismatch handling in forward order (earliest divergence first, then revalidate, then continue downstream).
+**Modified:** `notes\andrew Python Matlab Translation Issues.md` ??? added a settled workflow rule section for snippet-scale T11 mismatch handling in forward order (earliest divergence first, then revalidate, then continue downstream).
 
 **Shared files touched:** no.
 
@@ -1188,7 +2086,7 @@ component ordering deterministic with stable tie handling
 
 ---
 
-## Iteration — Step-6 boundary advance and grouping-source isolation
+## Iteration ??? Step-6 boundary advance and grouping-source isolation
 
 **Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`;
 `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`;
@@ -1228,13 +2126,13 @@ component ordering deterministic with stable tie handling
   - Python grouping run on MATLAB `MI` also differs from MATLAB group.
   - Interpretation: divergence is in spectral/group-selection behavior itself
     (not only MI value drift).
-- Sanity oracle: `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → 4 passed.
+- Sanity oracle: `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` ??? 4 passed.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — Step-6 harness hardening (timing + checkpoint resume)
+## Iteration ??? Step-6 harness hardening (timing + checkpoint resume)
 
 **Read:** `c:\Users\andre\.cursor\rules\rgms-rules.mdc`;
 `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`;
@@ -1270,11 +2168,11 @@ forward-ordered reruns without losing context.
 
 ---
 
-## Iteration — enforce forward-ordered gate inside snippet-scale exhaustive test
+## Iteration ??? enforce forward-ordered gate inside snippet-scale exhaustive test
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` (snippet-scale T11 tests).
 
-**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` — in
+**Modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ??? in
 `test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle`,
 added an explicit generate-stage gate:
 `_assert_pdp_o_window_matches(eng, "PDP_sx", pdp, k)` before building `o_sl` and
@@ -1287,16 +2185,16 @@ the non-exhaustive snippet test where it referenced `PDP_sx` (undefined in that 
 **Shared files touched:** no.
 
 **Oracle / checks run:**
-- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` → failed at `MDP{1}.a{5}` (generate-stage gate passed, so first observed divergence remains in SL tree compare).
-- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_oracle ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle -q` → `1 passed, 1 xfailed`.
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` ??? failed at `MDP{1}.a{5}` (generate-stage gate passed, so first observed divergence remains in SL tree compare).
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_oracle ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle -q` ??? `1 passed, 1 xfailed`.
 
 ---
 
-## Iteration — plan update: explicit forward-ordered checklist + RNG map
+## Iteration ??? plan update: explicit forward-ordered checklist + RNG map
 
-**Read:** `structure_learning_plan_week2.md` (sections §1 and revision history).
+**Read:** `structure_learning_plan_week2.md` (sections ?1 and revision history).
 
-**Modified:** `structure_learning_plan_week2.md` — added **§1.2 Immediate-priority
+**Modified:** `structure_learning_plan_week2.md` ??? added **?1.2 Immediate-priority
 execution checklist (forward-ordered, non-visual)**. The new section explicitly
 documents:
 - strict test/function execution order for each cycle,
@@ -1304,7 +2202,7 @@ documents:
 - step-by-step RNG involvement and required replay controls,
 - per-cycle completion rules that enforce earliest-first divergence handling.
 
-**Modified:** `structure_learning_plan_week2.md` revision history — added a row
+**Modified:** `structure_learning_plan_week2.md` revision history ??? added a row
 recording this checklist formalization.
 
 **Shared files touched:** no.
@@ -1314,7 +2212,7 @@ continues).
 
 ---
 
-## Iteration — earliest SL-internal checkpoint after `PDP.O` parity
+## Iteration ??? earliest SL-internal checkpoint after `PDP.O` parity
 
 **Read:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`,
 `python_src\toolbox\DEM\spm_faster_structure_learning.py`,
@@ -1325,7 +2223,7 @@ continues).
 1. Added `_assert_rgm_group_streams_exact(...)` as the next deterministic
    checkpoint after `PDP.O(:,1:k)` parity in
    `test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle`.
-2. Corrected checkpoint wiring to mirror SL’s actual stream row-block selection
+2. Corrected checkpoint wiring to mirror SL???s actual stream row-block selection
    (`idx` from `S` products and cumulative offsets), rather than a single-row
    shortcut.
 3. Kept the checkpoint ordered before any `MDP` tree compare.
@@ -1339,19 +2237,19 @@ continues).
 
 **Oracle / checks run:**
 - `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q` (multiple runs while refining checkpoint): final first failure at `spm_rgm_group stream 1 group 2`.
-- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` → passed.
-- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_oracle -q` → passed.
+- `pytest tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py -q` ??? passed.
+- `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_oracle -q` ??? passed.
 
 **Shared files touched:** no.
 
 ---
 
-## Iteration — explicit RNG-priority sentence in T11 guardrail
+## Iteration ??? explicit RNG-priority sentence in T11 guardrail
 
-**Read:** `structure_learning_plan_week2.md` (§12.1 guardrail text).
+**Read:** `structure_learning_plan_week2.md` (?12.1 guardrail text).
 
-**Modified:** `structure_learning_plan_week2.md` — added one explicit sentence in
-§12.1 stating that active T11 triage prioritizes MATLAB draw replay equivalence
+**Modified:** `structure_learning_plan_week2.md` ??? added one explicit sentence in
+?12.1 stating that active T11 triage prioritizes MATLAB draw replay equivalence
 (`rng(...,'twister')` + MATLAB `rand(N,1)` replay in Python), and that native
 Python RNG equivalence is deferred until replay-controlled stability is reached.
 
@@ -1361,14 +2259,14 @@ Python RNG equivalence is deferred until replay-controlled stability is reached.
 
 ---
 
-## Iteration — coherent checkpoint: `spm_rgm_group` stream 1 group 2 (Step 6)
+## Iteration ??? coherent checkpoint: `spm_rgm_group` stream 1 group 2 (Step 6)
 
 **Read (this pass):** `logs\log_0.md` (tail), `structure_learning_plan_week2.md`
-(§1.2.5), `notes\andrew Python Matlab Translation Issues.md` (prior `spm_rgm_group`
+(?1.2.5), `notes\andrew Python Matlab Translation Issues.md` (prior `spm_rgm_group`
 orientation section); coordinated review of spectral-loop iter2 diagnostics.
 
 **Modified (this pass):** `logs\log_0.md` (this entry), `structure_learning_plan_week2.md`
-(§1.2.5 current-boundary text + revision history row),
+(?1.2.5 current-boundary text + revision history row),
 `notes\andrew Python Matlab Translation Issues.md` (new subsection on `eig` /
 `max` / `sort(abs)` fidelity).
 
@@ -1380,7 +2278,7 @@ orientation section); coordinated review of spectral-loop iter2 diagnostics.
 
 - Forward-ordered exhaustive harness still fails `--runxfail` at
   **`spm_rgm_group stream 1 group 2`** canonical bytes (example: MATLAB
-  `[81, 42, 64, …]` vs Python `[42, 81, 64, …]` on the checkpointed path).
+  `[81, 42, 64, ???]` vs Python `[42, 81, 64, ???]` on the checkpointed path).
 - Harness diagnostics show **spectral while-loop iteration 1** aligned between
   MATLAB and Python traces; **iteration 2** diverges.
 - On the iter2 submatrix, the **principal eigenvector column matches MATLAB up
@@ -1391,34 +2289,34 @@ orientation section); coordinated review of spectral-loop iter2 diagnostics.
   `dx` cap / threshold and therefore the **1-based group vector bytes**.
 - **MATLAB `eig(...,'nobalance')` vs SciPy `scipy.linalg.eig`:** the **multiset
   of eigenvalues** matches to floating noise, but **column ordering of eigenpairs
-  differs** (e.g. MATLAB `jmax` at column **99** vs SciPy’s dominant λ appearing
-  in column **1** for the same symmetric `sub`). Any hand-rolled “MATLAB-like
-  `max(diag(v))`” rule must be validated on the **actual** `diag(v)` vector in
-  MATLAB’s column order; a previously tried heuristic was **falsified** against
+  differs** (e.g. MATLAB `jmax` at column **99** vs SciPy???s dominant ? appearing
+  in column **1** for the same symmetric `sub`). Any hand-rolled ???MATLAB-like
+  `max(diag(v))`??? rule must be validated on the **actual** `diag(v)` vector in
+  MATLAB???s column order; a previously tried heuristic was **falsified** against
   Engine truth on this checkpoint.
 - **Sort machinery:** NumPy `argsort(-abs(x), kind="mergesort")` was verified
-  against MATLAB `sort(abs(x),'descend')` **when `x` is exactly MATLAB’s
+  against MATLAB `sort(abs(x),'descend')` **when `x` is exactly MATLAB???s
   float vector**; remaining pain is **ULP differences in `x` produced by
   different `eig` implementations**, not a guessed tie-break table in isolation.
 
 **Checks run (recent coherent session, representative):**
-- `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **4 passed**
+- `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` ??? **4 passed**
   (file-level oracle does not cover this snippet-scale byte gate).
 - `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail`
-  with `RGMS_FSL_USE_CHECKPOINT=1` → fails at **`_assert_rgm_group_streams_exact`**
+  with `RGMS_FSL_USE_CHECKPOINT=1` ??? fails at **`_assert_rgm_group_streams_exact`**
   stream 1 group 2 (as above).
 
 **Next work direction (for a later iteration, not executed here):** decide whether
-byte-exact closure requires **matching MATLAB’s `eig` numerics and column layout**
+byte-exact closure requires **matching MATLAB???s `eig` numerics and column layout**
 (or an explicit documented relaxation at this discrete boundary). If byte-exact
 remains the goal, falsify two hypotheses in order: **(H1)** reordering Python
-eigenpairs to MATLAB’s `[e,v]` layout removes the rank-1 `sort` split; **(H2)** if
+eigenpairs to MATLAB???s `[e,v]` layout removes the rank-1 `sort` split; **(H2)** if
 not, quantify ULP diffs on the full `abs(principal_col))` vector vs MATLAB before
 any further sort heuristics.
 
 ---
 
-## Iteration — `spm_rgm_group`: MATLAB `abs(e)` + ULP diagnostics (H2)
+## Iteration ??? `spm_rgm_group`: MATLAB `abs(e)` + ULP diagnostics (H2)
 
 **Read:** `python_src\toolbox\DEM\spm_rgm_group.py`, coherent status report (goal
 re-anchor), `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
@@ -1439,31 +2337,31 @@ subsection).
 **H2 instrumentation:** when `RGMS_FSL_GROUP_DIAG=1` and stream 1 group 2 mismatches,
 iter2 diagnostics report **ULP deltas on the union of MATLAB/Python first-16 sort
 ranks** (avoids denormal tail blowups), compare **`ord_p` from `abs(col2_py)`**
-(production-like), and replace the misleading “|lam99|” line with **SciPy
-`argmax(|λ|)`** in SciPy’s column order.
+(production-like), and replace the misleading ???|lam99|??? line with **SciPy
+`argmax(|?|)`** in SciPy???s column order.
 
 **Checks run:**
-- `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **4 passed**.
+- `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` ??? **4 passed**.
 - `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail`
-  with `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_GROUP_DIAG=1` → still fails
+  with `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_GROUP_DIAG=1` ??? still fails
   **`spm_rgm_group stream 1 group 2`** canonical bytes.
 - Representative DIAG: sort still diverges at **rank pos 1** (mat_idx=74 vs
   py_idx=38); **mat_rank1** row shows **0 ULP** between MATLAB vs Python `abs`
-  vectors at that row; **py_rank1** row shows **~3 ULP** delta — consistent with
+  vectors at that row; **py_rank1** row shows **~3 ULP** delta ??? consistent with
   **different `eig` roundings** at tie-sensitive magnitudes, not an abstract
   mergesort bug.
 
 **Conclusion:** **H1 (column reordering) is unlikely to be the sole fix** when the
 principal column already phase-aligns to ~1e-15 but **`abs`** still differs by
 O(1) ULP at the competitor index. Next policy/technical fork remains: match
-MATLAB’s **`eig` numerics** (or relax byte gate), not further local sort heuristics.
+MATLAB???s **`eig` numerics** (or relax byte gate), not further local sort heuristics.
 
 ---
 
-## Iteration — byte-exact `eig`: layout probe + BLAS hypothesis (OpenBLAS vs MKL)
+## Iteration ??? byte-exact `eig`: layout probe + BLAS hypothesis (OpenBLAS vs MKL)
 
 **Read:** `numpy.show_config()` (BLAS identification), SciPy `linalg._decomp.eig`
-source (calls LAPACK `geev` directly — no extra balancing in wrapper),
+source (calls LAPACK `geev` directly ??? no extra balancing in wrapper),
 `python_src\toolbox\DEM\spm_rgm_group.py` (current spectral path).
 
 **Created:** `_tmp_eig_layout_probe.py` (MATLAB Engine rebuild of `rgms_MI` +
@@ -1474,7 +2372,7 @@ after `_matlab_max_diag_eig_index` removal), `_tmp_matlab_max_complex.py`
 (temporary MATLAB `max` toy probe).
 
 **Modified:** `notes\andrew Python Matlab Translation Issues.md` (BLAS/MKL vs
-OpenBLAS byte-exact gate paragraph), `structure_learning_plan_week2.md` (§1.2.5
+OpenBLAS byte-exact gate paragraph), `structure_learning_plan_week2.md` (?1.2.5
 toolchain bullet + revision history), `logs\log_0.md` (this entry).
 
 **Shared files touched:** no.
@@ -1488,18 +2386,18 @@ toolchain bullet + revision history), `logs\log_0.md` (this entry).
 
 **Interpretation:** the residual is not fixed by **memory layout** or **SciPy vs
 NumPy front-end** on this OpenBLAS build; it is consistent with **different
-LAPACK/BLAS implementation details** vs MATLAB’s shipped numerics (MKL
+LAPACK/BLAS implementation details** vs MATLAB???s shipped numerics (MKL
 hypothesis). Byte-exact closure for this gate therefore needs **explicit
 user-authorized** environment alignment (e.g. MKL-linked SciPy) or another
-approved MATLAB-numeric reference path — not more Python-only sort tweaks.
+approved MATLAB-numeric reference path ??? not more Python-only sort tweaks.
 
-**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **4 passed**
+**Oracle:** `pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` ??? **4 passed**
 (not rerun exhaustive here after doc-only iteration; prior state: exhaustive
 still fails stream 1 group 2 until toolchain/bridge decision).
 
 ---
 
-## Iteration — rollback: OpenBLAS PyPI NumPy/SciPy + restore `spm_MDP_MI._spm_MI`
+## Iteration ??? rollback: OpenBLAS PyPI NumPy/SciPy + restore `spm_MDP_MI._spm_MI`
 
 **Read:** `git diff python_src/spm_MDP_MI.py` (MKL-era edits), `rgms-rules.mdc`
 (environment mutation was user-authorized for MKL and for this rollback).
@@ -1509,7 +2407,7 @@ still fails stream 1 group 2 until toolchain/bridge decision).
 
 **Conda / pip (`rgms` env):**
 - `conda remove -y numpy scipy mkl libblas libcblas liblapack` (and conda-pulled
-  MKL-related deps such as `tbb`, `llvm-openmp`, `libhwloc`, … as shown in the
+  MKL-related deps such as `tbb`, `llvm-openmp`, `libhwloc`, ??? as shown in the
   transaction plan).
 - `pip install numpy==2.4.4 scipy==1.17.1` (restores prior **PyPI / scipy-openblas**
   wheel stack; `numpy.show_config` again reports **scipy-openblas**).
@@ -1524,42 +2422,42 @@ coupling**: keep transliterated `_spm_MI` and revisit toolchain/bridge options
 later without MI churn.
 
 **Checks run:**
-- `pytest tests\oracle\test_spm_MDP_MI.py tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` → **8 passed**.
+- `pytest tests\oracle\test_spm_MDP_MI.py tests\oracle\toolbox\DEM\test_spm_rgm_group.py -q` ??? **8 passed**.
 - `pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -q`
-  with `RGMS_FSL_USE_CHECKPOINT=1` → fails again at **`spm_rgm_group stream 1 group 2`**
+  with `RGMS_FSL_USE_CHECKPOINT=1` ??? fails again at **`spm_rgm_group stream 1 group 2`**
   canonical bytes (**known pre-MKL bottleneck** restored).
 
 ---
 
-## Iteration — provisional MATLAB Engine bridge for `spm_rgm_group` / FSL (reversible)
+## Iteration ??? provisional MATLAB Engine bridge for `spm_rgm_group` / FSL (reversible)
 
 **Goal:** Continue snippet-scale exhaustive validation by optionally routing
-structure-learning grouping through MATLAB’s ``MI`` and ``eig(...,'nobalance')``
-via the Engine — **temporary**, **oracle-only**, default code paths unchanged.
+structure-learning grouping through MATLAB???s ``MI`` and ``eig(...,'nobalance')``
+via the Engine ??? **temporary**, **oracle-only**, default code paths unchanged.
 
 **Modified:**
 
-- `python_src\toolbox\DEM\spm_rgm_group.py` — optional keyword-only ``eig_pair``
+- `python_src\toolbox\DEM\spm_rgm_group.py` ??? optional keyword-only ``eig_pair``
   (replace ``scipy.linalg.eig`` on each ``MI(i,i)`` block) and ``mi_override``
   (replace internally built ``MI`` matrix).
-- `python_src\toolbox\DEM\spm_faster_structure_learning.py` — optional
+- `python_src\toolbox\DEM\spm_faster_structure_learning.py` ??? optional
   keyword-only ``rgm_eig_pair`` and ``rgm_mi_override_fn`` forwarded into every
   ``spm_rgm_group`` call; module docstring notes hooks are provisional / omit in
   production.
-- `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` —
+- `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` ???
   ``_make_matlab_rgm_eig_pair``, ``_matlab_mi_for_o_slice`` (slice-indexed ``O``),
   ``_matlab_mi_from_o_cell_var`` + ``_make_rgm_mi_override_fn_matlab`` (push
   current ``o_sub`` to MATLAB), Step-6 assert wiring, exhaustive harness env
   split, ``test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity``,
   guard ``RGMS_FSL_RGM_MATLAB_MI_PUSH`` requires ``RGMS_FSL_RGM_MATLAB_EIG``,
   ``_assert_mdp_tree_exhaustive_exact`` compares ``MDP{*}.G{*}{*}`` with
-  ``.ravel()`` so MATLAB ``1×n`` vs Python ``n×1`` index vectors do not false-fail.
+  ``.ravel()`` so MATLAB ``1??n`` vs Python ``n??1`` index vectors do not false-fail.
 
 **Created / deleted:** none.
 
 **Shared files touched:** no.
 
-**Environment flags (snippet exhaustive + Step-6 harness — do not lose):**
+**Environment flags (snippet exhaustive + Step-6 harness ??? do not lose):**
 
 | Flag | Purpose |
 |------|---------|
@@ -1591,23 +2489,23 @@ pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_
 **Outcome (with both ``EIG`` and ``MI_PUSH`` on checkpoint):** exhaustive tree
 compare advances past prior ``MDP{1}.a{3}`` / ``G`` layout issues; current
 earliest observed mismatch moves to **`MDP{1}.ss.ID{1,2}(1, 58)`** canonical bytes
-(stream-link / ``spm_dir_MI`` lane — outside ``spm_rgm_group``). **Why those
-Engine flags existed:** see ``structure_learning_plan_week2.md`` **§1.2.6**
-(EIG eigenpair / MI slice / link ``spm_dir_MI`` bottlenecks)—do not infer from
-flags alone that “everything matches Python.”
+(stream-link / ``spm_dir_MI`` lane ??? outside ``spm_rgm_group``). **Why those
+Engine flags existed:** see ``structure_learning_plan_week2.md`` **?1.2.6**
+(EIG eigenpair / MI slice / link ``spm_dir_MI`` bottlenecks)???do not infer from
+flags alone that ???everything matches Python.???
 
 **Oracle spot-checks:** ``pytest tests\oracle\toolbox\DEM\test_spm_rgm_group.py``
-and FSL tests excluding the xfail exhaustive — **pass** after these edits.
+and FSL tests excluding the xfail exhaustive ??? **pass** after these edits.
 
 ---
 
-## Iteration — ``ss.ID`` / ``ss.IE`` failure isolation (link ``a`` vs ``spm_dir_MI``)
+## Iteration ??? ``ss.ID`` / ``ss.IE`` failure isolation (link ``a`` vs ``spm_dir_MI``)
 
 **Goal:** On the first canonical-byte mismatch for ``MDP{lev}.ss.ID`` or ``ss.IE``,
 print whether the linked Dirichlet matrix ``MDP{lev+1}.a{gi}`` matches MATLAB and
-whether ``spm_dir_MI`` disagrees on Python’s ``a`` alone (MATLAB vs Python port).
+whether ``spm_dir_MI`` disagrees on Python???s ``a`` alone (MATLAB vs Python port).
 
-**Modified:** ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`` —
+**Modified:** ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`` ???
 new ``_diag_ss_mi_link_mismatch``, ``_assert_ss_exact(..., mdp_py_full=mdp_py)``
 forwards full Python MDP list; on ``ID``/``IE`` ``AssertionError``, emit
 ``[SS-LINK-DIAG]`` lines then re-raise.
@@ -1618,11 +2516,11 @@ forwards full Python MDP list; on ``ID``/``IE`` ``AssertionError``, emit
 differ, suspect ``spm_dir_MI`` / ``psi`` numerics; if ``a`` differs, suspect
 ``_link_streams`` / ``spm_dir_norm`` / ``sg`` indexing.
 
-**Oracle:** ``pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **5 passed**.
+**Oracle:** ``pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` ??? **5 passed**.
 
 ---
 
-## Iteration — ``spm_dir_MI`` / stream-link parity (post ``[SS-LINK-DIAG]``)
+## Iteration ??? ``spm_dir_MI`` / stream-link parity (post ``[SS-LINK-DIAG]``)
 
 **Evidence:** Checkpoint exhaustive run with MATLAB EIG + MI_PUSH isolated the first
 ``MDP{1}.ss.ID`` mismatch to **Python ``spm_dir_MI``** returning exact ``0.0`` where
@@ -1630,13 +2528,13 @@ MATLAB returns ~``1e-16`` on **byte-identical** linked ``a`` (not ``_link_stream
 
 **Modified:**
 
-- ``python_src\spm_dir_MI.py`` — ``_spm_H`` now flattens inputs with Fortran (column-major)
+- ``python_src\spm_dir_MI.py`` ??? ``_spm_H`` now flattens inputs with Fortran (column-major)
   order and accumulates ``sum(a)`` / ``sum(a.*psi(a+1))`` sequentially to mirror MATLAB
   vector ``sum`` ordering and reduce spurious exact-zero cancellation on tiny MI.
-- ``python_src\toolbox\DEM\spm_faster_structure_learning.py`` — keyword-only
+- ``python_src\toolbox\DEM\spm_faster_structure_learning.py`` ??? keyword-only
   ``link_dir_mi_fn`` forwarded into ``_link_streams`` for oracle-only replacement of
   ``spm_dir_MI`` when storing ``ss.ID`` / ``ss.IE``.
-- ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`` —
+- ``tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`` ???
   ``_make_matlab_link_dir_mi_fn``, env ``RGMS_FSL_LINK_DIR_MI_MATLAB`` (optional MATLAB
   ``spm_dir_MI`` per linked matrix), exhaustive docstring updated.
 
@@ -1644,54 +2542,54 @@ MATLAB returns ~``1e-16`` on **byte-identical** linked ``a`` (not ``_link_stream
 
 **Shared files touched:** none.
 
-**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **12 passed**.
+**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` ??? **12 passed**.
 
-**Plan sync:** ``structure_learning_plan_week2.md`` §1.2.5 — operational rule:
+**Plan sync:** ``structure_learning_plan_week2.md`` ?1.2.5 ??? operational rule:
 Engine bridges (EIG, MI_PUSH, optional ``LINK_DIR_MI`` / ``link_dir_mi_fn``) are
 **provisional** (review + isolation **only**); passing exhaustive tests with flags
-≠ “Python transliteration complete”; later **Python-only** decisions required per
-site. Fixed §8.10 ``spm_dir_MI`` row (ported). Later edit: added **§1.2.6**
-(bottleneck detail)—net plan growth deliberate for context retention; shortened
-duplicate “pinned diagnosis” bullet in §1.2.5 with pointer to §1.2.6.
+??? ???Python transliteration complete???; later **Python-only** decisions required per
+site. Fixed ?8.10 ``spm_dir_MI`` row (ported). Later edit: added **?1.2.6**
+(bottleneck detail)???net plan growth deliberate for context retention; shortened
+duplicate ???pinned diagnosis??? bullet in ?1.2.5 with pointer to ?1.2.6.
 
-**Bottlenecks (why each Engine hook exists — mirror of plan §1.2.6):**
+**Bottlenecks (why each Engine hook exists ??? mirror of plan ?1.2.6):**
 
 1. **``RGMS_FSL_RGM_MATLAB_EIG``:** Step-6 / ``spm_rgm_group`` byte mismatch (snippet:
-   often stream **1** group **2**); **iter 2** spectral loop diverges—SciPy ``eig``
+   often stream **1** group **2**); **iter 2** spectral loop diverges???SciPy ``eig``
    vs MATLAB ``eig(...,'nobalance')``, **ULP ties** in ``sort(abs(e(:,jmax)),...)``,
    **eigenvector column order** / LAPACK vs MATLAB. Hook injects MATLAB eigenpairs.
 2. **``RGMS_FSL_RGM_MATLAB_MI_PUSH``:** After EIG, still need to know if **Python-built
-   ``MI`` from each ``o_sub``** matches MATLAB’s ``spm_MDP_MI`` path for that slice
-   when chasing full tree—hook rebuilds ``MI`` in MATLAB per call (**slow**).
+   ``MI`` from each ``o_sub``** matches MATLAB???s ``spm_MDP_MI`` path for that slice
+   when chasing full tree???hook rebuilds ``MI`` in MATLAB per call (**slow**).
 3. **``RGMS_FSL_LINK_DIR_MI_MATLAB``:** After EIG+MI_PUSH, ``ss.ID`` / ``ss.IE`` gate;
    ``[SS-LINK-DIAG]`` showed **same ``a`` bytes** but Python ``spm_dir_MI(a)=0`` vs
-   MATLAB ``~1e-16``—**``spm_dir_MI`` / ``_spm_H``** cancellation, not
+   MATLAB ``~1e-16``???**``spm_dir_MI`` / ``_spm_H``** cancellation, not
    ``_link_streams``. Hook isolates downstream if link MI equals MATLAB.
 
-**Modified:** ``structure_learning_plan_week2.md`` (§1.2.6 bottleneck narrative + §16
+**Modified:** ``structure_learning_plan_week2.md`` (?1.2.6 bottleneck narrative + ?16
 revision row). **Shared files touched:** none.
 
 ---
 
-## Iteration — resume exhaustive gate after ``spm_dir_MI`` marginal sums
+## Iteration ??? resume exhaustive gate after ``spm_dir_MI`` marginal sums
 
 **Command (PowerShell):** ``conda activate rgms``, checkpoint on,
 ``RGMS_FSL_RGM_MATLAB_EIG=1``, ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1``, no ``LINK_DIR_MI``.
 ``pytest ...::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail``.
 
-**Result:** **FAIL** — same first canonical mismatch ``MDP{1}.ss.ID{1,2}(1, 58)``.
+**Result:** **FAIL** ??? same first canonical mismatch ``MDP{1}.ss.ID{1,2}(1, 58)``.
 ``[SS-LINK-DIAG]`` unchanged: ``python_mi=0``, MATLAB ``spm_dir_MI`` on Python ``a`` =
 ``~8.88e-16``, linked ``a`` bytes match. So **only** tightening ``_spm_H`` (earlier)
 did **not** clear the gate; **NumPy ``np.sum`` on marginals was not** the smoking
 gun either.
 
-**Code:** ``python_src\spm_dir_MI.py`` — added MATLAB-like **sequential** reductions:
+**Code:** ``python_src\spm_dir_MI.py`` ??? added MATLAB-like **sequential** reductions:
 ``_marginals_sum_matlab_like`` (replacing ``np.sum`` for ``sum(a,2)`` /
 ``sum(a,1)``), ``_sum_all_matlab_like`` for ``sum(a,'all')``, and matching
 ``_sum_axis1_matlab_like`` / ``_sum_axis0_matlab_like`` for ``sum(A,2)`` /
 ``sum(A,1)`` on ``big_a`` in the ``c`` / ``h`` cost branches.
 
-**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py`` → **7 passed**.
+**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py`` ??? **7 passed**.
 
 **Interpretation:** Remaining gap is almost certainly **``psi`` / float64
 cancellation inside ``H(col)+H(row)-H(joint)``** (SciPy digamma vs MATLAB ``psi`` at
@@ -1706,7 +2604,7 @@ lane.
 
 ---
 
-## Iteration — exhaustive with ``LINK_DIR_MI_MATLAB`` (downstream isolation)
+## Iteration ??? exhaustive with ``LINK_DIR_MI_MATLAB`` (downstream isolation)
 
 **Command:** checkpoint + ``RGMS_FSL_RGM_MATLAB_EIG=1`` +
 ``RGMS_FSL_RGM_MATLAB_MI_PUSH=1`` + ``RGMS_FSL_LINK_DIR_MI_MATLAB=1``;
@@ -1714,10 +2612,10 @@ lane.
 
 **Result:** **1 passed** in ~9m24s. So when stream-link ``ss.ID`` / ``ss.IE`` values
 use MATLAB ``spm_dir_MI`` on each linked ``a``, the **full** nested ``MDP`` tree
-matches MATLAB **canonical bytes** on this checkpoint—no further divergence observed
+matches MATLAB **canonical bytes** on this checkpoint???no further divergence observed
 past the native ``spm_dir_MI`` scalar on that gate.
 
-**Notes:** ``notes\andrew Python Matlab Translation Issues.md`` — new short section
+**Notes:** ``notes\andrew Python Matlab Translation Issues.md`` ??? new short section
 documenting the near-zero ``spm_dir_MI`` / ``ss.ID`` finding and the isolation role
 of ``LINK_DIR_MI``.
 
@@ -1726,24 +2624,24 @@ of ``LINK_DIR_MI``.
 
 ---
 
-## Iteration — ``psi`` vs SciPy on checkpoint link ``a`` (``MDP{2}.a{21}``)
+## Iteration ??? ``psi`` vs SciPy on checkpoint link ``a`` (``MDP{2}.a{21}``)
 
 **Inspected:** ``matlab_src\spm_dir_MI.m``, ``spm_psi.m``; ``python_src\spm_dir_MI.py``,
 ``spm_psi.py``.
 
 **Added:** ``tests\oracle\test_spm_dir_MI.py::test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy``
-— loads ``fsl_snippet_t1000_matlab_inputs.mat``, runs MATLAB
+??? loads ``fsl_snippet_t1000_matlab_inputs.mat``, runs MATLAB
 ``spm_faster_structure_learning(O_fsl_sx,S_fsl_sx,9)``, pulls ``full(MDP{2}.a{21})``,
 compares MATLAB vs SciPy ``psi`` on all arguments feeding the three ``spm_H``
 calls, compares MATLAB ``sum(v.*psi(v+1))`` vs Python sequential / NumPy sum for
 the column marginal, and locks reproduction ``spm_dir_MI(py)==0`` vs MATLAB
 tiny nonzero.
 
-**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py`` → **8 passed**.
+**Oracle:** ``pytest tests\oracle\test_spm_dir_MI.py`` ??? **8 passed**.
 
 **Finding:** On this matrix, **``max|psi_ml - psi_scipy| < 1e-14``** on the sampled
-``z`` set, and the **column** marginal inner sum matches MATLAB — so the
-**``spm_psi``** helper is **irrelevant** to ``spm_dir_MI``’s ``spm_H`` (different
+``z`` set, and the **column** marginal inner sum matches MATLAB ??? so the
+**``spm_psi``** helper is **irrelevant** to ``spm_dir_MI``???s ``spm_H`` (different
 formula). Remaining MI gap is **not** a coarse SciPy-vs-MATLAB ``psi`` mismatch on
 those scalars; follow-up is **cancellation across the three ``H`` terms** (and
 possibly row/joint inner paths not isolated by the single-marginal check).
@@ -1753,20 +2651,20 @@ possibly row/joint inner paths not isolated by the single-marginal check).
 
 ---
 
-## Iteration — ``structure_learning_plan_week2.md`` harness policy + status
+## Iteration ??? ``structure_learning_plan_week2.md`` harness policy + status
 
-**Modified:** ``structure_learning_plan_week2.md`` — new **§1.2.5.1** (tiered table:
+**Modified:** ``structure_learning_plan_week2.md`` ??? new **?1.2.5.1** (tiered table:
 where Python exhaustive harness **departs** from native by env; Engine only after
-documented investigation / **numeric-policy** framing—not ad hoc patching).
-Tightened **§1.2.5** operational rule; **earliest byte boundary** bullets point to
-§1.2.5.1; **current code status** (native ``spm_dir_MI`` work, psi probe test,
-EIG+MI_PUSH vs +LINK exhaustive outcomes). **§16** change policy references §1.2.5.1.
+documented investigation / **numeric-policy** framing???not ad hoc patching).
+Tightened **?1.2.5** operational rule; **earliest byte boundary** bullets point to
+?1.2.5.1; **current code status** (native ``spm_dir_MI`` work, psi probe test,
+EIG+MI_PUSH vs +LINK exhaustive outcomes). **?16** change policy references ?1.2.5.1.
 
 **Shared files touched:** none.
 
 ---
 
-## Iteration — Lane-B enablement and first Lane-B vs Lane-C bottleneck compare
+## Iteration ??? Lane-B enablement and first Lane-B vs Lane-C bottleneck compare
 
 **Goal:** enable and exercise **Lane-B** (`MI_PUSH=1`, `EIG=0`) before deeper
 Lane-B vs Lane-C discussions.
@@ -1783,7 +2681,7 @@ Lane-B vs Lane-C discussions.
 
 **Validation (post-edit):**
 
-- ``pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` → **5 passed**.
+- ``pytest tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py -k "not exhaustive_exact_oracle" -q`` ??? **5 passed**.
 
 **Lane run outputs (checkpoint exhaustive):**
 
@@ -1797,20 +2695,20 @@ Lane-B vs Lane-C discussions.
 bottleneck; adding MATLAB eig (Lane-C) advances the bottleneck to link-MI /
 ``spm_dir_MI``.
 
-**Plan sync:** ``structure_learning_plan_week2.md`` updated so §1.2.5.1 now
+**Plan sync:** ``structure_learning_plan_week2.md`` updated so ?1.2.5.1 now
 reflects Lane-B support and explicit lane bottleneck snapshot.
 
 **Shared files touched:** none.
 
 ---
 
-## Iteration — Lane taxonomy lock-in (A/B/C/D/E)
+## Iteration ??? Lane taxonomy lock-in (A/B/C/D/E)
 
-**Modified:** ``structure_learning_plan_week2.md`` §1.2.5.1 to permanently lock
+**Modified:** ``structure_learning_plan_week2.md`` ?1.2.5.1 to permanently lock
 the lane taxonomy and avoid future naming drift:
 
-- Added canonical names **Lane A/B/C/D/E** with explicit rule “do not rename.”
-- Clarified that **A–D** are exhaustive-flag lanes on
+- Added canonical names **Lane A/B/C/D/E** with explicit rule ???do not rename.???
+- Clarified that **A???D** are exhaustive-flag lanes on
   ``test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle``.
 - Clarified **Lane E** is the non-exhaustive subset
   (``-k "not exhaustive_exact_oracle"``), with explicit purpose and limits.
@@ -1828,7 +2726,7 @@ interpreting future run results.
 
 
 
-## Lane validation cycle (2026-04-24) � ordered rerun for document coherence
+## Lane validation cycle (2026-04-24) ? ordered rerun for document coherence
 
 ### Lane A rerun (immediate log after run)
 
@@ -1991,7 +2889,7 @@ pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_
 
 ### Lane E rerun (immediate log after run)
 
-**Scope:** non-exhaustive subset in `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py` via pytest `-k "not exhaustive_exact_oracle"` (exhaustive gate `test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` deselected). No Lane A�D bridge env vars (`RGMS_FSL_RGM_MATLAB_MI_PUSH`, `RGMS_FSL_RGM_MATLAB_EIG`, `RGMS_FSL_LINK_DIR_MI_MATLAB`) were set for this run.
+**Scope:** non-exhaustive subset in `tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py` via pytest `-k "not exhaustive_exact_oracle"` (exhaustive gate `test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle` deselected). No Lane A?D bridge env vars (`RGMS_FSL_RGM_MATLAB_MI_PUSH`, `RGMS_FSL_RGM_MATLAB_EIG`, `RGMS_FSL_LINK_DIR_MI_MATLAB`) were set for this run.
 
 **Command (PowerShell):**
 
@@ -2007,8 +2905,125 @@ pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py -k "not ex
 
 **Evidence artifact (tee capture):** `C:\Users\andre\AppData\Local\Temp\lane_e_20260424_144752.log`.
 
-**Immediate interpretation (bounded to this selector):** the five included non-exhaustive oracle checks in this file remain green; this does not certify exhaustive native parity (Lanes A�C still characterize native gaps; Lane D remains the MATLAB-bridged exhaustive reference pass).
+**Immediate interpretation (bounded to this selector):** the five included non-exhaustive oracle checks in this file remain green; this does not certify exhaustive native parity (Lanes A?C still characterize native gaps; Lane D remains the MATLAB-bridged exhaustive reference pass).
 
 **Shared files touched:** none.
+
+---
+
+### Read-only preflight: branch, docs, MATLAB/Python `spm_dir_MI`, `_stream_link_mi` (no code changes)
+
+**Purpose:** Session preflight + mandatory doc reads + MATLAB reference pass + Python call-site audit per user instruction; **no** implementation edits in this iteration.
+
+**Git:** `git branch --show-current` ? **`andrew`**.
+
+**Re-read (notes):**
+- `notes\fsl_bottlenecks.md` ?B?F ? oracle contract (MATLAB `MDP_fsl_snip_exact` vs Python `_assert_mdp_tree_exhaustive_exact` / `_assert_exact_canon` bytes), Lane C vs D flags, file boundary table, Lane C `(1,58)` / `MDP{2}.a{21}` facts, next-step list.
+- `notes\structure_learning_plan_week2_22APR2026.md` ?4 lane table ? **Lane C:** `RGMS_FSL_RGM_MATLAB_EIG=1`, `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=0` (native link `spm_dir_MI`). **Lane D:** same + `RGMS_FSL_LINK_DIR_MI_MATLAB=1`. Optional checkpoint `RGMS_FSL_USE_CHECKPOINT=1`.
+
+**Mandatory doc reads (`rgms-rules.mdc`):**
+- `Python Matlab Translation Issues.md` ? raw 1-D arrays as MATLAB row vectors; `matlab_compat.py` narrow scope; `spm_cat` scalar-zero policy.
+- `notes\andrew Python Matlab Translation Issues.md` ? same baseline + **settled `spm_dir_MI` sections:** multimodal `h` oracle compares to sum of per-modality MATLAB calls; `spm_psi` ? `spm_dir_MI` digamma path; checkpoint probe on `MDP{2}.a{21}` (`psi` agreement `<1e-14`; inner marginal sum not sole explanation); **near-zero MI / `ss.ID`** documents `[SS-LINK-DIAG]`, Python `0.0` vs MATLAB `~1e-16`, prior tightening of `_spm_H` + sequential marginals **did not** move Python off zero; Lane D empirical pass with `LINK_DIR_MI`; remaining native byte work **concentrated in Python `spm_dir_MI`**.
+
+**Optional skim:** `Migration Plan.md` ? Phase 1.3 `spm_faster_structure_learning.m` / DEM demos scope (confirms SL sits in planned DEM/RGM path). `AGENTS.md` ? no extra SL-specific flags beyond general workflow.
+
+**MATLAB reference (`spm_dir_MI.m`):**
+- Read **read-only:** `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_MI.m` (did **not** edit `spm-main`).
+- Staged copy already present: `C:\Users\andre\.cursor\RGMs\matlab_src\spm_dir_MI.m` (matches top of reference; **no new copy** written this iteration).
+
+**Line-aligned Pass 1 audit checklist (MATLAB vs `python_src\spm_dir_MI.py`):**
+
+| Step | MATLAB (`spm_dir_MI.m`) | Python (`spm_dir_MI.py`) | Audit note |
+|------|-------------------------|----------------------------|------------|
+| Cell `a` | `iscell` ? loop `g`, recurse `spm_dir_MI(a{g},...)` with `nargin` branches | `_iscell_arg` / `_cell_get` / loop | Per-branch settled: multimodal + `h` uses `h[g]` vs MATLAB line-25 pattern; oracle sums per-modality MATLAB calls (documented in andrew notes). |
+| Tensor shape | `a = a(:,:)` | `asarray` + `reshape(..., order='F')` if not 2-D | Aligns with column-major reshape intent. |
+| Core MI (link path: **only** this) | `E = spm_H(sum(a,2)) + spm_H(sum(a,1)) - spm_H(a(:))` | `col_sums = np.sum(a_arr, axis=1, keepdims=True)`; `row_sums = np.sum(a_arr, axis=0, keepdims=True)`; `flat = reshape(..., order='F')`; `e_val = _spm_H(col_sums) + _spm_H(row_sums) - _spm_H(flat)` | **`_marginals_sum_matlab_like`** exists (sequential `sum` like MATLAB) but is **NOT** used for these marginals; **`np.sum`** may differ from MATLAB `sum` reduction order at ULP scale. Settled notes state sequential marginals + `_spm_H` tightening **still** left Python at **0.0** on checkpoint `a` ? residual points to **three-term cancellation** and/or **`psi`** / float path, not `_link_streams` assembly alone. |
+| Local `spm_H` | `a0 = sum(a); I = psi(a0+1) - sum(a.*psi(a+1))/a0` | `_spm_H`: Fortran-order flatten, **sequential** `a0` and inner `sum(a_i*psi(a_i+1))` | Matches stated intent to mirror MATLAB `spm_H` on vectors. |
+| Costs `c` | `nargin>1`: `A=a/sum(a,'all')`; normalize `c`; `E += spm_log(c)'*sum(A,2)` | `big_a`, `as_matlab_array`, `spm_log`, `_sum_axis1_matlab_like` | **Not executed** in `_stream_link_mi` one-arg link calls. |
+| Costs `h` | `nargin>2`: `spm_cat(h(:))`, normalize, `E += sum(A,1)*spm_log(h)` | `spm_cat`, `_sum_axis0_matlab_like` | **Not executed** in one-arg link calls. |
+
+**Python call-site audit ? `_stream_link_mi` / `_link_streams` (`spm_faster_structure_learning.py`):**
+- `_stream_link_mi(a_mat)`: if `link_dir_mi_fn` set ? `float(link_dir_mi_fn(asarray(a_mat, float64)))`; else ? `float(np.real(spm_dir_MI(a_mat)))` ? **single-argument** path only for stored link MI (no `c`, `h`).
+- **`a_mat` construction (ID branch, lines ~263?279):** `a_norm = spm_dir_norm(mdp_n['a'][gj-1][0])`; sparse ? **`toarray()`**; `asarray(..., float64)`; accumulate columns in double loop over `t_cols` with `+=` into preallocated `zeros((nj, ni))`. Same pattern for IE branch with `(nu, ni)`.
+- **Conclusion for isolation:** wiring produces **`float64` dense `a_mat`**; failure mode documented at **`ss.ID`** matches **kernel numeric** (`spm_dir_MI` / `_spm_H`), consistent with settled branch notes ? **not** a sparse-vs-dense skip before MI in this path.
+
+**Files read this iteration:** `rgms-rules.mdc` (session context), `notes\fsl_bottlenecks.md`, `notes\structure_learning_plan_week2_22APR2026.md` (lane ?), `Python Matlab Translation Issues.md`, `notes\andrew Python Matlab Translation Issues.md` (incl. `spm_dir_MI` sections), `Migration Plan.md` (grep/skim), `AGENTS.md` (grep), `C:\Users\andre\Documents\MATLAB\spm-main\spm_dir_MI.m`, `matlab_src\spm_dir_MI.m`, `python_src\spm_dir_MI.py`, `python_src\toolbox\DEM\spm_faster_structure_learning.py` (`_link_streams` / `_stream_link_mi` region).
+
+**Files created:** none  
+**Files modified:** none  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+**Recommended immediate follow-up (implementation phase, not done here):** oracle-extend or kernel change in **`spm_dir_MI.py`** per Lane C + `test_spm_dir_MI.py`, guided by settled notes (`psi` bit parity vs explicit policy); re-run Lane C then D; log again.
+
+---
+
+### spm_dir_MI / Lane C iteration (2026-04-24) - log entry (retried after interrupted shell)
+
+**Note:** The prior PowerShell `Add-Content` for this block did **not** complete (hardware/interrupt); this section records the same intent.
+
+**Code (`python_src\spm_dir_MI.py`):** core MI uses `_marginals_sum_matlab_like`; `sum(a,'all')` for `big_a` uses `_sum_all_matlab_like`; Fortran-order float64 copy of `a` before MI.
+
+**Oracle (`tests\oracle\test_spm_dir_MI.py`):** checkpoint probe mirrors exhaustive MATLAB harness (`addpath(matlab_src)`, `cd` to `matlab_src\toolbox\DEM`, `MDP_fsl_snip_exact`, `try/finally` pwd). All eight `test_spm_dir_MI` tests pass when run.
+
+**Harness (`tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`):** `[SS-LINK-DIAG]` passes `size=(nr,nc)` into `matlab.double` for MATLAB `spm_dir_MI` on Python `a`; optional `np.array_equal(mat,py)` print for linked `a`.
+
+**Lane C (exhaustive, checkpoint, MI_PUSH+EIG, native link MI):** still **FAIL** at `MDP{1}.ss.ID{1,2}(1,58)` after ~12-15 min; diag: `np.array_equal(mat,py)` true, Python `spm_dir_MI(a_p)=0`, MATLAB-on-Python-a `~8.88e-16`. Checkpoint oracle with aligned `cd` passes; remaining gap is in-process Python `spm_dir_MI` vs MATLAB on the compared `a` (see `notes\andrew Python Matlab Translation Issues.md`, section Open (2026-04-24)).
+
+**Files touched in that work:** `python_src\spm_dir_MI.py`, `tests\oracle\test_spm_dir_MI.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`. **Deleted:** `_probe_dir_mi_ck.py` (temp). **Shared runtime (`matlab_compat.py`):** not modified.
+
+---
+
+### Lane D regression (2026-04-24)
+
+**Env:** `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_RGM_MATLAB_EIG=1`, `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=1`, `RGMS_FSL_TIMING=1`.
+
+**Command:** `pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py::test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle --runxfail -vv --tb=short`
+
+**Result:** **PASS** in **1011.53 s** (~16:52).
+
+---
+
+### spm_dir_MI diagnostics + subprocess isolation (2026-04-25)
+
+**Scope (strict):** investigate native link-time `spm_dir_MI` behavior only, without widening to `spm_rgm_group` or other lanes.
+
+**Rule/context refresh (read first):** `rgms-rules.mdc`, `notes\fsl_bottlenecks.md`, `notes\structure_learning_plan_week2_22APR2026.md`.
+
+**Harness change (single-file, gated):** updated `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py` only.
+
+- Added optional dump helper for `[SS-LINK-DIAG]`:
+  - `RGMS_FSL_LINK_MI_DUMP=1` writes linked `a` to `.npy` plus sidecar `.json`.
+  - Metadata includes shape/dtype/contiguity/ownership and `sha256` over Fortran-order `float64` bytes.
+- Added optional subprocess helper:
+  - `RGMS_FSL_LINK_MI_SUBPROCESS=1` runs `spm_dir_MI` in a fresh Python process via `sys.executable`.
+  - Uses the dumped `.npy` artifact (same bytes) and prints scalar for parent-vs-subprocess comparison.
+- Default behavior remains unchanged when flags are not set.
+
+**Lane C run (checkpoint, MI_PUSH+EIG, native link MI, dump+subprocess enabled):**
+
+- Env: `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_RGM_MATLAB_EIG=1`, `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_TIMING=1`, `RGMS_FSL_LINK_MI_DUMP=1`, `RGMS_FSL_LINK_MI_SUBPROCESS=1`.
+- Result: **FAIL** (expected boundary) at `MDP{1}.ss.ID{1,2}(1,58)` in **783.49 s**.
+- Diagnostic evidence:
+  - linked `a` bytes match MATLAB: **True**
+  - dump created: `lev1_s1_2_k1_58_g21_B2_diag_pull_70eb08afc10f.npy`
+  - dump hash: `70eb08afc10f726e33d1085e2a7ac8e8408ea0b42063abbf3f44277e89d4fa62`
+  - `spm_dir_MI(Python parent on a_p)=0`
+  - `spm_dir_MI(subprocess on dump)=0` (delta parent-subprocess = `0`)
+  - `spm_dir_MI(MATLAB on same Python a)=8.8817841970012523e-16`
+  - interpretation: not parent-process contamination; discrepancy persists as deterministic Python kernel output on this artifact.
+
+**Lane D safety check after edit (diagnostic flags disabled):**
+
+- Env: `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_RGM_MATLAB_EIG=1`, `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`, `RGMS_FSL_LINK_DIR_MI_MATLAB=1`, `RGMS_FSL_TIMING=1`.
+- Result: **PASS** in **832.56 s** (~13:52).
+- Conclusion: gated diagnostics did not break Lane D behavior.
+
+**Files read this iteration:** `rgms-rules.mdc`, `notes\fsl_bottlenecks.md`, `notes\structure_learning_plan_week2_22APR2026.md`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
 
 ---

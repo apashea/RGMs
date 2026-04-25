@@ -1,0 +1,18 @@
+{
+  "boundary": "B2_diag_pull",
+  "lev": 1,
+  "si": 1,
+  "sj": 2,
+  "fi": 1,
+  "fj": 58,
+  "gi": 21,
+  "shape": [
+    2,
+    441
+  ],
+  "dtype": "float64",
+  "c_contiguous": true,
+  "f_contiguous": false,
+  "owndata": true,
+  "sha256_f64_fortran": "70eb08afc10f726e33d1085e2a7ac8e8408ea0b42063abbf3f44277e89d4fa62"
+}

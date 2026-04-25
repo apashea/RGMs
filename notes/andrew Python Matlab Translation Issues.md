@@ -126,29 +126,46 @@ parity work targets **`scipy.special.psi`** vs MATLAB **`psi`** on the
 and Python’s sequential inner loop for the column marginal — so the observed
 **Python `spm_dir_MI==0` vs MATLAB `~1e-16`** on that **`a`** is **not** explained
 by SciPy vs MATLAB **`psi`** on sampled scalars nor by a simple inner-sum order
-bug on that marginal alone; the residual is in **how the three `H` terms
-combine** (cancellation) and/or subtle marginal / joint path differences not
-covered by that single-marginal inner-sum check.
+bug on that marginal alone; the probe’s recombined `H` terms still left a gap
+until the **production** MI path matched MATLAB’s **sequential** marginal **`sum`**.
+
+**Update (2026-04-24):** `python_src/spm_dir_MI.py` had defined
+`_marginals_sum_matlab_like` / `_sum_all_matlab_like` but the **core**
+`spm_dir_MI` MI term still used **`np.sum`** for **`sum(a,2)`** / **`sum(a,1)`**
+and **`np.sum`** for **`sum(a,'all')`**. Wiring the core path to those helpers
+restores MATLAB–Python agreement on checkpoint **`MDP{2}.a{21}`** in
+`test_spm_dir_MI_checkpoint_link_a_psi_vs_scipy` **once that test mirrors the
+exhaustive harness MATLAB path** (`addpath(matlab_src)`, **`cd` to
+`matlab_src/toolbox/DEM`**, workspace name `MDP_fsl_snip_exact`). Without that
+`cd`/path alignment, the checkpoint probe could pull a **different** linked
+`a{21}` than the exhaustive reference while still “passing” an oracle.
+
+**Open (2026-04-24):** exhaustive Lane C still shows **`spm_dir_MI(Python a)=0`**
+while **`spm_dir_MI(MATLAB on Python a)`** matches MATLAB’s stored **`ss.ID`**
+on the **same** `a_p` with **`np.array_equal(a_m, a_p)`** true — so the remaining
+gap is **not** `_link_streams` matrix assembly; next step is to **diff** the
+numeric `a` pulled inside **`_stream_link_mi`** at store time vs the `a_p`
+extracted at compare time (e.g. optional `a_mat` dump under a debug env flag) or
+run **`spm_dir_MI` under a debugger** mid-`spm_faster_structure_learning` to
+rule out subtle **view / dtype / thread** interactions.
 
 ## `spm_dir_MI` near-zero MI on linked `a` (`ss.ID` / `ss.IE` bytes)
 
 On the snippet T1000 exhaustive checkpoint with MATLAB EIG + MI_PUSH, the first
-canonical-byte mismatch can sit in **`MDP{1}.ss.ID`** (e.g. key `(1, 58)`).
-**`[SS-LINK-DIAG]`** then shows: linked **`MDP{2}.a{gi}`** matches MATLAB **byte-for-byte**;
+canonical-byte mismatch **had** sat in **`MDP{1}.ss.ID`** (e.g. key `(1, 58)`).
+**`[SS-LINK-DIAG]`** showed: linked **`MDP{2}.a{gi}`** matches MATLAB **byte-for-byte**;
 MATLAB’s stored **`ss.ID`** equals MATLAB **`spm_dir_MI`** on Python’s **`a`**;
-Python **`spm_dir_MI`** returns **exact `0.0`** while MATLAB keeps **`~1e-16`**.
-So the lane is **`spm_dir_MI` / `_spm_H` numerics** (cancellation / **`psi`**),
-not **`_link_streams`** assembly. Tightening **`_spm_H`** (Fortran flatten +
-sequential inner sums) and MATLAB-like **sequential marginal sums** for
-**`sum(a,2)`** / **`sum(a,1)`** did **not** move Python off zero on that checkpoint
-matrix—native follow-up likely needs **`psi`** bit parity or an explicit numeric
-policy. Harness-only flag **`RGMS_FSL_LINK_DIR_MI_MATLAB`** calls MATLAB
-**`spm_dir_MI`** when writing **`ss.ID`/`ss.IE`** to see whether the **rest** of the
-nested **`MDP`** tree still diverges (provisional isolation, not production).
-**Empirical (2026-04-22):** with checkpoint + EIG + MI_PUSH + **`LINK_DIR_MI`**,
-``test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle``
-**passes** — so remaining native work for byte-exact tree parity on this harness is
-**concentrated in Python ``spm_dir_MI``** (not downstream fields after link MI).
+Python **`spm_dir_MI`** **previously** returned **exact `0.0`** while MATLAB kept
+**`~1e-16`** — isolating **`spm_dir_MI` / `_spm_H`** numerics and **`_link_streams`**
+assembly (assembly was ruled out by byte-matched **`a`**). **Update (2026-04-24):**
+core MI now uses MATLAB-like sequential marginals, **`sum(a,'all')`** via
+`_sum_all_matlab_like`, and a Fortran-order **`a`** copy before MI. **Lane C**
+exhaustive (`MI_PUSH`+`MATLAB_EIG`, native link `spm_dir_MI`) **still** fails at
+**`MDP{1}.ss.ID{1,2}(1,58)`** as of the same date — see **`logs\log_0.md`** and
+**`[SS-LINK-DIAG]`** “Open” note above. Harness-only **`RGMS_FSL_LINK_DIR_MI_MATLAB`**
+remains the bridge sanity lane (**Lane D**). **Empirical (2026-04-22):** with
+checkpoint + EIG + MI_PUSH + **`LINK_DIR_MI`**, the exhaustive oracle **passes**
+(Lane D).
 
 ## `spm_rgm_group` cell `O{o,t}` orientation (MATLAB Engine)
 

@@ -2,8 +2,12 @@
 
 from pathlib import Path
 from unittest.mock import patch
+import hashlib
+import json
 import os
 import pickle
+import subprocess
+import sys
 import time
 
 import matlab
@@ -15,7 +19,7 @@ from python_src.toolbox.DEM.spm_MDP_generate import spm_MDP_generate
 from python_src.toolbox.DEM.spm_MDP_pong import spm_MDP_pong
 from python_src.toolbox.DEM.spm_faster_structure_learning import spm_faster_structure_learning
 from python_src.toolbox.DEM.spm_rgm_group import _spm_cat_row, _spm_mdp_mi_scalar, spm_rgm_group
-from python_src.spm_dir_MI import spm_dir_MI
+from python_src.spm_dir_MI import get_experiment_stats, reset_experiment_stats, spm_dir_MI
 from python_src.spm_log import spm_log
 from tests.helpers.compare import assert_matlab_match
 
@@ -32,6 +36,82 @@ def _tlog(enabled: bool, msg: str) -> None:
 def _diaglog(enabled: bool, msg: str) -> None:
     if enabled:
         print(f"[DIAG] {msg}", flush=True)
+
+
+def _arr_sha256(a: np.ndarray) -> str:
+    """Stable digest of float64 Fortran-canonical payload for cross-process checks."""
+    arr = np.asarray(a, dtype=np.float64, order="F")
+    return hashlib.sha256(arr.tobytes(order="F")).hexdigest()
+
+
+def _dump_link_matrix_if_enabled(
+    a: np.ndarray,
+    *,
+    lev: int,
+    si: int,
+    sj: int,
+    fi: int,
+    fj: int,
+    gi: int,
+    boundary: str,
+) -> tuple[Path, str] | tuple[None, None]:
+    """Optional dump for link-MI diagnostics; disabled unless env flag is set."""
+    if not _env_flag("RGMS_FSL_LINK_MI_DUMP"):
+        return None, None
+    out_dir_env = os.getenv("RGMS_FSL_LINK_MI_DUMP_DIR")
+    if out_dir_env is None or out_dir_env.strip() == "":
+        out_dir = Path(__file__).resolve().parent / "_tmp_link_mi"
+    else:
+        out_dir = Path(out_dir_env).expanduser()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    arr = np.asarray(a, dtype=np.float64)
+    sha = _arr_sha256(arr)
+    stem = (
+        f"lev{int(lev)}_s{int(si)}_{int(sj)}_k{int(fi)}_{int(fj)}_g{int(gi)}"
+        f"_{boundary}_{sha[:12]}"
+    )
+    npy_path = out_dir / f"{stem}.npy"
+    meta_path = out_dir / f"{stem}.json"
+    np.save(npy_path, arr, allow_pickle=False)
+    meta = {
+        "boundary": boundary,
+        "lev": int(lev),
+        "si": int(si),
+        "sj": int(sj),
+        "fi": int(fi),
+        "fj": int(fj),
+        "gi": int(gi),
+        "shape": [int(x) for x in arr.shape],
+        "dtype": str(arr.dtype),
+        "c_contiguous": bool(arr.flags["C_CONTIGUOUS"]),
+        "f_contiguous": bool(arr.flags["F_CONTIGUOUS"]),
+        "owndata": bool(arr.flags["OWNDATA"]),
+        "sha256_f64_fortran": sha,
+    }
+    meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    print(f"[SS-LINK-DIAG] dumped {boundary} matrix: {npy_path}", flush=True)
+    return npy_path, sha
+
+
+def _spm_dir_mi_subprocess_from_npy(npy_path: Path) -> float:
+    """Evaluate spm_dir_MI in a fresh Python interpreter for process isolation."""
+    script = (
+        "import numpy as np; "
+        "from python_src.spm_dir_MI import spm_dir_MI; "
+        f"a=np.load(r'''{str(npy_path)}''',allow_pickle=False); "
+        "v=float(np.real(spm_dir_MI(a))); "
+        "print(repr(v))"
+    )
+    cp = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    out = cp.stdout.strip().splitlines()
+    if not out:
+        raise RuntimeError("subprocess spm_dir_MI produced no stdout")
+    return float(out[-1].strip())
 
 
 def _make_matlab_rgm_eig_pair(eng):
@@ -534,6 +614,21 @@ def _diag_ss_mi_link_mismatch(
             f"[SS-LINK-DIAG] linked a bytes match: {sm == sp and bm == bp}",
             flush=True,
         )
+        if sm == sp and bm == bp:
+            same_elems = bool(np.array_equal(np.asarray(a_m, dtype=np.float64), a_p))
+            print(f"[SS-LINK-DIAG] linked a np.array_equal(mat,py): {same_elems}", flush=True)
+        dump_path, dump_sha = _dump_link_matrix_if_enabled(
+            a_p,
+            lev=lev,
+            si=si,
+            sj=sj,
+            fi=fi,
+            fj=fj,
+            gi=gi,
+            boundary="B2_diag_pull",
+        )
+        if dump_sha is not None:
+            print(f"[SS-LINK-DIAG] dump sha256_f64_fortran={dump_sha}", flush=True)
     except Exception as exc:
         print(f"[SS-LINK-DIAG] linked a matrix pull failed: {exc}", flush=True)
         return
@@ -547,8 +642,23 @@ def _diag_ss_mi_link_mismatch(
     except Exception as exc:
         print(f"[SS-LINK-DIAG] Python spm_dir_MI(a_p) failed: {exc}", flush=True)
         py_mi_on_ap = None
+    if _env_flag("RGMS_FSL_LINK_MI_SUBPROCESS") and dump_path is not None:
+        try:
+            sub_mi = _spm_dir_mi_subprocess_from_npy(dump_path)
+            print(f"[SS-LINK-DIAG] spm_dir_MI(subprocess on dump)={sub_mi:.17g}", flush=True)
+            if py_mi_on_ap is not None:
+                print(
+                    f"[SS-LINK-DIAG] parent-vs-subprocess MI delta="
+                    f"{py_mi_on_ap - sub_mi:.3e}",
+                    flush=True,
+                )
+        except Exception as exc:
+            print(f"[SS-LINK-DIAG] subprocess spm_dir_MI(dump) failed: {exc}", flush=True)
     try:
-        eng.workspace["rgms_ap"] = matlab.double(a_p.tolist())
+        ap = np.asarray(a_p, dtype=np.float64)
+        eng.workspace["rgms_ap"] = matlab.double(
+            ap.tolist(), size=(int(ap.shape[0]), int(ap.shape[1]))
+        )
         eng.eval("rgms_mi_from_py_a = spm_dir_MI(rgms_ap);", nargout=0)
         ml_mi_on_py_a = float(
             np.asarray(eng.eval("rgms_mi_from_py_a"), dtype=np.float64).ravel()[0]
@@ -1502,6 +1612,8 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
     ``eig`` + link ``spm_dir_MI`` parity/policy is resolved.
     """
     eng = dem_eng_fsl_pdp
+    if _env_flag("RGMS_DIR_MI_EXPERIMENT_STATS"):
+        reset_experiment_stats()
     nr, nc, nd, na, npix = 12, 9, 4, 1, 0
     t_roll = 1000
     k = 1000
@@ -1515,6 +1627,12 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
     ck_dir = Path(__file__).resolve().parent / "_checkpoint_data"
     ck_py = ck_dir / "fsl_snippet_t1000_o_sl.pkl"
     ck_mat = ck_dir / "fsl_snippet_t1000_matlab_inputs.mat"
+    capture_tag = str(os.getenv("RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD_TAG", "")).strip()
+    if capture_tag:
+        safe_tag = "".join(ch if (ch.isalnum() or ch in ("-", "_")) else "_" for ch in capture_tag)
+        ck_link = ck_dir / f"fsl_link_mi_workload_{safe_tag}.pkl"
+    else:
+        ck_link = ck_dir / "fsl_link_mi_workload.pkl"
     t0 = time.perf_counter()
 
     o_sl = None
@@ -1579,6 +1697,8 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
     rgm_eig_pair = None
     rgm_mi_override_fn = None
     link_dir_mi_fn = None
+    link_mi_probe_fn = None
+    link_capture_records: list[dict] = []
     lane_b = _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH") and not _env_flag(
         "RGMS_FSL_RGM_MATLAB_EIG"
     )
@@ -1588,6 +1708,41 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         rgm_mi_override_fn = _make_rgm_mi_override_fn_matlab(eng)
     if _env_flag("RGMS_FSL_LINK_DIR_MI_MATLAB"):
         link_dir_mi_fn = _make_matlab_link_dir_mi_fn(eng)
+    if _env_flag("RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD"):
+        if _env_flag("RGMS_FSL_LINK_DIR_MI_MATLAB"):
+            raise RuntimeError(
+                "RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD requires native link MI "
+                "(unset RGMS_FSL_LINK_DIR_MI_MATLAB)"
+            )
+        seq = {"i": 0}
+
+        def _capture_link_mi(rec: dict) -> None:
+            seq["i"] += 1
+            a = np.asarray(rec["a_mat"], dtype=np.float64)
+            nr, nc = int(a.shape[0]), int(a.shape[1])
+            mname = f"rgms_cap_a_{seq['i']}"
+            outname = f"rgms_cap_mi_{seq['i']}"
+            eng.workspace[mname] = matlab.double(a.tolist(), size=(nr, nc))
+            eng.eval(f"{outname} = spm_dir_MI({mname});", nargout=0)
+            matlab_mi = float(np.asarray(eng.eval(outname), dtype=np.float64).reshape(-1)[0])
+            eng.eval(f"clear {mname} {outname}", nargout=0)
+            link_capture_records.append(
+                {
+                    "idx": int(seq["i"]),
+                    "kind": str(rec["kind"]),
+                    "lev": rec["lev"],
+                    "si": int(rec["si"]),
+                    "sj": int(rec["sj"]),
+                    "fi": int(rec["fi"]),
+                    "fj": int(rec["fj"]),
+                    "gi": int(rec["gi"]),
+                    "a_mat": np.asarray(a, dtype=np.float64),
+                    "python_mi_capture": float(rec["python_mi"]),
+                    "matlab_mi": matlab_mi,
+                }
+            )
+
+        link_mi_probe_fn = _capture_link_mi
     if lane_b:
         print(
             "[DIAG] Lane B enabled: MATLAB MI push with Python/SciPy eig "
@@ -1614,8 +1769,30 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         rgm_eig_pair=rgm_eig_pair,
         rgm_mi_override_fn=rgm_mi_override_fn,
         link_dir_mi_fn=link_dir_mi_fn,
+        link_mi_probe_fn=link_mi_probe_fn,
     )
     _tlog(timing, f"python spm_faster_structure_learning: {time.perf_counter() - t_sl:.2f}s")
+    if _env_flag("RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD"):
+        ck_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "meta": {
+                "source_test": "test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle",
+                "checkpoint_mode": bool(use_checkpoint),
+                "sc": int(sc),
+                "records": int(len(link_capture_records)),
+            },
+            "records": link_capture_records,
+        }
+        with ck_link.open("wb") as f:
+            pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
+        print(f"[DIR-MI-WORKLOAD] saved {len(link_capture_records)} records to {ck_link}", flush=True)
+    if _env_flag("RGMS_DIR_MI_EXPERIMENT_STATS"):
+        st = get_experiment_stats()
+        print(
+            f"[DIR-MI-STATS] one_arg_calls={st['one_arg_calls']} "
+            f"row_ulp_triggered={st['row_ulp_triggered']}",
+            flush=True,
+        )
 
     t_tree = time.perf_counter()
     _assert_mdp_tree_exhaustive_exact(eng, mdp_m_name, mdp_p, n_stream=4)
