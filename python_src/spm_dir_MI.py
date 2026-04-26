@@ -8,6 +8,12 @@ subfunction `spm_H`, using SciPy `psi` (digamma) like MATLAB `psi`.
 the full multimodal `h`, which mis-dimensions `sum(A,1)*H` when `numel(h)>1`.
 Python passes the per-modality slice `h[g]` (aligned with `a{g}` / `c{g}`); oracle
 for multimodal + `h` compares against the MATLAB **sum of per-modality** calls.
+
+Numerics note for current migration status: this module keeps the general
+one-argument `spm_H` evaluation form as default (`psi(a0+1) - inner/a0`). In the
+link-MI bottleneck lane, tiny float64 residuals (`~1e-15` absolute) can remain on
+some matrices; acceptance of those residuals is scoped in oracle assertions for
+`ss.ID` / `ss.IE`, not hidden inside this runtime function.
 """
 
 from __future__ import annotations
@@ -217,13 +223,10 @@ def _spm_H(a: np.ndarray) -> float:
         raise ValueError("spm_H: sum(a) is zero")
     psi_a0 = float(psi(a0 + 1.0))
     frac = float(s / a0)
-    # Default: ``(psi(a0+1)*a0 - inner_sum) / a0`` matches MATLAB ``psi(a0+1) -
-    # sum(a.*psi(a+1))/a0`` in real arithmetic; on float64 it aligns better with
-    # MATLAB's rounded ``spm_H`` on captured ``spm_faster_structure_learning`` link
-    # workloads than ``psi_a0 - frac`` (see logs/log_0.md, ALT_ORDER replay batch).
-    if _env_flag("RGMS_DIR_MI_LEGACY_SPM_H_EVAL"):
-        out = float(psi_a0 - frac)
-    else:
+    # Keep the direct MATLAB-subfunction expression as default.
+    out = float(psi_a0 - frac)
+    # Optional diagnostics-only alternate float grouping.
+    if _env_flag("RGMS_DIR_MI_EXPERIMENT_ALT_ORDER"):
         out = float((psi_a0 * a0 - s) / a0)
     if _trace_enabled():
         # Trace-only diagnostics: compare default float path with alternate

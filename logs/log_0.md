@@ -123,6 +123,191 @@
 
 ---
 
+### Link workload: per-matrix ``spm_H`` / marginal trace vs ULP folklore (2026-04-25)
+
+**Oracle:** `tests\oracle\test_spm_dir_MI.py::test_spm_dir_MI_link_workload_matlab_python_H_trace_oracle` (MATLAB Engine). Replays all `fsl_link_mi_workload*.pkl` records and compares inline MATLAB ``spm_H`` decomposition (same formulas as `test_spm_dir_MI_link_diag_dump_fast_oracle`) against Python ``_marginals_sum_matlab_like`` + ``_spm_H``.
+
+**Structural ``12/24`` (not a random half):** In every workload pickle, **record indices ``0``, ``1``, ``2``** (capture order within the six-record batch) byte-mismatch stored MATLAB ``spm_dir_MI``; indices ``3``–``5`` always match. This repeats across four files because the harness captures the **same logical link-MI slots** four times, not independent draws.
+
+**``h_row`` vs ``h_flat``:** On this corpus, **Python always has ``h_row == h_flat``** at float64 equality (sequential row marginal vs ``a(:)`` path land on the same rounded ``spm_H`` inputs). **MATLAB** separates ``h_row`` and ``h_flat`` by **exactly one float64 ULP** on **16/24** matrices; on **8/24** those MATLAB terms are byte-equal. **Crucially, all 12 final-MI byte mismatches** sit in the **16**-matrix subset where MATLAB exhibits the **1 ULP** row/flat split; none occur when MATLAB's row and flat ``spm_H`` terms are already equal.
+
+**Cross-tab among the 12 byte matches:** **8** have MATLAB ``h_row==h_flat`` (``0 ULP`` split); **4** still have MATLAB's **1 ULP** split but ``h_col + h_row - h_flat`` lands on the **same** float as Python anyway (the split cancels in the MI recombination at this scale).
+
+**Final MI gap sizes (correcting “everything is 1 ULP”):** Of the **12** mismatches, **8** are ``Python==0`` vs MATLAB ``~8.88e-16`` — these are **not** ``nextafter``-1 apart from zero (subnormal staircase is astronomically long). **4** are the nonzero ``IE`` slot at idx ``1`` where Python and MATLAB MI differ by **128** float64 ULPs between neighboring representable values near ``0.0456``.
+
+**Files modified:** `tests\oracle\test_spm_dir_MI.py`, `logs\log_0.md`
+
+---
+
+### Row-shape perturbation micro-study (`h_row` vs `h_flat` ULP class) — 2026-04-25
+
+**Goal:** probe causation for MATLAB local `spm_H` row-vs-flat category (`0 ULP` vs `1 ULP`) using controlled matrix edits on workload fixtures while preserving column-wise mass profiles as much as possible.
+
+**Method (read-only scripts, no code changes):**
+
+- Start from one workload file (`fsl_link_mi_workload.pkl`; six unique slot matrices, repeated across the four workload files).
+- For selected matrices (`idx 1` shape `2x441`, `idx 5` shape `3x441`, `idx 4` shape `9x441`), evaluate MATLAB row-vs-flat ULP distance:
+  - baseline,
+  - append `k` all-zero rows (`k=1..12`),
+  - reorder nonzero rows (reverse + cyclic shifts),
+  - split/merge rows while preserving per-column totals.
+- ULP class computed on MATLAB terms:
+  - `h_row = psi(sum(sum(a,1))+1) - sum(sum(a,1).*psi(sum(a,1)+1))/sum(sum(a,1))`
+  - `h_flat = psi(sum(a(:))+1) - sum(a(:).*psi(a(:)+1))/sum(a(:))`
+  - classify by `nextafter` step distance between `h_row` and `h_flat`.
+
+**Findings:**
+
+1) **Row-padding parity pattern (strong):**
+
+- For `idx 1` (`2x441`, baseline `1 ULP`): adding an **odd** number of all-zero rows flips to `0 ULP`; adding an **even** number preserves `1 ULP` (observed flip points at `+1,+3,+5,+7,+9,+11`).
+- For `idx 5` (`3x441`, baseline `0 ULP`): adding `+1` row (to `4x441`) flips to `1 ULP`; adding `+2,+3` rows returns to `0 ULP`; up to `+12`, additional flips appeared at `+1,+5,+9`.
+- For `idx 4` (`9x441`, baseline `0 ULP`): no flip up to `+12` rows.
+
+2) **Row-order invariance (within tested permutations):**
+
+- Reversing/cyclically shifting nonzero row order for `idx 5` and `idx 4` did **not** change ULP class.
+- This argues against simple row-order accumulation as the primary lever.
+
+3) **Split/merge perturbations:**
+
+- Splitting one row of a `2x441` matrix into two half-rows (to `3x441`) can move row-vs-flat far beyond `1 ULP` neighborhood (large absolute `h_row-h_flat`, `nextafter` count not reachable within practical cap).
+- Merging `idx 5` (`3x441`) into `2x441` via row-sum pairs kept class at `0 ULP` in tested merges.
+
+**Interpretation update:**
+
+- The workload category (`0` vs `1` ULP) is **not** explained by meaningful distributional differences in column totals (those were matched across slots).
+- Evidence supports a **numerical reduction-path / shape-length effect** in MATLAB evaluation of row-marginal vs flat-marginal `spm_H` terms.
+- The effect is deterministic and reproducible under small structural perturbations (especially zero-row padding), which strengthens causation compared to correlation-only analysis.
+
+**Caveat:** this micro-study is from the current fixture family; it demonstrates mechanism plausibility and deterministic sensitivity, not a universal proof for all matrices.
+
+---
+
+### Deterministic reduction mechanics follow-up (padding phase + inner-term isolation) — 2026-04-25
+
+**Goal:** move from correlation to explicit numeric mechanism by isolating which scalar in local MATLAB `spm_H` changes when `h_row`/`h_flat` class flips under shape perturbations.
+
+**Key isolation result (read-only scripts):**
+
+- For the `2x441` fixture (`idx=1`) under `+k` zero-row padding:
+  - `a0_row == a0_flat == 500` always.
+  - row marginal vector values (`sum(a,1)`) are byte-identical to the unpadded reference across all `k`.
+  - the only moving piece is the inner term mismatch
+    `inr_row - inr_flat = sum(v_row.*psi(v_row+1)) - sum(v_flat.*psi(v_flat+1))`,
+    which drives `h_row - h_flat = -(inr_row - inr_flat)/a0`.
+- Therefore, category flips are not from changed data mass, but from reduction-path rounding in the `sum(v.*psi(v+1))` contraction.
+
+**Observed deterministic phase law on this fixture family:**
+
+- `idx=1` (`2x441`) ULP sequence for `k=0..7`: `[1,0,1,0,1,0,1,0]`.
+- `idx=5` (`3x441`) ULP sequence for `k=0..7`: `[0,1,0,0,0,1,0,0]`.
+- `idx=4` (`9x441`) ULP sequence for `k=0..7`: `[0,0,0,0,0,0,0,0]`.
+- Additional scan to `k=24` on `idx=1` showed a strict period-4 pattern in `inr_row-inr_flat` values, with `h_row-h_flat` toggling accordingly between `0` and `8.8817841970012523e-16`.
+
+**Permutation check refinement:**
+
+- Reversing/cyclically shifting nonzero row order in tested `3x441` and `9x441` fixtures did not change ULP class.
+- This further supports shape/length reduction-path effects over simple row-order effects.
+
+**New reproducible oracle test:**
+
+- Added `tests\\oracle\\test_spm_dir_MI.py::test_spm_dir_MI_link_workload_rowflat_padding_phase_oracle` (`@pytest.mark.slow`).
+- The test asserts:
+  1. `a0_row == a0_flat` while class flips under padding,
+  2. exact deterministic padding-phase sequences above for indices `1`, `5`, `4`,
+  3. row-order invariance for selected fixtures (`idx=5`, `idx=4`).
+- This captures deterministic mechanics directly in suite form instead of ad-hoc shell traces.
+
+**Validation:**
+
+- Target test: pass.
+- Full `test_spm_dir_MI.py` module: `13 passed`.
+
+**Files modified:** `tests\\oracle\\test_spm_dir_MI.py`, `logs\\log_0.md`
+
+---
+
+### Generalization sweep (synthetic families beyond fixture shape) — 2026-04-26
+
+**Objective:** test whether the discovered row/flat `0-or-1 ULP` mechanism and padding-phase behavior are general to `spm_dir_MI` inputs, or primarily a property of the sparse one-hot link-matrix family.
+
+**Protocol (read-only script):**
+
+- MATLAB Engine + Python `spm_dir_MI` compared on **110 synthetic matrices**:
+  - `m x 441` for `m in {2,3,4,5,6,7,8,9,10,12,16}`.
+  - `5` random reps each for two families:
+    - `onehot`: per column exactly one nonzero entry, values sampled from `{1,2,3}` (link-like sparsity pattern).
+    - `dense`: positive gamma draws across all entries.
+- Metrics:
+  - canonical byte equality of final MI scalar (`float64`) Python vs MATLAB,
+  - abs diff,
+  - MI ULP distance (bounded scanner),
+  - MATLAB row-vs-flat `spm_H` ULP class (`h_row` vs `h_flat`).
+
+**Results summary:**
+
+1) **Dense family (55 cases):**
+
+- Exact byte matches are rare (`0–2` matches per shape bucket).
+- Typical abs deltas are still tiny (`~1e-15` to `1e-14`) but much larger than link-fixture near-zero class.
+- MATLAB row-vs-flat separation is not in the `0/1 ULP` bucket; observed differences can be substantially larger in magnitude, so the prior binary category model does not apply cleanly.
+
+2) **One-hot family (55 cases):**
+
+- Behaves closer to link workload regime (`max_abs` around `8.88e-16` to `2.67e-15` by shape bucket).
+- MATLAB row-vs-flat is mostly `0 ULP`, with occasional `1 ULP` instances in some row counts.
+- Still not a universal odd/even law; shape-specific phases persist.
+
+3) **Global implication:**
+
+- The previously isolated deterministic mechanism (padding-phase `0/1 ULP` flips) is real but appears **family-specific** (sparse one-hot / link-like tensors), not a complete explanatory model for all positive matrices.
+- Therefore, a parity strategy based only on reproducing that binary row/flat mechanism risks overfitting to link fixtures and under-explaining dense/general cases.
+
+**Interpretation for next steps:**
+
+- Keep two-track diagnostics:
+  - **Track A (link parity):** preserve and use row/flat phase tests because they are causally relevant to current bottleneck.
+  - **Track B (generalization):** add synthetic oracle coverage spanning sparse + dense families, so future fixes are evaluated for broad MATLAB-faithfulness and not only checkpoint fixture closure.
+
+**Files modified:** `logs\\log_0.md`
+
+---
+
+### Default-vs-legacy `_spm_H` evaluation on synthetic families (risk-of-overfit check) — 2026-04-26
+
+**Why:** after promoting former candidate C to default (`(psi*a0 - s)/a0`), verify this does not silently over-tailor to link fixtures at the expense of broader one-arg `spm_dir_MI` behavior.
+
+**Protocol (read-only script):**
+
+- Families: `onehot` and `dense`, shapes `m x 200` for `m in {2,3,4,5,6,8,10,12}`, `8` reps each.
+- For each matrix:
+  - MATLAB reference `spm_dir_MI(A)` via Engine.
+  - Python default (`RGMS_DIR_MI_LEGACY_SPM_H_EVAL` unset).
+  - Python legacy (`RGMS_DIR_MI_LEGACY_SPM_H_EVAL=1`).
+- Collected:
+  - absolute scalar error vs MATLAB,
+  - canonical-byte equality count.
+
+**Outcome (important):**
+
+- On this synthetic mix, **legacy** outperformed **default** more often:
+  - per-matrix abs-error comparison: `default better = 20`, `legacy better = 41`, `same = 67`.
+- In sparse onehot buckets, legacy was usually equal-or-better on mean abs error and exact-counts.
+- In dense buckets, winner varied by row count, but there is no evidence that the default promoted grouping is globally superior.
+
+**Interpretation:**
+
+- Promoted default clearly helps current link-workload replay closure (`12/24` vs `20/24`) but may reduce broad MATLAB closeness on other distributions.
+- This strengthens the caution against a global “one formula ordering fits all” conclusion.
+- If project priority is strict global MATLAB-faithfulness beyond the current bottleneck, next decisions should consider:
+  1. reverting to legacy default and scoping alternate ordering only where justified, or
+  2. implementing a deterministic reduction primitive that better matches MATLAB across families, then reevaluating both link fixtures and synthetic families.
+
+**Files modified:** `logs\\log_0.md`
+
+---
+
 ### spm_dir_MI decision-memory and policy-justification record (2026-04-25 17:12 UTC-5)
 
 This section is intentionally explicit so future review can justify any final ULP/tolerance scope and explain exactly what assertion boundary is being changed.

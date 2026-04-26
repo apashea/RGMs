@@ -167,6 +167,56 @@ remains the bridge sanity lane (**Lane D**). **Empirical (2026-04-22):** with
 checkpoint + EIG + MI_PUSH + **`LINK_DIR_MI`**, the exhaustive oracle **passes**
 (Lane D).
 
+## `spm_dir_MI` current status policy (temporary, scoped, migration-safe)
+
+This note captures the current settled operating policy so work can proceed to
+other bottlenecks without confusing this as final global closure.
+
+- **Runtime intent remains fully Python-native:** default `python_src/spm_dir_MI.py`
+  does not call MATLAB Engine or import MATLAB outputs.
+- **Default arithmetic is the general MATLAB-like expression form** in local
+  `_spm_H` (`psi(a0+1) - sum(a.*psi(a+1))/a0` shape), with alternate float
+  grouping retained only behind a diagnostics env flag.
+- **Scoped tolerance acceptance is enabled only at link-MI assertion boundaries**
+  (`ss.ID` / `ss.IE` checks in SL oracle paths), currently `abs(MATLAB-Python) <= 1e-15`.
+- **Observed accepted residual class in this bottleneck lane** is typically
+  around `8.88e-16` (both `0.0` vs tiny MATLAB nonzero and tiny nonzero-vs-nonzero).
+- **Non-link assertions remain strict canonical-byte checks.** This is not a
+  blanket tolerance policy for all translated outputs.
+
+Rationale: this keeps `spm_dir_MI` non-hypertailored while documenting a narrow,
+explicit migration policy at the known link-MI bottleneck boundary.
+
+## Bottleneck isolation workflow policy (applies beyond `spm_dir_MI`)
+
+Decision: for any newly investigated numeric bottleneck, use boundary-capture
+replay as the default method before spending time on repeated long end-to-end runs.
+
+Required workflow:
+
+1. **Deterministic upstream state first**
+   - Lock/random-replay upstream inputs so mismatches are attributable to the
+     target bottleneck function.
+
+2. **Capture exact runtime bottleneck inputs**
+   - Save the true call-boundary inputs that enter the bottleneck function during
+     execution (not only distant upstream checkpoints).
+   - Save MATLAB outputs for those exact inputs in the same capture artifact.
+
+3. **Fast replay oracle**
+   - Add a replay test that compares Python vs stored MATLAB outputs using the
+     captured boundary corpus.
+   - Use this replay test as the inner loop for candidate experiments.
+
+4. **Long-run discipline**
+   - Reserve long exhaustive runs for milestone confirmation or intentional
+     capture refresh/expansion.
+   - Do not regress to long-run-only iteration after a boundary replay gate exists.
+
+5. **Explicit acceptance scope**
+   - If tolerance is used, it must be scoped to a named boundary, with clear
+     magnitude, rationale, and tests; no implicit global relaxation.
+
 ## `spm_rgm_group` cell `O{o,t}` orientation (MATLAB Engine)
 
 `spm_cat(R(o,:))` concatenates each time slice with the same **row** layout as

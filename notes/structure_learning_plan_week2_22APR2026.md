@@ -70,11 +70,11 @@ MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);
 
 `spm_MDP_generate` rolls that model forward stochastically and emits the outcome sequence (`PDP.O`) used by structure learning. Here we enforce replay-controlled comparability (MATLAB `twister` + buffered random draws) so generated windows can be compared before any SL internals are blamed. In other words, this stage isolates whether disagreement originates in generation versus later interpretation of generated outcomes.
 
-`spm_faster_structure_learning` is the core learner under test. It groups outcome channels, builds hierarchical linked structures, and populates nested MDP fields including stream-link metadata (`ss.D`, `ss.E`, `ss.ID`, `ss.IE`). Inside this function, `spm_rgm_group` performs MI-driven grouping with spectral partitioning; later, link assembly computes link-level MI scores through `spm_dir_MI` and stores them into `ss.ID/ss.IE`. The current residual native bottlenecks are located in these two adjacent internal regions.
+`spm_faster_structure_learning` is the core learner under test. It groups outcome channels, builds hierarchical linked structures, and stores both matrix links and per-link scalar information scores in the resulting model state. In this workflow, one bottleneck is still in grouping/spectral decisions, and another is the tiny numerical difference in those stored per-link scalar scores computed through `spm_dir_MI`.
 
 `spm_rgm_group` computes MI structure over selected stream slices and performs eigensystem-based grouping decisions. In this project, one known bottleneck is spectral ordering sensitivity (MATLAB vs SciPy eig behavior under near-ties), and another is MI assembly parity on runtime `o_sub` slices. These are distinct but coupled: MI values determine eig inputs, and eig ordering determines selected group partitions.
 
-`spm_dir_MI` computes expected information gain for Dirichlet parameters, including the entropy-style core term `H(row) + H(col) - H(joint)`. In the link-storage lane this is where we currently see near-cancellation behavior (Python exact `0.0` vs MATLAB tiny nonzero `~1e-16`) on a matrix that otherwise matches MATLAB bytes. This bottleneck is numerically subtle and currently treated as a separate lane from spectral grouping.
+`spm_dir_MI` computes expected information gain for Dirichlet parameters, including the entropy-style core term `H(row) + H(col) - H(joint)`. In the current bottleneck path, Python and MATLAB are very close but not fully identical on some stored scalar scores (typical absolute difference around `1e-15`), so this part is tracked separately from the grouping/spectral bottleneck.
 
 
 # 3. Current setup and issues
@@ -150,13 +150,12 @@ Ordered pipeline (from the original snippet):
       replaces Python/SciPy eig output with MATLAB `eig(...,'nobalance')`
       output in `spm_rgm_group`, isolating the eigenpair-and-ordering step.
 
-  - Later link stage (`_link_streams`) writes `ss.ID` / `ss.IE` via `spm_dir_MI(a_mat)`.
-    **Current bottleneck #3 (later than `spm_rgm_group`).** In observed Lane C
-    first-failure evidence, the linked matrix bytes match exactly, but stored
-    `ss.ID` scalar differs at key `(1,58)`: MATLAB `spm_dir_MI(a_mat)` returns
-    `8.8817841970012523e-16` while Python `spm_dir_MI(a_mat)` returns `0.0`.
-    Temporary flag `RGMS_FSL_LINK_DIR_MI_MATLAB=1` replaces this specific
-    link-time `spm_dir_MI` scalar operation with MATLAB.
+  - Later link stage (`_link_streams`) writes per-link scalar information scores
+    through `spm_dir_MI(a_mat)` into `ss.ID` / `ss.IE`.
+    **Current bottleneck #3 (later than `spm_rgm_group`).** Linked matrices can
+    match while the stored scalar score differs by a tiny amount (typically around
+    `1e-15`). A temporary MATLAB-bridge flag exists for isolation runs, but the
+    production goal remains Python-native `spm_dir_MI`.
 
 - Exhaustive nested canonical-byte compare (full tree gate).  
   Checkpoint controls:
@@ -167,53 +166,19 @@ Ordered pipeline (from the original snippet):
 
 Current validated status at this progress point:
 
-- Replay-controlled pre-`spm_faster_structure_learning` comparability is validated
-  for the tested harness path; this still includes a MATLAB random-draw replay
-  intervention.
-- Bottleneck ordering in exhaustive Lane A/B/C/D evidence is currently:
-  `spm_MDP_MI` operation in `spm_rgm_group` -> eig/ordering operation in
-  `spm_rgm_group` -> link-time `spm_dir_MI` operation in `_link_streams`.
-- With all three temporary replacements active (Lane D), exhaustive checkpoint
-  passes; this is evidence of bottleneck localization, not evidence that the
-  full path is already fully Python-native.
-- **Ground-truth lane confirmation (2026-04-24 Lane A rerun):** with
-  `RGMS_FSL_USE_CHECKPOINT=1` and no temporary replacements at
-  `spm_MDP_MI`/eig/`spm_dir_MI` call sites, the exhaustive selector fails at
-  `spm_rgm_group stream 1 group 2: canonical byte mismatch` (`1 failed in 42.62s`).
-  Diagnostics reconfirm the same operation-level signature as prior runs:
-  `MI(1,24)` tiny delta (`-1.1102230246251565e-16`), first `spm_log` diff at
-  index 25, and iter2 ordering divergence (`mat_idx=74` vs `py_idx=38`,
-  `max|am-ap|=9.992e-16`, `max_ulps=36`).
-- **Ground-truth lane confirmation (2026-04-24 Lane B rerun):** with
-  `RGMS_FSL_RGM_MATLAB_MI_PUSH=1` and native eig + native link-time
-  `spm_dir_MI`, the exhaustive selector still fails at
-  `spm_rgm_group stream 1 group 2: canonical byte mismatch`
-  (`1 failed in 471.84s`). The Lane-B diagnostic line confirms MATLAB
-  `spm_MDP_MI` replacement is active, but iter2 ordering divergence remains
-  (`mat_idx=74` vs `py_idx=38`, `max|am-ap|=9.992e-16`, `max_ulps=36`).
-- **Ground-truth lane confirmation (2026-04-24 Lane C rerun):** with
-  `RGMS_FSL_RGM_MATLAB_MI_PUSH=1` + `RGMS_FSL_RGM_MATLAB_EIG=1` and native
-  link-time `spm_dir_MI`, first failure moves to
-  `MDP{1}.ss.ID{1,2}(1,58): canonical byte mismatch` (`1 failed in 964.44s`).
-  Diagnostics reconfirm linked matrix identity (`MDP{2}.a{21}` bytes match) but
-  scalar mismatch at link-time MI storage: MATLAB `spm_dir_MI(a_mat)` is
-  `8.8817841970012523e-16` while Python `spm_dir_MI(a_mat)` is `0.0`.
-- **Ground-truth lane confirmation (2026-04-24 Lane D rerun):** with
-  `RGMS_FSL_USE_CHECKPOINT=1`, `RGMS_FSL_RGM_MATLAB_MI_PUSH=1`,
-  `RGMS_FSL_RGM_MATLAB_EIG=1`, and `RGMS_FSL_LINK_DIR_MI_MATLAB=1`, the
-  exhaustive selector **passes** (`1 passed in 955.71s (0:15:55)`). Timers from
-  the same run: checkpoint load+MATLAB FSL ~6.00s; `spm_rgm_group` checkpoint
-  phase ~437.45s; Python `spm_faster_structure_learning` ~497.30s; exhaustive
-  nested-tree compare ~3.03s; total exhaustive gate ~943.79s. Full console
-  capture: `C:\Users\andre\AppData\Local\Temp\lane_d_20260424_141025.log`.
-- **Ground-truth lane confirmation (2026-04-24 Lane E rerun):** non-exhaustive
-  selector on the same file,
-  `pytest ... -k "not exhaustive_exact_oracle"` (no A–D bridge env vars), yields
-  **`5 passed, 1 deselected in 49.32s`** with two existing `RuntimeWarning`s in
-  `test_spm_faster_structure_learning_checkpoint_rgm_streams_matlab_eig_parity`.
-  Full capture: `C:\Users\andre\AppData\Local\Temp\lane_e_20260424_144752.log`.
-  **Scope note:** this lane is regression hygiene only; it does not re-litigate
-  or replace exhaustive Lane A–D bottleneck ordering claims above.
+- Input comparability before structure learning is controlled in the current test
+  harness, so downstream differences can be attributed to structure-learning
+  internals rather than random upstream variation.
+- The current bottleneck order is:
+  1) MI construction in grouping,
+  2) spectral ordering in grouping,
+  3) tiny numeric residuals in link-time `spm_dir_MI` scalar storage.
+- When all three bottleneck call sites are MATLAB-bridged in isolation runs, the
+  exhaustive compare passes. This is used as localization evidence only; it is
+  not claimed as Python-native closure.
+- For ongoing team work, treat this section as the plain-language status and use
+  the lane table below for configuration details. Deep run logs and timings are
+  tracked in `logs\log_0.md`.
 
 
 # 4. Test Lanes and current evaluation
@@ -240,54 +205,79 @@ Lane configurations:
   `-k "not exhaustive_exact_oracle"`; this lane is for quick regression coverage
   and is not a full exhaustive bottleneck-classification lane.
 
-Lane-to-bottleneck interpretation (current evidence from `log_0.md` lane reruns):
+Lane-to-bottleneck interpretation (plain summary):
 
-- **Lane A (reconfirmed 2026-04-24):** first failure occurs in
-  `spm_rgm_group` group bytes (`stream 1 group 2`), with MI/log tiny deltas and
-  iter2 ordering divergence diagnostics; downstream link-time `spm_dir_MI` is
-  therefore not yet the first failing operation in this lane.
-- **Lane B:** replacing `spm_MDP_MI` operation alone does not clear first failure;
-  first failure remains in `spm_rgm_group` group ordering output.
-  **Reconfirmed 2026-04-24** with Lane-B diagnostic enabled and same first
-  boundary (`stream 1 group 2`).
-- **Lane C:** replacing both `spm_MDP_MI` and eig operations moves first failure
-  to link-time `spm_dir_MI` storage (`ss.ID` mismatch at key `(1,58)`).
-  **Reconfirmed 2026-04-24** with `[SS-LINK-DIAG]` again showing linked
-  `MDP{2}.a{21}` bytes match while stored `ss.ID` scalar differs
-  (`8.8817841970012523e-16` vs `0.0`).
-- **Lane D:** replacing `spm_MDP_MI`, eig, and link-time `spm_dir_MI` yields
-  exhaustive pass on checkpointed inputs.
-  **Reconfirmed 2026-04-24** on the same exhaustive selector with all three
-  bridges active and checkpointed inputs (`1 passed in 955.71s`).
-- **Lane E:** provides non-exhaustive regression information only; do not use it
-  as standalone evidence for full exhaustive bottleneck classification.
-  **Reconfirmed 2026-04-24:** `5 passed, 1 deselected in 49.32s` on
-  `-k "not exhaustive_exact_oracle"` with no A–D bridge env vars.
+- Baseline and MI-only bridge runs still fail in grouping/spectral behavior.
+- Adding MATLAB eig to grouping moves first failure to link-time `spm_dir_MI`
+  scalar storage.
+- Bridging that final scalar call site as well makes the exhaustive compare pass.
+- Non-exhaustive subset runs are useful regression checks, but they do not replace
+  exhaustive bottleneck localization.
 
-Validation-cycle status (must stay synchronized with lane reruns):
+Maintenance note: keep the lane table and this summary aligned with reruns; keep
+chronological command/timing evidence in `logs\log_0.md`.
 
-- Completed in this cycle: **Lane A, Lane B, Lane C, Lane D, Lane E**
-  (reconfirmed; exhaustive details for A–D above; Lane E is the non-exhaustive
-  subset noted in its lane bullet).
-- **Validation cycle closed for dated reruns on 2026-04-24**; any future lane
-  rerun should refresh the corresponding bullets and `logs\log_0.md` immediately.
+Current progress toward end goal is substantial but intentionally staged.
 
-Current progress toward end goal is substantial but intentionally staged. The
-team can now isolate and discuss specific function-level operations by lane using
-shared terminology (`spm_MDP_MI`, eig operation inside `spm_rgm_group`, and
-link-time `spm_dir_MI`) instead of ambiguous shorthand.
+Plain-language status of `spm_dir_MI` in this plan:
 
-The unresolved operations are currently:
-1) native eig/ordering behavior in `spm_rgm_group`, and
-2) native link-time `spm_dir_MI` near-cancellation behavior when writing `ss.ID/ss.IE`.
-These are separable by lane evidence (Lane B still fails in `spm_rgm_group`,
-Lane C moves first failure to link-time `spm_dir_MI`, Lane D passes with all
-three temporary replacements active).
+- In this part of the pipeline, `spm_faster_structure_learning` creates linked
+  probability/count matrices and stores a scalar information score for each link.
+- Those stored scalar scores are currently where Python and MATLAB can differ by
+  tiny floating-point amounts, even when the underlying linked matrices match.
+- Typical size of the remaining difference is around `8.88e-16` (about `10^-15`).
 
-Going forward, closure criteria remain explicit: temporary MATLAB interventions
-are investigative scaffolding, and completion requires documented, Python-native
-behavior at these operations plus clear scope statements for what each passing
-test selector proves.
+Plain-language meaning of the field names used in assertions:
+
+- `ss.ID` and `ss.IE` are the two maps where those per-link scalar information
+  scores are stored in the model state.
+- In other words, these are not the full model matrices; they are the specific
+  scalar outputs from `spm_dir_MI` for each link relationship.
+
+Current temporary acceptance policy (strict but practical):
+
+- Scope: only these two scalar map checks (`ss.ID`, `ss.IE`) in this bottleneck path.
+- Rule: accept absolute MATLAB-Python difference up to `1e-15`.
+- Everything else in the exhaustive compare remains strict canonical-byte exact.
+- This policy is temporary to allow work on other bottlenecks while keeping the
+  tolerance narrow, explicit, and test-enforced.
+
+Closure goal remains unchanged: Python-native behavior with documented parity
+against MATLAB, and no hidden broad relaxation of assertion strictness.
+
+Reusable bottleneck isolation workflow (apply this to future functions):
+
+1. **Freeze comparable inputs first.**
+   - Make upstream randomness deterministic/replayed so failures are attributable
+     to the bottleneck under study, not changing inputs.
+   - Use checkpointed upstream artifacts when available to avoid repeating long
+     end-to-end generation for every edit.
+
+2. **Capture the exact bottleneck call boundary.**
+   - Instrument the specific function call site and save the exact runtime inputs
+     passed into the bottleneck function (for example, matrices passed to a scalar
+     information function).
+   - At the same time, save the MATLAB reference outputs for those exact inputs.
+
+3. **Create a fast replay gate.**
+   - Build a test that replays only the captured boundary inputs and compares
+     Python output against stored MATLAB references.
+   - This replay gate should run in seconds and become the default iteration loop.
+
+4. **Separate diagnostics from policy.**
+   - Diagnostics can include byte equality, ULP distances, decomposition traces,
+     and targeted matrix-level probes.
+   - Acceptance policy must be explicit and scoped: what boundary, what tolerance,
+     and why.
+
+5. **Run long exhaustive lanes only at milestones.**
+   - Use long runs to (a) refresh captures intentionally or (b) confirm that local
+     bottleneck changes still integrate correctly at system level.
+   - Do not use long runs as the default inner loop once boundary replay exists.
+
+6. **Record outcomes in two levels of documentation.**
+   - Keep plain-language current status and policy in this plan note.
+   - Keep chronological command-level forensic details in `logs\log_0.md`.
 
 
 # 5. Lane-by-lane execution table (A/B/C/D/E) and scientific interpretation
@@ -401,20 +391,3 @@ state in one place with exact call sites, flags, mismatch evidence, and lane mea
   2) exhaustive SL-on-fixed-input scope, or  
   3) non-exhaustive regression subset scope (Lane E).
 
-### Latest ground-truth run deltas to apply to this section
-
-- `2026-04-24` Lane A rerun (no MATLAB replacements at `spm_MDP_MI`/eig/`spm_dir_MI`
-  call sites) reconfirmed first mismatch at `spm_rgm_group stream 1 group 2` on the
-  exhaustive selector, with `MI(1,24)` tiny delta + `spm_log` index-25 diff +
-  iter2 ordering divergence diagnostics, and no movement of first failure to
-  link-time `spm_dir_MI` in that lane.
-- `2026-04-24` Lane C rerun (`spm_MDP_MI` + eig replacements active, link-time
-  `spm_dir_MI` still native) reconfirmed first mismatch at
-  `MDP{1}.ss.ID{1,2}(1,58)` with `[SS-LINK-DIAG]` showing linked matrix bytes
-  match but scalar mismatch persists (`8.8817841970012523e-16` vs `0.0`).
-- `2026-04-24` Lane D rerun (MI push + MATLAB eig + MATLAB link `spm_dir_MI`,
-  checkpointed inputs) **passed** the exhaustive selector (`1 passed in 955.71s`);
-  evidence log `C:\Users\andre\AppData\Local\Temp\lane_d_20260424_141025.log`.
-- `2026-04-24` Lane E rerun (non-exhaustive `-k "not exhaustive_exact_oracle"`,
-  no A–D bridge env vars) **passed** (`5 passed, 1 deselected in 49.32s`);
-  evidence log `C:\Users\andre\AppData\Local\Temp\lane_e_20260424_144752.log`.
