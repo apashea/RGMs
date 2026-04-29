@@ -26,6 +26,37 @@ This policy matters for shape-sensitive functions including `spm_log.py`,
 `spm_cross.py`, `spm_dot.py`, `spm_cov2corr.py`, and new translations such as
 `spm_sum.py` and `spm_MDP_size.py`.
 
+## `spm_log`: MATLAB transliteration vs `log` ULP (Bottleneck #1)
+
+**MATLAB source (`matlab_src/spm_log.m`, matches SPM):** `islogical(A)` branch
+uses `A = -32*(~A);`; numeric branch uses `A = max(log(A),-32);` (no extra
+epsilon inside `log`).
+
+**Python Pass 1 (`python_src/spm_log.py`):** After `as_matlab_array`, the same
+control flow applies on non-logical arrays using `np.fmax(np.log(A), -32.0)`.
+`np.fmax` is used (not `np.maximum`) because MATLAB `max(log(NaN), -32)` returns
+`-32`, while NumPy `maximum` would preserve `NaN` from `log(NaN)` and would
+incorrectly poison downstream expressions such as `spm_MDP_MI`’s `dEdA`
+construction.
+
+**IEEE / libm note:** `np.log` on `float64` is not guaranteed to be bitwise
+identical to MATLAB’s `log` on every host, even when the real mathematical
+results round to the same IEEE value—different C runtimes / vectorized kernels
+can differ by a **small number of ULPs**. This matters for byte-exact MI
+pipelines that multiply many `log` outputs and accumulate.
+
+**Measured guardrail (2026-04-28, Windows, MATLAB Engine vs Python `spm_log`):**
+On the **234** distinct `float64` values in the multiset built from the
+captured Bottleneck #1 MI workload (`A = p/sum(p)`, `sum(A,1)`, `sum(A,2)` over
+all `p` in `fsl_rgm_mi_workload_full_native_mi.pkl`), worst-case ULP distance
+vs MATLAB `spm_log` was **3**; **19** of **234** entries were not bitwise-equal.
+`tests/oracle/test_spm_log.py::test_spm_log_mi_workload_reference_max_ulp_oracle`
+locks in that ceiling so libm regressions are caught.
+
+**Diagnostic-only:** `RGMS_SPM_LOG_EXPERIMENT_KERNEL=log2_ln2` is **not**
+MATLAB-faithful; use only for controlled Bottleneck #1 experiments, never as
+the default translation.
+
 ## Shared `matlab_compat.py`
 
 Decision: repo-root `matlab_compat.py` is an approved narrow exception to the

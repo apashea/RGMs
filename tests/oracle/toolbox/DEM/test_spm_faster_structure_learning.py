@@ -767,7 +767,11 @@ def _assert_rgm_group_streams_exact(
     *,
     rgm_eig_pair=None,
     rgm_mi_override_fn=None,
+    rgm_mi_probe_fn=None,
 ) -> None:
+    mi_capture_mode = bool(
+        rgm_mi_probe_fn is not None and _env_flag("RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD")
+    )
     """Forward-ordered Step-6 start: n=1 call setup, then stream-wise grouping parity."""
     if rgm_eig_pair is None and _env_flag("RGMS_FSL_RGM_MATLAB_EIG"):
         rgm_eig_pair = _make_matlab_rgm_eig_pair(eng)
@@ -820,7 +824,75 @@ def _assert_rgm_group_streams_exact(
                     f"spm_fsl O-slice stream {s} row {row_pos} t {t_pos}",
                 )
 
-        if s == 1:
+        if rgm_mi_probe_fn is not None:
+            # Full Bottleneck #1 boundary capture for this stream: every (i,j)
+            # shareable pair and both MATLAB/Python MI values on the same runtime p.
+            eng.eval(
+                "rgms_os_cap = " + f"{pdp_o_name}([{idx_mat}],:); "
+                "[rgms_no_cap,~] = size(rgms_os_cap); "
+                "rgms_n_cap = false(1,rgms_no_cap); rgms_r_cap = cell(1,rgms_no_cap); "
+                "for rgms_o = 1:rgms_no_cap, "
+                "  rgms_r_cap{rgms_o} = spm_cat(rgms_os_cap(rgms_o,:)); "
+                "  rgms_n_cap(rgms_o) = any(diff(rgms_r_cap{rgms_o},[],2),'all'); "
+                "end; "
+                "rgms_MI_cap = zeros(rgms_no_cap,rgms_no_cap); "
+                "for rgms_i = 1:rgms_no_cap, "
+                "  for rgms_j = rgms_i:rgms_no_cap, "
+                "    if rgms_n_cap(rgms_i) && rgms_n_cap(rgms_j), "
+                "      rgms_p_cap = rgms_r_cap{rgms_i}*rgms_r_cap{rgms_j}'; "
+                "      rgms_MI_cap(rgms_i,rgms_j) = spm_MDP_MI(rgms_p_cap); "
+                "      rgms_MI_cap(rgms_j,rgms_i) = rgms_MI_cap(rgms_i,rgms_j); "
+                "    end; "
+                "  end; "
+                "end;",
+                nargout=0,
+            )
+            mi_m_cap = np.asarray(eng.eval("rgms_MI_cap"), dtype=np.float64)
+            n_m_cap = np.asarray(eng.eval("rgms_n_cap"), dtype=bool).ravel(order="F")
+            o_sub_cap = [o_py[int(i) - 1] for i in idx]
+            r_cells_cap = [_spm_cat_row(o_sub_cap[o]) for o in range(len(o_sub_cap))]
+            n_flags_cap = np.array(
+                [
+                    bool(np.any(np.abs(np.diff(r_cells_cap[o], axis=1)) > 1e-14))
+                    for o in range(len(o_sub_cap))
+                ],
+                dtype=bool,
+            )
+            mi_p_cap = np.zeros((len(o_sub_cap), len(o_sub_cap)), dtype=np.float64)
+            for i0 in range(len(o_sub_cap)):
+                for j0 in range(i0, len(o_sub_cap)):
+                    if n_flags_cap[i0] and n_flags_cap[j0]:
+                        p_ij = r_cells_cap[i0] @ r_cells_cap[j0].T
+                        val = _spm_mdp_mi_scalar(p_ij)
+                        mi_p_cap[i0, j0] = val
+                        mi_p_cap[j0, i0] = val
+                        rgm_mi_probe_fn(
+                            {
+                                "stream_idx": int(s),
+                                "i": int(i0 + 1),
+                                "j": int(j0 + 1),
+                                "idx_row_i": int(idx[i0]),
+                                "idx_row_j": int(idx[j0]),
+                                "n_i": bool(n_flags_cap[i0]),
+                                "n_j": bool(n_flags_cap[j0]),
+                                "p_mat": np.asarray(p_ij, dtype=np.float64, copy=True),
+                                "python_mi": float(val),
+                                "matlab_mi": float(mi_m_cap[i0, j0]),
+                            }
+                        )
+            rgm_mi_probe_fn(
+                {
+                    "stream_idx": int(s),
+                    "kind": "stream_summary",
+                    "idx_rows": np.asarray(idx, dtype=np.int64, copy=True),
+                    "n_flags_py": np.asarray(n_flags_cap, dtype=bool, copy=True),
+                    "n_flags_mat": np.asarray(n_m_cap, dtype=bool, copy=True),
+                    "mi_py": np.asarray(mi_p_cap, dtype=np.float64, copy=True),
+                    "mi_mat": np.asarray(mi_m_cap, dtype=np.float64, copy=True),
+                }
+            )
+
+        if s == 1 and not mi_capture_mode:
             diag = _env_flag("RGMS_FSL_MI_DIAG")
             # Earliest deterministic checkpoint inside grouping: MI matrix.
             eng.eval(
@@ -997,6 +1069,98 @@ def _assert_rgm_group_streams_exact(
                     f"spm_rgm_group stream 1 MI-scalar({i1},{j1})",
                 )
             _assert_repro_close_f64(mi_m, mi_p, "spm_rgm_group stream 1 MI")
+            if _env_flag("RGMS_FSL_GROUP_DIAG"):
+                eng.eval(
+                    "rgms_dbg_i = 1:size(rgms_MI,1); "
+                    "rgms_dbg_dx = fix(" + f"{int(d_val)}" + "); "
+                    "rgms_dbg_U = exp(-16); "
+                    "for rgms_dbg_iter = 1:2, "
+                    "  rgms_dbg_sub = rgms_MI(rgms_dbg_i,rgms_dbg_i); "
+                    "  [rgms_dbg_evec,rgms_dbg_eval] = eig(rgms_dbg_sub,'nobalance'); "
+                    "  rgms_dbg_lambda = diag(rgms_dbg_eval); "
+                    "  [~,rgms_dbg_jmax] = max(diag(rgms_dbg_eval),[],1); "
+                    "  rgms_dbg_col = rgms_dbg_evec(:,rgms_dbg_jmax); "
+                    "  [rgms_dbg_es,rgms_dbg_js] = sort(abs(rgms_dbg_evec(:,rgms_dbg_jmax)),'descend'); "
+                    "  rgms_dbg_k = 1:min(numel(rgms_dbg_js),rgms_dbg_dx); "
+                    "  rgms_dbg_j = rgms_dbg_js(rgms_dbg_k); "
+                    "  rgms_dbg_j(rgms_dbg_es(rgms_dbg_k) < rgms_dbg_U) = []; "
+                    "  assignin('base',sprintf('rgms_dbg_i_%d',rgms_dbg_iter),rgms_dbg_i); "
+                    "  assignin('base',sprintf('rgms_dbg_j_%d',rgms_dbg_iter),rgms_dbg_j); "
+                    "  assignin('base',sprintf('rgms_dbg_es_%d',rgms_dbg_iter),rgms_dbg_es(rgms_dbg_k)); "
+                    "  assignin('base',sprintf('rgms_dbg_lam_%d',rgms_dbg_iter),rgms_dbg_lambda); "
+                    "  assignin('base',sprintf('rgms_dbg_jmax_%d',rgms_dbg_iter),rgms_dbg_jmax); "
+                    "  assignin('base',sprintf('rgms_dbg_col_%d',rgms_dbg_iter),full(rgms_dbg_col)); "
+                    "  rgms_dbg_i(rgms_dbg_j) = []; "
+                    "end;",
+                    nargout=0,
+                )
+        if False and rgm_mi_probe_fn is not None:
+            # Full Bottleneck #1 boundary capture for this stream: every (i,j)
+            # shareable pair and both MATLAB/Python MI values on the same runtime p.
+            eng.eval(
+                "rgms_os_cap = " + f"{pdp_o_name}([{idx_mat}],:); "
+                "[rgms_no_cap,~] = size(rgms_os_cap); "
+                "rgms_n_cap = false(1,rgms_no_cap); rgms_r_cap = cell(1,rgms_no_cap); "
+                "for rgms_o = 1:rgms_no_cap, "
+                "  rgms_r_cap{rgms_o} = spm_cat(rgms_os_cap(rgms_o,:)); "
+                "  rgms_n_cap(rgms_o) = any(diff(rgms_r_cap{rgms_o},[],2),'all'); "
+                "end; "
+                "rgms_MI_cap = zeros(rgms_no_cap,rgms_no_cap); "
+                "for rgms_i = 1:rgms_no_cap, "
+                "  for rgms_j = rgms_i:rgms_no_cap, "
+                "    if rgms_n_cap(rgms_i) && rgms_n_cap(rgms_j), "
+                "      rgms_p_cap = rgms_r_cap{rgms_i}*rgms_r_cap{rgms_j}'; "
+                "      rgms_MI_cap(rgms_i,rgms_j) = spm_MDP_MI(rgms_p_cap); "
+                "      rgms_MI_cap(rgms_j,rgms_i) = rgms_MI_cap(rgms_i,rgms_j); "
+                "    end; "
+                "  end; "
+                "end;",
+                nargout=0,
+            )
+            mi_m_cap = np.asarray(eng.eval("rgms_MI_cap"), dtype=np.float64)
+            n_m_cap = np.asarray(eng.eval("rgms_n_cap"), dtype=bool).ravel(order="F")
+            o_sub_cap = [o_py[int(i) - 1] for i in idx]
+            r_cells_cap = [_spm_cat_row(o_sub_cap[o]) for o in range(len(o_sub_cap))]
+            n_flags_cap = np.array(
+                [
+                    bool(np.any(np.abs(np.diff(r_cells_cap[o], axis=1)) > 1e-14))
+                    for o in range(len(o_sub_cap))
+                ],
+                dtype=bool,
+            )
+            mi_p_cap = np.zeros((len(o_sub_cap), len(o_sub_cap)), dtype=np.float64)
+            for i0 in range(len(o_sub_cap)):
+                for j0 in range(i0, len(o_sub_cap)):
+                    if n_flags_cap[i0] and n_flags_cap[j0]:
+                        p_ij = r_cells_cap[i0] @ r_cells_cap[j0].T
+                        val = _spm_mdp_mi_scalar(p_ij)
+                        mi_p_cap[i0, j0] = val
+                        mi_p_cap[j0, i0] = val
+                        rgm_mi_probe_fn(
+                            {
+                                "stream_idx": int(s),
+                                "i": int(i0 + 1),
+                                "j": int(j0 + 1),
+                                "idx_row_i": int(idx[i0]),
+                                "idx_row_j": int(idx[j0]),
+                                "n_i": bool(n_flags_cap[i0]),
+                                "n_j": bool(n_flags_cap[j0]),
+                                "p_mat": np.asarray(p_ij, dtype=np.float64, copy=True),
+                                "python_mi": float(val),
+                                "matlab_mi": float(mi_m_cap[i0, j0]),
+                            }
+                        )
+            rgm_mi_probe_fn(
+                {
+                    "stream_idx": int(s),
+                    "kind": "stream_summary",
+                    "idx_rows": np.asarray(idx, dtype=np.int64, copy=True),
+                    "n_flags_py": np.asarray(n_flags_cap, dtype=bool, copy=True),
+                    "n_flags_mat": np.asarray(n_m_cap, dtype=bool, copy=True),
+                    "mi_py": np.asarray(mi_p_cap, dtype=np.float64, copy=True),
+                    "mi_mat": np.asarray(mi_m_cap, dtype=np.float64, copy=True),
+                }
+            )
             if _env_flag("RGMS_FSL_GROUP_DIAG"):
                 eng.eval(
                     "rgms_dbg_i = 1:size(rgms_MI,1); "
@@ -1650,6 +1814,24 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         ck_link = ck_dir / f"fsl_link_mi_workload_{safe_tag}.pkl"
     else:
         ck_link = ck_dir / "fsl_link_mi_workload.pkl"
+    spectral_capture_tag = str(
+        os.getenv("RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD_TAG", "")
+    ).strip()
+    if spectral_capture_tag:
+        safe_spec_tag = "".join(
+            ch if (ch.isalnum() or ch in ("-", "_")) else "_" for ch in spectral_capture_tag
+        )
+        ck_rgm_spec = ck_dir / f"fsl_rgm_spectral_workload_{safe_spec_tag}.pkl"
+    else:
+        ck_rgm_spec = ck_dir / "fsl_rgm_spectral_workload.pkl"
+    mi_capture_tag = str(os.getenv("RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD_TAG", "")).strip()
+    if mi_capture_tag:
+        safe_mi_tag = "".join(
+            ch if (ch.isalnum() or ch in ("-", "_")) else "_" for ch in mi_capture_tag
+        )
+        ck_rgm_mi = ck_dir / f"fsl_rgm_mi_workload_{safe_mi_tag}.pkl"
+    else:
+        ck_rgm_mi = ck_dir / "fsl_rgm_mi_workload.pkl"
     t0 = time.perf_counter()
 
     o_sl = None
@@ -1713,9 +1895,13 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
     assert o_sl is not None
     rgm_eig_pair = None
     rgm_mi_override_fn = None
+    rgm_spectral_probe_fn = None
+    rgm_mi_probe_fn = None
     link_dir_mi_fn = None
     link_mi_probe_fn = None
     link_capture_records: list[dict] = []
+    rgm_spectral_capture_records: list[dict] = []
+    rgm_mi_capture_records: list[dict] = []
     lane_b = _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH") and not _env_flag(
         "RGMS_FSL_RGM_MATLAB_EIG"
     )
@@ -1723,6 +1909,105 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         rgm_eig_pair = _make_matlab_rgm_eig_pair(eng)
     if _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH"):
         rgm_mi_override_fn = _make_rgm_mi_override_fn_matlab(eng)
+    if _env_flag("RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD"):
+        if not _env_flag("RGMS_FSL_RGM_MATLAB_EIG"):
+            raise RuntimeError(
+                "RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD requires RGMS_FSL_RGM_MATLAB_EIG=1 "
+                "to capture MATLAB eig references"
+            )
+        allow_native_mi = _env_flag("RGMS_FSL_CAPTURE_RGM_SPECTRAL_ALLOW_NATIVE_MI")
+        if (not _env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH")) and (not allow_native_mi):
+            raise RuntimeError(
+                "RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD requires RGMS_FSL_RGM_MATLAB_MI_PUSH=1 "
+                "to isolate spectral ordering from MI-construction drift "
+                "(or set RGMS_FSL_CAPTURE_RGM_SPECTRAL_ALLOW_NATIVE_MI=1 "
+                "for upstream MI-formation experiments)"
+            )
+        seq_spec = {"i": 0}
+
+        def _capture_rgm_spec(rec: dict) -> None:
+            seq_spec["i"] += 1
+            rgm_spectral_capture_records.append(
+                {
+                    "idx": int(seq_spec["i"]),
+                    "iter_idx": int(rec["iter_idx"]),
+                    "lev_call": int(rec["lev_call"]),
+                    "stream_idx": int(rec["stream_idx"]),
+                    "m": int(rec["m"]),
+                    "dx": int(rec["dx"]),
+                    "u_thresh": float(rec["u_thresh"]),
+                    "active_before": np.asarray(rec["active_before"], dtype=np.int64),
+                    "sub_mi": np.asarray(rec["sub_mi"], dtype=np.float64),
+                    "eig_source": str(rec["eig_source"]),
+                    "vals_py": np.asarray(rec["vals_py"], dtype=np.complex128),
+                    "vecs_py": np.asarray(rec["vecs_py"], dtype=np.complex128),
+                    "jmax_py": int(rec["jmax_py"]),
+                    "absv_py": np.asarray(rec["absv_py"], dtype=np.float64),
+                    "order_py": np.asarray(rec["order_py"], dtype=np.int64),
+                    "chosen_py": np.asarray(rec["chosen_py"], dtype=np.int64),
+                    "vals_use": np.asarray(rec["vals_use"], dtype=np.complex128),
+                    "vecs_use": np.asarray(rec["vecs_use"], dtype=np.complex128),
+                    "jmax_use": int(rec["jmax_use"]),
+                    "absv_use": np.asarray(rec["absv_use"], dtype=np.float64),
+                    "order_use": np.asarray(rec["order_use"], dtype=np.int64),
+                    "chosen_use": np.asarray(rec["chosen_use"], dtype=np.int64),
+                    "vals_mat": None
+                    if rec["vals_mat"] is None
+                    else np.asarray(rec["vals_mat"], dtype=np.complex128),
+                    "vecs_mat": None
+                    if rec["vecs_mat"] is None
+                    else np.asarray(rec["vecs_mat"], dtype=np.complex128),
+                    "jmax_mat": None if rec["jmax_mat"] is None else int(rec["jmax_mat"]),
+                    "absv_mat": None
+                    if rec["absv_mat"] is None
+                    else np.asarray(rec["absv_mat"], dtype=np.float64),
+                    "order_mat": None
+                    if rec["order_mat"] is None
+                    else np.asarray(rec["order_mat"], dtype=np.int64),
+                    "chosen_mat": None
+                    if rec["chosen_mat"] is None
+                    else np.asarray(rec["chosen_mat"], dtype=np.int64),
+                }
+            )
+
+        rgm_spectral_probe_fn = _capture_rgm_spec
+    if _env_flag("RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD"):
+        seq_mi = {"i": 0}
+
+        def _capture_rgm_mi(rec: dict) -> None:
+            seq_mi["i"] += 1
+            if str(rec.get("kind", "")) == "stream_summary":
+                rgm_mi_capture_records.append(
+                    {
+                        "idx": int(seq_mi["i"]),
+                        "kind": "stream_summary",
+                        "stream_idx": int(rec["stream_idx"]),
+                        "idx_rows": np.asarray(rec["idx_rows"], dtype=np.int64),
+                        "n_flags_py": np.asarray(rec["n_flags_py"], dtype=bool),
+                        "n_flags_mat": np.asarray(rec["n_flags_mat"], dtype=bool),
+                        "mi_py": np.asarray(rec["mi_py"], dtype=np.float64),
+                        "mi_mat": np.asarray(rec["mi_mat"], dtype=np.float64),
+                    }
+                )
+                return
+            rgm_mi_capture_records.append(
+                {
+                    "idx": int(seq_mi["i"]),
+                    "kind": "pair",
+                    "stream_idx": int(rec["stream_idx"]),
+                    "i": int(rec["i"]),
+                    "j": int(rec["j"]),
+                    "idx_row_i": int(rec["idx_row_i"]),
+                    "idx_row_j": int(rec["idx_row_j"]),
+                    "n_i": bool(rec["n_i"]),
+                    "n_j": bool(rec["n_j"]),
+                    "p_mat": np.asarray(rec["p_mat"], dtype=np.float64),
+                    "python_mi": float(rec["python_mi"]),
+                    "matlab_mi": float(rec["matlab_mi"]),
+                }
+            )
+
+        rgm_mi_probe_fn = _capture_rgm_mi
     if _env_flag("RGMS_FSL_LINK_DIR_MI_MATLAB"):
         link_dir_mi_fn = _make_matlab_link_dir_mi_fn(eng)
     if _env_flag("RGMS_FSL_CAPTURE_LINK_MI_WORKLOAD"):
@@ -1768,15 +2053,43 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         )
     # Next earliest deterministic boundary inside SL path: stream-wise grouping.
     t_g = time.perf_counter()
-    _assert_rgm_group_streams_exact(
-        eng,
-        "O_fsl_sx",
-        o_sl,
-        s_mat,
-        d_val=sc,
-        rgm_eig_pair=rgm_eig_pair,
-        rgm_mi_override_fn=rgm_mi_override_fn,
-    )
+    rgm_group_exc = None
+    try:
+        _assert_rgm_group_streams_exact(
+            eng,
+            "O_fsl_sx",
+            o_sl,
+            s_mat,
+            d_val=sc,
+            rgm_eig_pair=rgm_eig_pair,
+            rgm_mi_override_fn=rgm_mi_override_fn,
+            rgm_mi_probe_fn=rgm_mi_probe_fn,
+        )
+    except Exception as exc:
+        rgm_group_exc = exc
+    finally:
+        if _env_flag("RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD") and rgm_mi_capture_records:
+            ck_dir.mkdir(parents=True, exist_ok=True)
+            payload_mi = {
+                "meta": {
+                    "source_test": "test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle",
+                    "checkpoint_mode": bool(use_checkpoint),
+                    "sc": int(sc),
+                    "records": int(len(rgm_mi_capture_records)),
+                    "mi_push": bool(_env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH")),
+                    "matlab_eig": bool(_env_flag("RGMS_FSL_RGM_MATLAB_EIG")),
+                    "early_flush": True,
+                },
+                "records": rgm_mi_capture_records,
+            }
+            with ck_rgm_mi.open("wb") as f:
+                pickle.dump(payload_mi, f, protocol=pickle.HIGHEST_PROTOCOL)
+            print(
+                f"[RGM-MI-WORKLOAD] early-saved {len(rgm_mi_capture_records)} records to {ck_rgm_mi}",
+                flush=True,
+            )
+    if rgm_group_exc is not None:
+        raise rgm_group_exc
     _tlog(timing, f"rgm_group checkpoints: {time.perf_counter() - t_g:.2f}s")
     t_sl = time.perf_counter()
     mdp_p = spm_faster_structure_learning(
@@ -1785,6 +2098,7 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         sc,
         rgm_eig_pair=rgm_eig_pair,
         rgm_mi_override_fn=rgm_mi_override_fn,
+        rgm_spectral_probe_fn=rgm_spectral_probe_fn,
         link_dir_mi_fn=link_dir_mi_fn,
         link_mi_probe_fn=link_mi_probe_fn,
     )
@@ -1803,6 +2117,47 @@ def test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_orac
         with ck_link.open("wb") as f:
             pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
         print(f"[DIR-MI-WORKLOAD] saved {len(link_capture_records)} records to {ck_link}", flush=True)
+    if _env_flag("RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD"):
+        ck_dir.mkdir(parents=True, exist_ok=True)
+        payload_spec = {
+            "meta": {
+                "source_test": "test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle",
+                "checkpoint_mode": bool(use_checkpoint),
+                "sc": int(sc),
+                "records": int(len(rgm_spectral_capture_records)),
+                "mi_push": bool(_env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH")),
+                "matlab_eig": bool(_env_flag("RGMS_FSL_RGM_MATLAB_EIG")),
+                "allow_native_mi": bool(
+                    _env_flag("RGMS_FSL_CAPTURE_RGM_SPECTRAL_ALLOW_NATIVE_MI")
+                ),
+            },
+            "records": rgm_spectral_capture_records,
+        }
+        with ck_rgm_spec.open("wb") as f:
+            pickle.dump(payload_spec, f, protocol=pickle.HIGHEST_PROTOCOL)
+        print(
+            f"[RGM-SPECTRAL-WORKLOAD] saved {len(rgm_spectral_capture_records)} records to {ck_rgm_spec}",
+            flush=True,
+        )
+    if _env_flag("RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD"):
+        ck_dir.mkdir(parents=True, exist_ok=True)
+        payload_mi = {
+            "meta": {
+                "source_test": "test_spm_faster_structure_learning_snippet_scale_T1000_exhaustive_exact_oracle",
+                "checkpoint_mode": bool(use_checkpoint),
+                "sc": int(sc),
+                "records": int(len(rgm_mi_capture_records)),
+                "mi_push": bool(_env_flag("RGMS_FSL_RGM_MATLAB_MI_PUSH")),
+                "matlab_eig": bool(_env_flag("RGMS_FSL_RGM_MATLAB_EIG")),
+            },
+            "records": rgm_mi_capture_records,
+        }
+        with ck_rgm_mi.open("wb") as f:
+            pickle.dump(payload_mi, f, protocol=pickle.HIGHEST_PROTOCOL)
+        print(
+            f"[RGM-MI-WORKLOAD] saved {len(rgm_mi_capture_records)} records to {ck_rgm_mi}",
+            flush=True,
+        )
     if _env_flag("RGMS_DIR_MI_EXPERIMENT_STATS"):
         st = get_experiment_stats()
         print(

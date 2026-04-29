@@ -36,6 +36,7 @@ def spm_faster_structure_learning(
     *,
     rgm_eig_pair: Optional[Callable[[np.ndarray], Tuple[np.ndarray, np.ndarray]]] = None,
     rgm_mi_override_fn: Optional[Callable[[List[Any], int], np.ndarray]] = None,
+    rgm_spectral_probe_fn: Optional[Callable[[dict], None]] = None,
     link_dir_mi_fn: Optional[Callable[[np.ndarray], float]] = None,
     link_mi_probe_fn: Optional[Callable[[dict], None]] = None,
 ):
@@ -55,6 +56,11 @@ def spm_faster_structure_learning(
         Optional ``a_mat -> float`` replacing ``spm_dir_MI`` when storing stream-link
         matrices ``ss.ID`` / ``ss.IE``. Oracle-only (e.g. MATLAB Engine); default
         ``None`` uses native Python.
+    rgm_spectral_probe_fn :
+        Optional callback receiving per-iteration spectral records from
+        :func:`spm_rgm_group` (active set, MI block, eig/sort decisions). Intended
+        for oracle/capture diagnostics only; default ``None`` keeps runtime behavior
+        unchanged.
     """
     spinblock = False
     S = np.asarray(S, dtype=np.float64)
@@ -117,6 +123,17 @@ def spm_faster_structure_learning(
                     m_stream,
                     eig_pair=rgm_eig_pair,
                     mi_override=mi_override,
+                    spectral_probe_fn=(
+                        None
+                        if rgm_spectral_probe_fn is None
+                        else lambda rec, _n=n, _s=s: rgm_spectral_probe_fn(
+                            {
+                                **rec,
+                                "lev_call": int(_n),
+                                "stream_idx": int(_s),
+                            }
+                        )
+                    ),
                 )
 
             g_off = spm_unvec(spm_vec(g) + float(no), g)

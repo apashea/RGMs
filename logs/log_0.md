@@ -1,5 +1,672 @@
 # RGMs migration log (log_0)
 
+### `Atari_example.md` de-clutter revision (2026-04-28)
+
+**Objective:** remove redundant top-level file-map clutter and keep specific
+runtime/test files scoped within their corresponding linear entries.
+
+**What changed:**
+- Replaced the standalone “Current code and test map” block with a concise
+  directory-orientation section only:
+  - `python_src/`
+  - `tests/`
+  - `matlab_src/`
+  - read-only external SPM tree path
+- Kept all concrete file references contextualized under each ordered entry.
+
+**Files read this iteration:** `Atari_example.md`.
+
+**Files created:** none  
+**Files modified:** `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Bottleneck #1 full MI boundary workload capture + replay gate (2026-04-28)
+
+**Goal:** capture **full** MATLAB/Python MI boundary data for `spm_MDP_MI` inside `spm_rgm_group` (no partial slices), then replay quickly as a strict oracle.
+
+**Code updates:**
+
+- `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+  - Added `rgm_mi_probe_fn` path in `_assert_rgm_group_streams_exact(...)`.
+  - Capture payload now includes, for each stream and valid `(i,j)` pair:
+    - source row indices
+    - `p_mat` (runtime pair matrix)
+    - Python MI scalar and MATLAB MI scalar on the same `p`
+  - Added per-stream summary records (`mi_py`, `mi_mat`, flags, row ids).
+  - Added `RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD` and `RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD_TAG` checkpoint wiring.
+  - Added **early flush** safeguard: MI workload file is written even if downstream assertions fail.
+- `tests\oracle\test_spm_MDP_MI.py`
+  - Added fast replay oracle `test_spm_MDP_MI_rgm_workload_fast_replay_oracle`.
+  - Added `RGMS_MDP_MI_REPLAY_TAG` selection for tagged workload files.
+  - Replay reports:
+    - Python determinism on captured `p_mat` (`py_self`)
+    - Python-vs-MATLAB mismatch count (`py_vs_mat`)
+    - summary matrix mismatch flag
+
+**Capture command (executed):**
+
+`conda activate rgms; RGMS_FSL_USE_CHECKPOINT=1; RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD=1; RGMS_FSL_CAPTURE_RGM_MI_WORKLOAD_TAG=full_native_mi; pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py -k snippet_scale_T1000_exhaustive_exact_oracle -s -q`
+
+**Capture result:**
+
+- Produced checkpoint: `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_mi_workload_full_native_mi.pkl`
+- Record count: **1712** (`1711` pair records + `1` stream summary)
+- Exhaustive test remains expected `xfailed` (unrelated to capture persistence).
+
+**Replay command (executed):**
+
+`conda activate rgms; RGMS_MDP_MI_REPLAY_TAG=full_native_mi; pytest tests/oracle/test_spm_MDP_MI.py -k rgm_workload_fast_replay_oracle -s -q`
+
+**Replay result:**
+
+- `pairs=1711`
+- `py_self=0` (Python deterministic on captured workload)
+- `py_vs_mat=764` (strict byte-equality mismatches vs MATLAB references)
+- `summary_mis=1`
+- Test fails intentionally as strict blocker oracle (`pair_mismatch=764`).
+
+**Interpretation:**
+
+- Bottleneck #1 now has a persisted **full boundary workload** + **fast strict replay gate**, analogous in spirit to spectral replay.
+- Data supports global pattern analysis without relying on selective slices.
+- No acceptance policy change introduced in this step.
+
+### Bottleneck #1 follow-on: log-kernel candidate family (2026-04-28)
+
+**Focus retained:** `spm_MDP_MI` (Bottleneck #1) only.
+
+**Global workload profiling (from `fsl_rgm_mi_workload_full_native_mi.pkl`):**
+
+- pairs: `1711` (`5x5` each, stream 1)
+- strict mismatches (default kernel): `764`
+- abs diff range: `1.3877787807814457e-17` to `4.440892098500626e-16`
+- term-level mismatch counts vs MATLAB decomposition:
+  - joint term (`A(:)'*spm_log(A(:))`): `447`
+  - column-marginal term: `707`
+  - row-marginal term: `709`
+- direct `spm_log` parity checks on captured MI inputs also show many tiny-ULP mismatches (same max-abs scale).
+
+**Candidate sweep result (no tolerance policy introduced):**
+
+- Tested alternate MI reduction kernels and associativity: no improvement.
+- Tested alternate log kernel computation (`log2(x) * log(2)`, same `-32` floor):
+  - workload strict mismatches improved: `764 -> 706`.
+
+**Code updates for reproducible gating:**
+
+- `python_src\spm_log.py`
+  - added env-gated kernel selector:
+    - default: unchanged (`np.log`)
+    - experimental: `RGMS_SPM_LOG_EXPERIMENT_KERNEL=log2_ln2` (or `log2`)
+- `tests\oracle\test_spm_MDP_MI.py`
+  - replay oracle now supports `RGMS_MDP_MI_REPLAY_ALLOW_SELF_DRIFT=1` for candidate sweeps where the runtime baseline intentionally changes.
+
+**Replay commands and outcomes:**
+
+- Default:
+  - `RGMS_MDP_MI_REPLAY_TAG=full_native_mi`
+  - `py_vs_mat=764` (unchanged baseline)
+- Experimental:
+  - `RGMS_SPM_LOG_EXPERIMENT_KERNEL=log2_ln2`
+  - `RGMS_MDP_MI_REPLAY_TAG=full_native_mi`
+  - `RGMS_MDP_MI_REPLAY_ALLOW_SELF_DRIFT=1`
+  - `py_vs_mat=706` (improved but unresolved)
+  - stream summary mismatch still present (`summary_mis=1`)
+
+### Bottleneck #1: term-order × sub-assoc grid + `log2_ln2` trade-off (2026-04-28)
+
+**Code:** `python_src\spm_MDP_MI.py` — added env-gated `RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC` for `_spm_MI` only (default path unchanged when unset; scalar term-order paths unchanged when unset).
+
+**Full grid (workload `fsl_rgm_mi_workload_full_native_mi.pkl`, `1711` pairs):**
+
+- `RGMS_SPM_LOG_EXPERIMENT_KERNEL`: `''` vs `log2_ln2`
+- `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER`: `''`, `scalar_fwd`, `scalar_rev`
+- `RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC`: `''`, `t1_minus_sum23`, `t1_minus_t3_minus_t2`
+
+**Outcome:** best row remains **`log2_ln2` + default term order + default sub-assoc** with **`py_vs_mat=706`**. No other combination in this grid beat **`706`**.
+
+**Critical regression analysis (`log2_ln2` vs default `spm_log`):**
+
+- Mismatch set size: **`764 -> 706`**
+- **Not** a monotone refinement of the default mismatch set:
+  - **fixed** (default missed MATLAB, `log2_ln2` hits): **446** pairs
+  - **regressed** (default hit MATLAB, `log2_ln2` misses): **388** pairs
+  - **intersection** (both miss): **318** pairs
+- Regressed pairs still have only tiny absolute deltas vs MATLAB (max observed **`4.44e-16`**, median **`~1.39e-17`**).
+
+**Per-term log kernel sweep (analysis only, not wired as runtime):**
+
+- Tried all `2^3` combinations of `natural log` vs `log2*ln(2)` applied independently to joint / column-marginal / row-marginal log sites in the MI formula.
+- **No hybrid beat `706`**; global `l2` on all three sites matches the global `RGMS_SPM_LOG_EXPERIMENT_KERNEL=log2_ln2` outcome (`706` with same fix/regress split).
+
+**Conclusion for next work:** `log2_ln2` is a **net-count** improvement on this workload but **moves** which pairs are exact; adopting it for native parity requires **global** regression gates (spectral replay + exhaustive), not workload pair-count alone.
+
+### `spm_log` NaN/`max` parity fix + `spm_MDP_MI` derivative audit (2026-04-28)
+
+**Root cause (inputs → outputs, minute detail):**
+
+- `spm_MDP_MI` line `dEdA = spm_log(A./(sum(A,2)*sum(A,1))) - 1` builds a denominator `D = sum(A,2)*sum(A,1)` (outer product). For normalized Dirichlet-like `A`, many entries of `D` are **exactly 0**, so the ratio `R=A./D` contains **`0/0` → NaN** at those sites (observed **33,207** NaN sites summed across the `1711` workload matrices; MATLAB and Python agree on **where** those NaNs occur once `log` is handled consistently).
+- MATLAB `spm_log` is `max(log(x),-32)`. MATLAB `max(NaN,-32)` returns **`-32`** (verified in-engine: `spm_log(NaN) == -32`).
+- NumPy `np.maximum(np.log(np.nan), -32.0)` returns **`NaN`**, so Python poisoned **`dEdA` and then `dEda`**, producing **33,207** NaN derivative entries vs MATLAB’s **0**.
+
+**Fix (faithful to MATLAB `max`, not a tolerance hack):**
+
+- `python_src\spm_log.py`: use **`np.fmax`** instead of **`np.maximum`** on the float branches (including experimental `log2` kernel), matching MATLAB/IEEE `fmax` NaN behavior.
+
+**Post-fix workload metrics (`fsl_rgm_mi_workload_full_native_mi.pkl`, MATLAB Engine vs Python):**
+
+- `dEdA` / `dEda` **NaN element counts:** **0** Python vs **0** MATLAB (was **33,207** Python NaNs before).
+- `dEdA` **full-matrix `np.array_equal`:** **1640 / 1711** exact (was **2 / 1711** before).
+- Remaining gap is now almost entirely **finite ULP-scale** differences in `log` (same scalar `E` mismatch profile as before; MI replay vs stored MATLAB scalars still **`764`** because that path is dominated by `log` ULPs, not NaNs).
+
+**Tests:**
+
+- `tests\oracle\test_spm_log.py`: added `test_spm_log_nan_scalar_matches_matlab_max_semantics_oracle`.
+- `pytest tests/oracle/test_spm_log.py` — **10 passed**.
+
+**Ephemeral scripts:** `_probe_matlab_nan_behavior.py`, `_analyze_mdp_mi_workload.py` created for probing then **deleted**.
+
+**Follow-up (same day):**
+
+- `tests\oracle\test_spm_MDP_MI.py`: added `test_spm_MDP_MI_outer_product_zero_sites_derivatives_finite_oracle` (forces `0/0` ratio sites; asserts finite `dEdA`/`dEda` and MATLAB `assert_matlab_match` on all outputs).
+- Marked `test_spm_MDP_MI_rgm_workload_fast_replay_oracle` as **`xfail(strict=False)`** so `pytest tests/oracle/test_spm_MDP_MI.py` completes while the scalar MI replay gate remains an explicit progress oracle (still **764** pair mismatches vs stored MATLAB scalars until ULP-level `log` parity work closes it).
+
+### `spm_log` MATLAB-reference oracles + settled ULP note (2026-04-28)
+
+**Goal:** align Python `spm_log` with MATLAB `spm_log.m` semantics and lock a **MATLAB-Engine reference** guardrail on the same float multiset that feeds Bottleneck #1.
+
+**Code/doc:**
+
+- `python_src\spm_log.py`: module docstring line-aligned with `matlab_src\spm_log.m`; clarified that `RGMS_SPM_LOG_EXPERIMENT_KERNEL=log2_ln2` is diagnostic-only.
+- `notes\andrew Python Matlab Translation Issues.md`: new **`spm_log`** section (libm vs MATLAB `log`, MI multiset measurement, experiment-kernel warning).
+
+**Tests (`tests\oracle\test_spm_log.py`):**
+
+- autouse fixture clears `RGMS_SPM_LOG_EXPERIMENT_KERNEL` so oracles always hit the faithful path.
+- `test_spm_log_clamp_and_reference_values_max_ulp_oracle`: zeros, `exp(-32)` neighborhood, typical positives — max ULP vs MATLAB ≤ **3**.
+- `test_spm_log_mi_workload_reference_max_ulp_oracle`: all distinct floats from captured `fsl_rgm_mi_workload_full_native_mi.pkl` MI inputs — same ULP ceiling (skips if checkpoint absent).
+- `test_spm_log_experiment_kernel_unknown_raises`: invalid experiment kernel raises `ValueError`.
+
+**Command:** `pytest tests/oracle/test_spm_log.py -v` — **9 passed**.
+
+### `Atari_example.md` entry-indexing refactor (2026-04-28)
+
+**Objective:** align document structure with team readability requirement that each
+entry maps to an actual translated MATLAB code line and that bottlenecks are
+documented inside the corresponding function-call entry (not as detached entries).
+
+**What changed:**
+- Updated `Atari_example.md` ordered entries to index directly to concrete
+  `DEM_AtariIII.m` lines/functions:
+  1. `rng(...)` reproducibility control,
+  2. `spm_MDP_pong(...)`,
+  3. `spm_MDP_generate(...)`,
+  4. `spm_faster_structure_learning(...)`.
+- Folded bottleneck #1/#2/#3 details into **Entry 4** (where they occur), including:
+  - location in call path,
+  - test files,
+  - MATLAB-testing hook/flag names,
+  - acceptance-policy status and consequence.
+- Added append clarity in protocol: do not renumber existing entries; append next
+  integer at bottom.
+
+**Files read this iteration:** `Atari_example.md`.
+
+**Files created:** none  
+**Files modified:** `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### `Atari_example.md` linear-structure refactor (2026-04-28)
+
+**Objective:** refactor `Atari_example.md` to remove stage-frozen prose and keep a
+durable, append-friendly, top-to-bottom ledger format.
+
+**What changed:**
+- Rewrote document into a strict linear structure with:
+  - compact onboarding read-order block,
+  - explicit current code/test file map,
+  - ordered translation entries with stable fields,
+  - durable append protocol.
+- Removed wording tied to a single transition point (for example “when moving on
+  from the current segment”) and replaced it with process-stable language for
+  unresolved upstream bottlenecks.
+- Kept bottleneck policy statements in-place under the corresponding ordered entry
+  instead of splitting details into disconnected sections.
+
+**Design intent preserved:**
+- Stage awareness comes from the ordered translated-entry list itself.
+- New information is appended in order only after translation/testing is complete.
+- `logs/log_0.md` remains forensic trace; `Atari_example.md` remains readable status contract.
+
+**Files read this iteration:** `rules\rgms-rules.mdc`, `notes\structure_learning_plan_week2_22APR2026.md`, `notes\andrew Python Matlab Translation Issues.md`, `python_src\toolbox\DEM\spm_faster_structure_learning.py`, `python_src\toolbox\DEM\spm_rgm_group.py`, `python_src\spm_MDP_MI.py`, `python_src\spm_dir_MI.py`, `Atari_example.md`.
+
+**Files created:** none  
+**Files modified:** `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### `Atari_example.md` central ordered ledger added (2026-04-28)
+
+**Objective:** create a single plain-language, top-to-bottom document that unifies
+project intention, ordered snippet translation status, bottleneck split
+(Python-native vs MATLAB-testing), and acceptance-policy consequences for team use.
+
+**Work completed:**
+- Added new file `Atari_example.md` at repo root as an append-friendly execution
+  ledger in script order.
+- Document structure intentionally avoids disconnected sections and keeps each stage
+  self-contained in sequence.
+- Included current bottleneck status:
+  - #1 (`spm_MDP_MI` in grouping): unresolved, no accepted tolerance policy.
+  - #2 (spectral grouping in `spm_rgm_group`): unresolved, no accepted tolerance policy.
+  - #3 (`spm_dir_MI` link scalar storage): scoped active temporary policy
+    (`abs <= 1e-15` for `ss.ID` / `ss.IE` assertions only).
+- Included explicit requirement to preserve MATLAB-testing substitutions during
+  later `DEM_AtariIII.m` translation steps until bottlenecks are closed.
+
+**Files read this iteration:** `rules\rgms-rules.mdc`, `notes\structure_learning_plan_week2_22APR2026.md`, `notes\andrew Python Matlab Translation Issues.md`, `python_src\toolbox\DEM\spm_faster_structure_learning.py`, `python_src\toolbox\DEM\spm_rgm_group.py`, `python_src\spm_MDP_MI.py`, `python_src\spm_dir_MI.py`.
+
+**Files created:** `Atari_example.md`  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Bottleneck #2 overnight integrity review + latest runs (2026-04-28)
+
+**Status check outcome:** work is on track; no corruption or destructive changes detected.
+
+**What completed after last stable entry:**
+- `R_TIME_ORDER` focused sweep (`rtime_default`, `rtime_rev`) completed with tagged native-MI spectral capture and replay.
+- Results are identical to current baseline in both tags:
+  - replay `py_vs_mat(order/chosen)=7/6`
+  - blocker micro `order=5, chosen=5`
+- Interpretation: time-order concatenation variant does not change this bottleneck outcome on the snippet workload.
+
+**`spm_MDP_MI` term-order family (new):**
+- Added env-gated internal reduction-order experiment in `python_src\spm_MDP_MI.py`:
+  - `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER=default|scalar_fwd|scalar_rev`
+- `mdpmi_default` capture + replay completed:
+  - replay `py_vs_mat(order/chosen)=7/6`
+  - blocker micro `order=5, chosen=5`
+- `scalar_fwd` / `scalar_rev` did **not** reach a valid spectral replay lane in strict run:
+  - under `--runxfail`, run fails early at `_assert_rgm_group_streams_exact` MI reproducibility gate
+  - failing check: `spm_rgm_group stream 1 MI` max abs diff `6.661338147750939e-16`
+  - therefore no approved downstream spectral comparison for these two modes yet.
+
+**Artifact verification:**
+- Tagged spectral workload files exist for:
+  - `rtime_default`, `rtime_rev`
+  - `mdpmi_default`, `mdpmi_probe`
+  - prior `mi_form_*` and `rasm_*` sweeps
+- No evidence of missing or overwritten prior checkpoint artifacts.
+
+**Hygiene:**
+- Cleared experiment env flags in shell after review (`RGMS_MDP_MI_EXPERIMENT_TERM_ORDER`, `RGMS_RGM_EXPERIMENT_*`, `RGMS_FSL_CAPTURE_*`, replay tag, etc.).
+
+---
+
+### Bottleneck #2 upstream R-grid assembly (time + Kronecker) — status (2026-04-27)
+
+**What happened:** a follow-on step added env-gated controls on the path *before* `MI`
+(`r_grid` / `spm_cat` lane). A planned tagged capture + replay sweep was **started in
+the shell but interrupted** before completion; **this log was not updated at that
+moment** (the freeze you saw).
+
+**Code landed (default-off, diagnostics-only):**
+- `python_src\toolbox\DEM\spm_rgm_group.py`
+  - `RGMS_RGM_EXPERIMENT_R_TIME_ORDER`: `fwd` (default) vs `rev` / `reverse` /
+    `backward` — reverses the time index order when building each row via
+    `spm_cat` (same cells, different concatenation order vs MATLAB default).
+  - `RGMS_RGM_EXPERIMENT_R_KRON_CHAIN`: `matlab` / `default` (same as
+    ``spm_rgm_group.m``) vs `rev_assoc` vs `left_deep_swap` — only affects
+    composite construction when `m>1`; for `m==1` all Kronecker modes reduce to the
+    single-modality vector (no-op for the current snippet `S[...,3]==1` workload).
+
+**Artifacts / results:** no `fsl_rgm_spectral_workload_rasm_*.pkl` files were written
+in `_checkpoint_data` from this interrupted run, so **no new replay metrics** were
+recorded for this family in this session.
+
+**Resume plan (unchanged protocol):** when re-run: per-tag
+`RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD` + `RGMS_FSL_CAPTURE_RGM_SPECTRAL_ALLOW_NATIVE_MI`
+with `RGMS_FSL_RGM_MATLAB_EIG=1`, then `RGMS_RGM_SPECTRAL_REPLAY_TAG` + blocker + full
+replay gates (same as MI-formation sweep).
+
+**Files modified (code):** `python_src\toolbox\DEM\spm_rgm_group.py`  
+**Files modified (log):** `logs\log_0.md` (this entry only, on resume)
+
+---
+
+### Bottleneck #2 upstream MI-formation-order family sweep (2026-04-27)
+
+**Objective:** test upstream MI matrix-formation order (not post-hoc tolerance) in a globally valid way.
+
+**Code changes for this sweep:**
+- `python_src\toolbox\DEM\spm_rgm_group.py`
+  - added `RGMS_RGM_EXPERIMENT_MI_FORMATION` for pair matrix build `p` before `spm_MDP_MI`:
+    - `default` (`a @ b.T`)
+    - `fortran_matmul` (Fortran-contiguous matmul path)
+    - `outer_fwd` (explicit column-wise outer-sum, forward accumulation)
+    - `outer_rev` (explicit column-wise outer-sum, reverse accumulation)
+- `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`
+  - enabled spectral workload capture with **native MI formation** when
+    `RGMS_FSL_CAPTURE_RGM_SPECTRAL_ALLOW_NATIVE_MI=1` (still requires MATLAB eig for references).
+- `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`
+  - added tag-filtered spectral replay file selection via `RGMS_RGM_SPECTRAL_REPLAY_TAG`
+    so each candidate workload is evaluated in isolation.
+
+**Validation protocol per mode (global):**
+1. Run exhaustive snippet-scale test with checkpoint + tagged spectral capture:
+   - `RGMS_FSL_RGM_MATLAB_EIG=1`
+   - `RGMS_FSL_RGM_MATLAB_MI_PUSH=0`
+   - `RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD=1`
+   - `RGMS_FSL_CAPTURE_RGM_SPECTRAL_ALLOW_NATIVE_MI=1`
+   - `RGMS_FSL_CAPTURE_RGM_SPECTRAL_WORKLOAD_TAG=mi_form_<mode>`
+2. Run blocker + full replay gates against that tag:
+   - `test_spm_rgm_group_spectral_workload_blocker_micro_oracle`
+   - `test_spm_rgm_group_spectral_workload_fast_replay_oracle`
+
+**Modes tested and outcomes:**
+- `default`:
+  - replay `py_vs_mat(order/chosen)=7/6`
+  - blocker `order=5, chosen=5`
+- `fortran_matmul`:
+  - replay `py_vs_mat(order/chosen)=7/6`
+  - blocker `order=5, chosen=5`
+- `outer_fwd`:
+  - replay `py_vs_mat(order/chosen)=7/6`
+  - blocker `order=5, chosen=5`
+- `outer_rev`:
+  - replay `py_vs_mat(order/chosen)=7/6`
+  - blocker `order=5, chosen=5`
+
+**Decision:**
+- MI-formation-order family shows **no improvement** and no change to mismatch set in this workload.
+- Candidate family rejected under current byte-exact protocol.
+
+**Run-time notes:**
+- Capture durations (xfail oracle invocation) were stable and practical with checkpoint mode:
+  ~28s to ~63s per mode in this session.
+
+**Post-run hygiene:**
+- Cleared all sweep env flags and restored baseline shell environment.
+
+**Files read this iteration:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, sweep output file `a89ff08a-5c84-461a-83f3-a335a941bc72.txt`.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 upstream conditioning-family sweep (2026-04-27)
+
+**Objective:** test a broader upstream matrix-formation/conditioning candidate family in a globally valid, env-gated way.
+
+**Implementation (gated, no default behavior change):**
+- `python_src\toolbox\DEM\spm_rgm_group.py`
+  - added `RGMS_RGM_EXPERIMENT_SUB_CONDITION` with modes:
+    - `scale_maxabs`
+    - `psd_clip`
+    - `scale_psd`
+  - applied after symmetry step and before eig.
+- `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`
+  - replay helper mirrors same `RGMS_RGM_EXPERIMENT_SUB_CONDITION` modes for candidate-evaluation parity.
+
+**Protocol run for each mode (blocker gate + full replay gate):**
+- `scale_maxabs`:
+  - blocker: `order=5`, `chosen=5` (no blocker closure)
+  - full replay: no net closure of core mismatch class.
+- `psd_clip`:
+  - blocker: `order=5`, `chosen=5`
+  - full replay: degraded replay-self consistency (`py_self` mismatches), no blocker closure.
+- `scale_psd`:
+  - blocker: `order=5`, `chosen=5`
+  - full replay: degraded replay-self consistency (`py_self` mismatches), no blocker closure.
+
+**Global comparison checks:**
+- No mode removed blocker membership-flip set (`records 2..6`).
+- No mode achieved reduction in core `(order, chosen)` mismatch class sufficient for promotion.
+
+**Decision:**
+- Upstream conditioning-family candidates are **rejected** for this bottleneck under current protocol.
+
+**Post-run hygiene:**
+- Cleared all experiment env flags:
+  - `RGMS_RGM_EXPERIMENT_SUB_CONDITION`
+  - `RGMS_RGM_EXPERIMENT_SUB_ROUND15`
+  - `RGMS_RGM_EXPERIMENT_ABSV_ROUND15`
+  - `RGMS_RGM_EXPERIMENT_USE_DGEEV`
+- Baseline replay behavior reconfirmed after clearing flags.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, captured tool output file for conditioning sweep.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 Candidate C evaluation + full protocol check (2026-04-27)
+
+**Objective:** test an upstream eig-realization candidate (not post-sort key tweak) under full protocol.
+
+**Candidate C implemented (gated):**
+- `python_src\toolbox\DEM\spm_rgm_group.py`
+  - added env-gated eig backend experiment `RGMS_RGM_EXPERIMENT_USE_DGEEV`:
+    - use raw LAPACK `dgeev` reconstruction path for Python eigpairs.
+- `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`
+  - replay helper updated to honor `RGMS_RGM_EXPERIMENT_USE_DGEEV` for candidate-evaluation parity.
+
+**Protocol execution:**
+1. **Blocker micro-gate (candidate on):**
+   - result: unchanged blocker failure `order=5`, `chosen=5`.
+2. **Full replay gate (candidate on):**
+   - result: unchanged `py_vs_mat(order/chosen)=7/6`, same mismatch IDs `[1..7]`.
+3. **Global metrics script (candidate vs baseline):**
+   - baseline and candidate C metrics are identical:
+     - `(order, chosen) = (7, 6)`,
+     - blocker chosen mismatches `=5`,
+     - same overlap means.
+
+**Decision:**
+- Candidate C is **rejected**.
+- Switching to raw `dgeev` realization in current environment does not improve blocker class or global parity.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 Candidate B evaluation + full protocol check (2026-04-27)
+
+**Objective:** run second runtime candidate under the same full protocol (blocker micro-gate + full replay + global metrics), with no blocker-only shortcuts.
+
+**Candidate B implemented (gated):**
+- `python_src\toolbox\DEM\spm_rgm_group.py`
+  - added env-gated experiment `RGMS_RGM_EXPERIMENT_ABSV_ROUND15`:
+    - round `absv` (`abs(e(:,j))`) to 15 decimals before sorting.
+- `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`
+  - replay helper now honors `RGMS_RGM_EXPERIMENT_ABSV_ROUND15` for candidate evaluation parity.
+
+**Protocol execution:**
+1. **Blocker micro-gate (candidate on):**
+   - result: still `order=5`, `chosen=5` mismatches on blocker records (`2..6` unchanged as chosen-mismatch set).
+2. **Full replay gate (candidate on):**
+   - result: `py_vs_mat(order/chosen)=7/5` (one chosen mismatch improved, same order mismatch count).
+   - mismatch IDs remained `[1..7]` (no new mismatch IDs introduced).
+3. **Global metrics script (candidate vs baseline):**
+   - baseline: `(order, chosen) = (7, 6)`, blocker chosen mismatches `=5`, ids `[1..7]`.
+   - candidate B: `(order, chosen) = (7, 5)`, blocker chosen mismatches `=5`, ids `[1..7]`.
+   - mean overlap metrics slightly improve but blocker class does not close.
+
+**Decision:**
+- Candidate B is **rejected** for core objective.
+- It improves only non-blocker chosen ordering class (record 7-like behavior) while leaving blocker membership-flip set unresolved.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 Candidate A evaluation + full protocol check (2026-04-27)
+
+**Objective:** execute first runtime candidate under full protocol (blocker micro-gate + full replay + global check), not blocker-only.
+
+**Candidate A implemented (gated):**
+- `python_src\toolbox\DEM\spm_rgm_group.py`
+  - added env-gated experiment `RGMS_RGM_EXPERIMENT_SUB_ROUND15`:
+    - after symmetric projection, optionally round sub-MI to 15 decimals before `eig`.
+- `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`
+  - updated `_replay_python_spectral_decision` to honor `RGMS_RGM_EXPERIMENT_SUB_ROUND15` so replay tests reflect runtime candidate state.
+
+**Protocol execution:**
+1. **Blocker micro-gate (candidate on):**
+   - result: `order=5`, `chosen=5` mismatches (no blocker closure).
+2. **Full replay gate (candidate on):**
+   - result: still `py_vs_mat(order/chosen)=7/6` (no net improvement),
+   - plus replay self-consistency degraded under candidate (`py_self` mismatches appeared), indicating candidate destabilization vs captured baseline path.
+3. **Global metrics script (candidate vs baseline):**
+   - mismatch IDs unchanged (`[1..7]`),
+   - counts unchanged (`order=7`, `chosen=6`),
+   - no meaningful closure of blocker class.
+4. **Baseline re-check (candidate off):**
+   - full replay returns to expected baseline diagnostic state (`py_self=0/0/0`, `py_vs_mat=7/6`).
+
+**Decision:**
+- Candidate A is **rejected**.
+- It does not reduce blocker mismatches and introduces undesirable replay self-path instability when enabled.
+
+**Files read this iteration:** `notes\andrew Python Matlab Translation Issues.md`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\spm_rgm_group.py`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 blocker micro-oracle gate added (2026-04-27)
+
+**Objective:** convert blocker-set understanding into a fast strict gate for inner-loop candidate testing.
+
+**Change made:**
+- Updated `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`:
+  - added `_load_spectral_workload_records()` helper to reuse checkpoint records safely.
+  - added `test_spm_rgm_group_spectral_workload_blocker_micro_oracle()` focused on blocker `record_id` set `{2,3,4,5,6}`.
+  - gate asserts strict parity on both `order` and `chosen` for blocker records and prints compact mismatch details when failing.
+
+**Verification run:**
+- Command: `pytest tests/oracle/toolbox/DEM/test_spm_rgm_group.py -k blocker_micro_oracle -q`
+- Result: **FAIL** (expected current state), with:
+  - `order=5`, `chosen=5` mismatches on blocker records.
+  - printed per-record chosen vectors (Python vs MATLAB) for ids `2..6`.
+
+**Why this is useful:**
+- Gives a seconds-level focused gate for high-impact membership-flip records.
+- Avoids repeatedly scanning full diagnostics while preserving strict byte-exact objective.
+
+**Files read this iteration:** `notes\andrew Python Matlab Translation Issues.md`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 upstream call-path + column-search probe (2026-04-27)
+
+**Objective:** continue strict byte-exact investigation across multiple axes without tolerance or environment changes.
+
+**Offline probes executed (no runtime edits):**
+- Solver path comparison:
+  - `scipy.linalg.eig` (current high-level path) vs raw LAPACK `dgeev` wrapper.
+- Complex-column canonicalization before ranking:
+  - no-op, real-if-close, phase anchor (max-abs), phase anchor (first nonzero).
+- All-column search on blocker records (`2..6`):
+  - tested whether any Python eigenvector column reproduces MATLAB `chosen` exactly.
+
+**Results:**
+- Solver path + canonicalization combinations were invariant:
+  - all remained `order=7`, `chosen=6`, with blocker chosen mismatches still `5` (records `2..6`).
+- `dgeev` produced same blocker chosen vectors as baseline for `2..6`.
+- All-column search on records `2..6` found no exact match column:
+  - `exact_cols=[]` for each blocker record,
+  - best Jaccard overlaps remained below `1.0`.
+
+**Interpretation:**
+- Remaining mismatch is not explained by high-level-vs-low-level solver entry path, phase/sign canonicalization, or “wrong column picked from Python eig output.”
+- Evidence continues to indicate byte-level eigenvector-value realization differences on current stack, amplified by discrete ranking/grouping.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 holistic risk/stability/cascade analysis (2026-04-27)
+
+**Objective:** broaden analysis beyond a single aspect by combining global risk mapping, perturbation stability, and downstream cascade indicators across the entire 58-record workload.
+
+**Offline analyses run:**
+1. **Global risk map** over all records:
+   - mismatch IDs, iter positions, active sizes,
+   - boundary margins, top-set Jaccard (`topJ`), chosen-set Jaccard (`chosenJ`).
+2. **Perturbation stability test**:
+   - tiny ±(1,2,4)-ULP nudges at rank-0 / `dx` boundary competitor indices,
+   - measure whether chosen set flips relative to baseline Python result.
+3. **Cascade indicator**:
+   - weighted severity score from `(iter, n, topJ, chosenJ)` to rank likely downstream impact.
+
+**Results:**
+- Global:
+  - `58` records total, `7` mismatch records (`1..7`), `51` full mismatch-status matches.
+  - mismatch set occurs at earliest iterations with descending `n`: `(iter,n)= (1,108)..(7,54)`.
+  - mismatch `topJ/chosenJ` ranges: min `0.286`, median `0.636`, max `1.0`.
+  - match `topJ/chosenJ`: all exactly `1.0`.
+- Perturbation stability (chosen-focused):
+  - chosen-mismatch records: `6/6` flip under tiny ULP perturbations.
+  - chosen-match records: `0/52` flip under same perturbations.
+  - this is a strong separator between stable and unstable decision regions.
+- Cascade ranking (highest first):
+  - record `2` highest impact, then `4`, `3`, `6`, `5`, `7`, `1`.
+
+**Interpretation:**
+- This confirms a holistic pattern: mismatches are concentrated in an early, unstable decision regime where tiny numeric perturbations can flip discrete group membership; matched region is robust under the same perturbations.
+- Supports prioritizing blocker records by cascade score for any further byte-exact candidate testing.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
 ## Iteration ??? `spm_dir_norm` (Phase 0)
 
 **Inspected:** `rgms-rules.mdc`, `AGENTS.md`, migration docs, `Python Matlab Translation Issues.md`; template Python modules and oracle tests under `python_src/` and `tests/oracle/`; `tests/conftest.py`, `tests/helpers/matlab_engine.py`, `tests/helpers/compare.py`.
@@ -11,6 +678,311 @@
 **Modified:** `python_src\spm_dir_norm.py` (cell input handling: avoid NumPy stacking a list of same-shaped `ndarray` cells into a numeric tensor; use explicit `dtype=object` buffer and `np.errstate` around divide to mirror MATLAB `rdivide` before zero-column overwrite).
 
 **Shared files touched:** none.
+
+---
+
+### Bottleneck #2 multi-axis transform sweep (2026-04-27)
+
+**Objective:** avoid single-aspect focus by testing multiple deterministic pre-sort transforms and overlap/regression metrics across all records.
+
+**Offline analysis performed (no runtime edits):**
+- Evaluated transforms on principal-column `abs` vectors:
+  - scale normalizations (`l2`, `max`),
+  - zero-handling (`signed_zero_collapse`, clip `<1e-16`, clip `<1e-15`),
+  - quantization (`round16`, `round15`, `round14`, spacing-snap).
+- For each transform, measured:
+  - `order_mis`, `chosen_mis`,
+  - improvement/regression counts vs baseline,
+  - mean pre-threshold and post-threshold set overlaps (`topJ`, `chosenJ`),
+  - focused blocker status on records `2..6`.
+
+**Results:**
+- Baseline remains `order=7`, `chosen=6`.
+- Most transforms produce **no change**.
+- `round15`, `round14`, and spacing-snap variants improve chosen from `6 -> 5` only.
+- Critical point: blocker subset `2..6` remains unchanged under all tested transforms (`order_mis=1` and `chosen_mis=1` per each of these records).
+- The only chosen improvement is record `7` (chosen-order-only), not the membership-flip blocker set.
+- No regressions were introduced on baseline full-match records in the tested transform set.
+
+**Interpretation:**
+- Multi-axis deterministic pre-sort normalization does not resolve the true blocker class.
+- The unresolved byte gap is now tightly localized to membership flips on records `2..6`, likely requiring upstream byte-level eigenvector-entry alignment beyond simple post-processing transforms.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 blocker-focused rank-front reconstruction (2026-04-27)
+
+**Objective:** deepen strict byte-exact analysis on the true blocker subset (`records 2..6`) before any runtime change.
+
+**Work performed (offline only):**
+- Generated top-rank reconstruction tables (top 15 ranks) for records `2..6` with:
+  - Python/MATLAB rank indices per position,
+  - paired `abs` values at each rank,
+  - absolute and ULP deltas,
+  - cross-lookups (`py@mat_idx`, `mat@py_idx`) to expose near-tie permutations.
+- Ran expanded deterministic policy sweep (all 58 records) with additional rank keys:
+  - lexicographic secondary index ascending/descending,
+  - rounded keys + ascending/descending secondary key,
+  - bucketed keys + ascending/descending secondary key.
+
+**Findings:**
+- Records `2..6` show dense near-tie fronts at high ranks; tiny value differences (`~1e-17` to `~1e-14`) reorder top candidates and alter membership.
+- No deterministic ranking key tested closed the blocker set:
+  - baseline remains `order=7`, `chosen=6`,
+  - best variants (`round14/15 + idx_asc`) only improve chosen to `5`,
+  - several variants regress heavily (large new order mismatches).
+- This reinforces that residual mismatch source is not simple tie-break-key choice; it is upstream byte-level differences in the principal-column values themselves.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 mismatch anatomy classification (2026-04-27)
+
+**Objective:** proceed with byte-exact-first analysis by classifying discrepancy patterns before runtime edits or tolerance policy.
+
+**Analysis run (offline replay, no code edits):**
+- Computed mismatch anatomy buckets on the 58-record spectral workload:
+  - `match`: 51
+  - `order_only_outside_chosen`: 1 (record 1)
+  - `membership_flip`: 5 (records 2,3,4,5,6)
+  - `chosen_order_only`: 1 (record 7)
+- Computed pre-threshold (`top-dx`) and post-threshold (`chosen`) set overlaps:
+  - record 1: `topJ=1.0`, `chosenJ=1.0` (pure late-order drift, no group-content drift)
+  - records 2..6: `topJ==chosenJ` in range `0.286 .. 0.800` (true membership divergence)
+  - record 7: `topJ=0.8`, `chosenJ=1.0` (same chosen members, different chosen order)
+- Boundary diagnostics on mismatch records show tiny margins and tiny cross-value deltas at decisive ranks, consistent with rank-flip sensitivity.
+
+**Candidate key probe (still offline):**
+- baseline sort key: `(order, chosen) = (7, 6)` mismatches
+- `round15` / `round14` keying: `(7, 5)` mismatches
+  - improvement is limited and does not close order mismatches.
+
+**Interpretation:**
+- Main unresolved class is **membership flips** (`5` records), not only benign ordering.
+- This narrows next byte-exact work to reproducing MATLAB’s top-rank and `dx` boundary ranking outcomes for records `2..6`.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 strict-byte next-step execution (2026-04-27)
+
+**Objective:** execute the two agreed next steps under byte-exact-first policy:
+1) deeper micro-probe on mismatch records `2..7`, 2) toolchain feasibility check for MKL-alignment experiments.
+
+**Step 1 — targeted micro-probe (`records 2..7`):**
+- Printed per-record details for:
+  - rank-0 pair values and gaps,
+  - first-divergence rank/value/ULP deltas,
+  - `dx` boundary in/out values and margins,
+  - chosen vectors (Python vs MATLAB).
+- Pattern confirmed:
+  - first divergence is at rank `0` for records `2..6`, rank `1` for record `7`.
+  - decisive deltas remain tiny (`~5.55e-17` to `~7.33e-15`; up to ~`132` ULP in observed rank-0 comparisons).
+  - multiple records have zero/near-zero `dx` margins on at least one side, so tiny shifts flip discrete membership.
+
+**Step 2 — toolchain check (non-invasive):**
+- Queried NumPy/SciPy build config in current `rgms` env.
+- Current stack is OpenBLAS-backed (`scipy-openblas`) for BLAS/LAPACK, not MKL.
+- This means MKL-alignment remains a separate explicit experiment (not currently active by default).
+
+**Interpretation for immediate next iteration:**
+- We now have concrete per-record, per-rank evidence of where byte drift enters discrete ranking.
+- We also know local solver/layout swaps already tested did not close this set; backend alignment remains a plausible remaining axis.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 byte-exact candidate sweep (2026-04-27)
+
+**Objective:** continue strict byte-exact pursuit with deeper, exhaustive replay analytics before any tolerance discussion.
+
+**Work performed (no runtime/source edits):**
+- Ran an offline sort-key hypothesis sweep on the 58-record spectral workload replay:
+  - baseline stable `argsort(-abs)`,
+  - uint64-bit key ordering,
+  - rounded-value keys (`round(..., 15/14)` + stable index tie-break),
+  - ULP-bucket keys (`8/16` ULP bins + stable index tie-break).
+- Ran eigensolver/matrix-prep sweep on the same corpus:
+  - `scipy.linalg.eig`, `numpy.linalg.eig`, `numpy/scipy eigh`,
+  - with/without explicit symmetrization and C/F-order matrix layout.
+- Ran oracle-ceiling check: sort from captured MATLAB principal column directly.
+
+**Results:**
+- Baseline remains `order=7`, `chosen=6` mismatches (`ids 1..7` for order, `2..7` for chosen).
+- Sort-key sweep:
+  - uint64 key: no improvement (`7/6`),
+  - rounding keys: `chosen` improves to `5`, `order` unchanged at `7` (record 7 chosen becomes correct),
+  - ULP-bucket keys: regression to `8/7` (record 58 newly mismatched).
+- Eigensolver/matrix-prep sweep:
+  - all tested variants stayed at `7/6`; mismatch set unchanged.
+  - max principal-column `abs` diff vs MATLAB remained around `~1.85e-14` (or slightly worse for `eigh`).
+- Oracle ceiling:
+  - sorting captured MATLAB principal column reproduces MATLAB exactly (`order=0`, `chosen=0` mismatches).
+
+**Interpretation in byte-exact context:**
+- We have exhausted common local solver/layout switches with no closure.
+- Remaining failures are highly concentrated and driven by tiny principal-column `abs` value differences (not gross algorithm mismatch).
+- Since MATLAB principal-column sorting gives exact parity, the unresolved gap is still in reproducing MATLAB eigenvector column values at byte level in Python runtime.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 strict-byte analysis census (2026-04-27)
+
+**Objective:** deepen discrepancy analytics before any tolerance discussion, while remaining in byte-exact pursuit mode.
+
+**Work performed (no code edits):**
+- Ran comprehensive offline census on captured spectral workload (`58` records) using current Python replay path vs stored MATLAB references.
+- Measured, per record: first order divergence rank (`k0`), absolute/ULP gaps at decisive ranks, `dx` boundary margins, and tie-cluster sizes.
+- Compared mismatch and match populations to isolate structural patterns.
+- Checked eigenvector-column correspondence pattern for every record.
+
+**Key findings:**
+- Mismatch counts unchanged: `order=7`, `chosen=6` (records `2..7` for chosen; `1..7` for order).
+- First-difference rank pattern for order mismatches: `[58, 0, 0, 0, 0, 0, 1]` (so not only tail effects).
+- At mismatch decisive ranks, `|abs_py-abs_mat|` is tiny but nonzero:
+  - `dabs_k0`: `min=5.55e-17`, `median=1.67e-15`, `max=7.33e-15`.
+- Chosen-mismatch records all show very small `dx` boundary margins (often exactly `0` in one side), consistent with tie-sensitive membership flips.
+- Match-vs-mismatch separation is strong at top rank:
+  - order mismatches: rank-0 gap `5.55e-17 .. 7.33e-15` (ULP median ~`30`, max `132`);
+  - order matches: rank-0 gap `0 .. 1.11e-16` (ULP median `0`, max `1`).
+- Principal eigenvector correspondence remains exact after permutation:
+  - for all `58/58` records, best MATLAB column match for Python principal column equals stored MATLAB `j` (`sim=1.0`).
+
+**Interpretation (byte-exact context):**
+- We are comparing the same principal eigendirections but tiny float differences in `abs(e(:,j))` still induce discrete ordering/chosen divergence under strict byte-equality.
+- This is now well-characterized enough to start controlled byte-exact candidate trials (ordering/keying policy experiments) against the same replay corpus.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_spectral_workload_initial.pkl`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 comprehensive full-rank replay diagnostics (2026-04-26)
+
+**Objective:** run a *comprehensive* spectral mismatch characterization across the full rank order, not a near-zero-only probe.
+
+**File modified**
+- `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`
+  - Added full-rank mismatch analytics in `test_spm_rgm_group_spectral_workload_fast_replay_oracle`:
+    - first-rank divergence detection (`first_diff_rank`) between Python and MATLAB order vectors,
+    - per-mismatch rank-level profile (`py_idx`, `mat_idx`, selected `abs` values),
+    - global and per-record `max_abs_col_diff` between matched principal columns,
+    - aggregate stats: `first_diff_rank_stats` and `first_diff_abs_delta_stats`.
+
+**Fast replay result (same captured workload)**
+- `records=58`
+- `py_vs_mat(order/chosen)=7/6`
+- `j_index_diag_only=8`
+- aggregate diagnostics:
+  - `first_diff_rank_stats=min=0, median=0.0, max=58`
+  - `first_diff_abs_delta_stats=min=5.55e-17, median=1.67e-15, max=7.33e-15`
+  - `global_max_abs_col_diff=1.85e-14` at `(record_id=6, iter=6)`.
+
+**Interpretation from comprehensive evidence**
+- Not confined to tail/near-zero band: several mismatches diverge at rank `0` or `1`.
+- Dominant eigendirection correspondence is still exact by column matching (`sim(best)=1.0` in printed profiles).
+- Therefore remaining discrete order/chosen mismatches come from very small `abs(e(:,j))` perturbations combined with tie-sensitive sorting/index selection, including but not limited to near-zero entries.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `python_src\toolbox\DEM\spm_rgm_group.py`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 fast-check recovery after stalled command (2026-04-26)
+
+- A long diagnostic command appeared frozen because `conda run -n rgms python -c ...` was given a multiline script; Conda hit its known newline-argument assertion path and waited on an interactive error-report prompt.
+- Killed the stalled process tree and re-ran the same diagnostic as a stdin script (`@' ... '@ | python -`) to keep it bounded and non-interactive.
+- Confirmed current replay state remains:
+  - `records=58`
+  - `order_mis=7`
+  - `chosen_mis=6`
+  - chosen-mismatch records are ids `2..7` with max `|absv_py-absv_mat|` in roughly `8.6e-16` to `1.85e-14`.
+- Interpretation remains on track with prior diagnostics: dominant eigendirection correspondence is preserved, but tiny `abs(e(:,j))` residuals at near-zero/tie ranks still flip discrete sort/chosen outputs.
+
+**Files read this iteration:** `projects\c-Users-andre-cursor\terminals\1.txt`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `python_src\toolbox\DEM\spm_rgm_group.py`.
+
+**Files created:** none  
+**Files modified:** `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #2 fast replay diagnostics tightening (2026-04-26)
+
+**Goal for this iteration:** improve the *fast-only* spectral replay gate so we can diagnose `spm_rgm_group` eigenvector-order mismatches without re-running exhaustive long pipelines.
+
+**What was changed**
+
+- **`tests\oracle\toolbox\DEM\test_spm_rgm_group.py`**
+  - Added richer mismatch diagnostics in `test_spm_rgm_group_spectral_workload_fast_replay_oracle`:
+    - top mismatch record printout includes `record_id`, `lev`, `stream`, `iter`, and `j(py/mat)`.
+    - added spectral profile printout (`top_abs(py/mat)`, `top2_gap(py/mat)`).
+    - added column-correspondence profile between captured Python and MATLAB eigenvector bases (`best_mat_col_for_py`, cosine similarity on `abs` columns).
+  - Added small helpers used by the replay test (`_normalize_vals_for_record`, `_normalize_vecs_for_record`, `_top2_abs_gap`, `_unit_abs_col_similarity`).
+- **`python_src\toolbox\DEM\spm_rgm_group.py`**
+  - Added `_normalize_eig_vals` and used it on `vals_py`, `vals`, and `vals_mat` so replay/capture code consistently handles vector-vs-diagonal-matrix eigenvalue payloads.
+
+**Why these changes were made**
+
+- To keep iteration loops in seconds while surfacing concrete evidence for the next spectral fix.
+- To separate “eigenvalue magnitude drift” from “index/column permutation mapping” causes.
+
+**Fast replay outcome after changes**
+
+- Command run in env: `conda activate rgms; python -m pytest tests/oracle/toolbox/DEM/test_spm_rgm_group.py -k spectral_workload_fast_replay_oracle -q`
+- Result remains expected failing parity signal: `py_vs_mat(jmax/order/chosen)=8/7/6` on 58 records.
+- New evidence now printed directly in the test output:
+  - `top_abs` and `top2_gap` are identical for mismatch records.
+  - column correspondence is exact (`sim(best)=1.0`, and `best_mat_col_for_py == j_mat`) for shown mismatches.
+  - Interpretation: mismatch is dominated by deterministic eigenpair column indexing/permutation correspondence, not dominant-eigenvalue magnitude differences.
+
+**Files read this iteration:** `rules\rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`, `Python Matlab Translation Issues.md`, `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `python_src\toolbox\DEM\spm_rgm_group.py`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `python_src\toolbox\DEM\spm_rgm_group.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
 
 ---
 

@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from matlab_compat import as_matlab_array, matlab_scalar
@@ -71,13 +73,68 @@ def spm_MDP_MI(a, c=None, h=None):
 def _spm_MI(A):
     # expected information gain of joint distribution
     A = as_matlab_array(A)
-    A_col = _column(A)
-    I = (
-        A_col.T @ spm_log(A_col)
-        - _sum_dim(A, 1) @ spm_log(_sum_dim(A, 1).T)
-        - _sum_dim(A, 2).T @ spm_log(_sum_dim(A, 2))
-    )
-    return matlab_scalar(I)
+    mode = str(os.getenv("RGMS_MDP_MI_EXPERIMENT_TERM_ORDER", "")).strip().lower()
+    sub_assoc = str(os.getenv("RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC", "")).strip().lower()
+
+    def _combine_three_scalars(t_a: np.ndarray, t_b: np.ndarray, t_c: np.ndarray) -> np.float64:
+        """Float64 scalar combination for Bottleneck #1 experiment sweeps only."""
+        x = np.float64(matlab_scalar(t_a))
+        y = np.float64(matlab_scalar(t_b))
+        z = np.float64(matlab_scalar(t_c))
+        if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
+            # Matches MATLAB grouping: ((joint - col_marg) - row_marg) as one expression.
+            return np.float64(x - y - z)
+        if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
+            return np.float64(x - (y + z))
+        if sub_assoc in ("t1_minus_t3_minus_t2", "j_minus_r_minus_c", "joint_row_col"):
+            return np.float64(np.float64(x - z) - y)
+        raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC mode: {sub_assoc!r}")
+
+    if mode in ("", "default", "matmul", "none", "off", "0", "false", "no"):
+        if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
+            A_col = _column(A)
+            I = (
+                A_col.T @ spm_log(A_col)
+                - _sum_dim(A, 1) @ spm_log(_sum_dim(A, 1).T)
+                - _sum_dim(A, 2).T @ spm_log(_sum_dim(A, 2))
+            )
+            return matlab_scalar(I)
+        A_col = _column(A)
+        t1 = A_col.T @ spm_log(A_col)
+        t2 = _sum_dim(A, 1) @ spm_log(_sum_dim(A, 1).T)
+        t3 = _sum_dim(A, 2).T @ spm_log(_sum_dim(A, 2))
+        I = _combine_three_scalars(t1, t2, t3)
+        return matlab_scalar(I)
+
+    cs = np.asarray(_sum_dim(A, 1), dtype=np.float64).ravel(order="F")
+    rs = np.asarray(_sum_dim(A, 2), dtype=np.float64).ravel(order="F")
+    flat = np.asarray(A, dtype=np.float64).ravel(order="F")
+    if mode in ("scalar_fwd", "fwd"):
+        t_joint = float(np.sum(flat * np.asarray(spm_log(flat), dtype=np.float64)))
+        t_col = float(np.sum(cs * np.asarray(spm_log(cs), dtype=np.float64)))
+        t_row = float(np.sum(rs * np.asarray(spm_log(rs), dtype=np.float64)))
+        if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
+            return matlab_scalar(t_joint - t_col - t_row)
+        if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
+            return matlab_scalar(np.float64(t_joint - (t_col + t_row)))
+        if sub_assoc in ("t1_minus_t3_minus_t2", "j_minus_r_minus_c", "joint_row_col"):
+            return matlab_scalar(np.float64(np.float64(t_joint - t_row) - t_col))
+        raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC mode: {sub_assoc!r}")
+    if mode in ("scalar_rev", "rev", "reverse"):
+        fr = flat[::-1]
+        csr = cs[::-1]
+        rsr = rs[::-1]
+        t_joint = float(np.sum(fr * np.asarray(spm_log(fr), dtype=np.float64)))
+        t_col = float(np.sum(csr * np.asarray(spm_log(csr), dtype=np.float64)))
+        t_row = float(np.sum(rsr * np.asarray(spm_log(rsr), dtype=np.float64)))
+        if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
+            return matlab_scalar(t_joint - t_col - t_row)
+        if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
+            return matlab_scalar(np.float64(t_joint - (t_col + t_row)))
+        if sub_assoc in ("t1_minus_t3_minus_t2", "j_minus_r_minus_c", "joint_row_col"):
+            return matlab_scalar(np.float64(np.float64(t_joint - t_row) - t_col))
+        raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC mode: {sub_assoc!r}")
+    raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_TERM_ORDER mode: {mode!r}")
 
 
 def _matrix_view(x):
