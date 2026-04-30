@@ -23,6 +23,735 @@ runtime/test files scoped within their corresponding linear entries.
 
 ---
 
+### Entry 5/6 interim status update (2026-04-30)
+
+**Purpose:** record the latest Entry 5/6 lane work before full Entry 6 closure, with emphasis on strict MATLAB-faithful Entry 6 semantics and current parity evidence.
+
+**Context and scope:**
+
+- This is an interim checkpoint only.
+- Focus remained on Entry 5/6 driver-lane behavior and Entry 6 MATLAB-vs-Python validation.
+- No scope expansion to later entries in this update.
+
+**Entry 5 status carried forward:**
+
+- Entry 5 parameter-forgetting behavior remains implemented in `python_src\toolbox\DEM\DEM_AtariIII.py` and covered by `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py`.
+- Checkpoint semantics remain: using pre-checkpoint restores boundary state and still executes the entry logic.
+
+**Entry 6 implementation updates now in tree:**
+
+- `python_src\toolbox\DEM\DEM_AtariIII.py` includes Entry 6 boundary logic:
+  - computes `r` and `c` from `PDP["o"]` using `GDP["id"]["reward"]` and `GDP["id"]["contraint"]`,
+  - computes per-reward `s` and `t` windows,
+  - stores `ctx["r"]`, `ctx["c"]`, and `ctx["entry6_windows"]`,
+  - supports Entry 6 checkpoint/capture flags.
+- `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py` exists with:
+  - entries 1..6 smoke,
+  - Entry 6 checkpoint roundtrip,
+  - Entry 6 MATLAB oracle comparison on boundary inputs.
+- `Atari_example.md` was updated with an Entry 6 section aligned to current code/test boundaries.
+
+**Strict MATLAB-semantics correction applied during this cycle:**
+
+- A temporary non-MATLAB guard for the `find(...,'last')` empty case was introduced and then explicitly removed.
+- Entry 6 logic is now restored to strict MATLAB control flow:
+  - `s = c(find(c < r(i),1,'last'))` equivalent in Python indexing form.
+- The Entry 6 MATLAB oracle expression in tests was also restored to the same strict form (no guard mirror).
+
+**Validation results from this cycle:**
+
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry6.py -q` passed after strict-semantic restoration.
+- Focused strict oracle parity rerun:
+  - `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry6.py::test_DEM_AtariIII_entry6_hits_miss_windows_oracle -q`
+  - result: **pass**.
+
+**Parity interpretation (important):**
+
+- Current evidence supports parity of the Entry 6 transformation itself (`r`, `c`, and window endpoints) when evaluated against MATLAB on the boundary inputs used by the test.
+- Full closure condition still pending for this lane: independently proving that upstream Entry 1-5 boundary inputs at the same run point match MATLAB original, then re-asserting Entry 6 outputs on that independently matched boundary.
+
+**Temporary artifact handling during investigation:**
+
+- Created and removed a short-lived diagnostic script:
+  - created: `tests\oracle\toolbox\DEM\_tmp_entry6_parity_audit.py`
+  - deleted in same cycle after a MATLAB Engine hang during standalone execution.
+- No permanent diagnostic helper from that attempt was retained.
+
+**Files read this iteration:** `python_src\toolbox\DEM\DEM_AtariIII.py`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`, `Atari_example.md`, `logs\log_0.md`.
+
+**Files created:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`, `tests\oracle\toolbox\DEM\_tmp_entry6_parity_audit.py` (temporary; later deleted)  
+**Files modified:** `python_src\toolbox\DEM\DEM_AtariIII.py`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`, `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** `tests\oracle\toolbox\DEM\_tmp_entry6_parity_audit.py`  
+**Shared files touched:** no
+
+---
+
+### 2026-04-30 — Entry 6 implementation (DEM_AtariIII lane)
+
+**What was inspected:**
+
+- `python_src\toolbox\DEM\DEM_AtariIII.py` (entry boundary scaffolding and checkpoint hooks)
+- `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py` (pattern reference)
+- `Atari_example.md` (ordered-entry ledger section)
+- `Python Matlab Translation Issues.md` and `notes\andrew Python Matlab Translation Issues.md` (required corner-case policy refresh)
+
+**What changed and why:**
+
+- Updated `python_src\toolbox\DEM\DEM_AtariIII.py` to add **Entry 6 only**:
+  - extended driver support to `entry_stop=6`,
+  - added `_entry6_find_events_and_windows(...)` for `r/c` extraction from `PDP["o"]` using `GDP["id"]` (`reward`, `contraint`),
+  - added Entry 6 pre/post checkpoint capture and restore hooks,
+  - stored `ctx["r"]`, `ctx["c"]`, and `ctx["entry6_windows"]`.
+- Added `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`:
+  - smoke test for entries 1..6,
+  - checkpoint roundtrip test for Entry 6 hooks,
+  - oracle test for Entry 6 hit/miss/window logic against MATLAB (computed from Python boundary inputs).
+- Updated `Atari_example.md` with a dedicated Entry 6 implementation/status section aligned to driver + tests.
+
+**Notable issue resolved during implementation:**
+
+- Initial Entry 6 helper raised `IndexError` when a reward event had no prior miss (`find(...,'last')` empty case in randomized runs). Added a guard to skip such events for runtime stability; MATLAB oracle helper was aligned to the same guarded behavior for consistent boundary comparison.
+
+**Validation:**
+
+- `conda activate rgms; pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry6.py -q`
+- Result: **3 passed**.
+
+**Shared files touched:** no.
+
+**Files read this iteration:** `rgms-rules.mdc`, `Python Matlab Translation Issues.md`, `notes\andrew Python Matlab Translation Issues.md`, `python_src\toolbox\DEM\DEM_AtariIII.py`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py`, `Atari_example.md`, `logs\log_0.md`.
+
+**Files created:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`  
+**Files modified:** `python_src\toolbox\DEM\DEM_AtariIII.py`, `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 1..5 script-lane validation expansion + checkpoint semantics fix (2026-04-29)
+
+**Intent:** begin broader script-lane testing for `DEM_AtariIII.py` Entries 1..5 and
+verify checkpoint/capture behavior is operational and non-destructive to existing suites.
+
+**Test additions:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py`
+
+- Added `test_DEM_AtariIII_entries_1_to_5_python_smoke`:
+  - runs `run_dem_atariiii(entry_stop=5)` with `RGMS_ATARI_TRAINING_T=1000`,
+  - checks required context keys and Entry 5 invariants (`Nm`, `Ne`, all `a`/`b` cleared).
+- Added `test_DEM_AtariIII_entry5_checkpoint_roundtrip_smoke`:
+  - captures Entry 5 `pre/post` artifacts under a test tag,
+  - re-runs with `RGMS_ATARI_ENTRY5_USE_CHECKPOINT=1`,
+  - confirms boundary outputs and clear-state invariants remain valid.
+
+**Driver fix:** `python_src\toolbox\DEM\DEM_AtariIII.py`
+
+- Corrected checkpoint semantics for Entries 2..5:
+  - `ENTRY{N}_USE_CHECKPOINT=1` now means
+    **load pre-boundary context, then execute Entry N**,
+    rather than loading and skipping entry execution.
+
+**Fixture safety fix:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py`
+
+- Removed `rmpath(...)` teardown calls from local MATLAB fixture.
+- Reason: teardown removed globally required paths from the session engine and
+  caused unrelated integration tests to fail (`spm_speye` not found).
+
+**Validation sequence:**
+
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry5.py -q -s` -> initial fail surfaced checkpoint semantics bug.
+- After fixes:
+  - `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry5.py -q -s` -> pass (`3 passed`)
+  - `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry5.py tests/oracle/toolbox/DEM/test_spm_MDP_pong_generate_integration.py -q` -> pass (`7 passed`)
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `tests\conftest.py`, `tests\helpers\matlab_engine.py`, `python_src\toolbox\DEM\spm_MDP_pong.py`, `python_src\toolbox\DEM\spm_MDP_generate.py`, `tests\oracle\toolbox\DEM\test_spm_MDP_pong_generate_integration.py`, `tests\helpers\compare.py`, `Atari_example.md`.
+
+**Files created:** none  
+**Files modified:** `python_src\toolbox\DEM\DEM_AtariIII.py`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry5.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Entry 5 lane start: DEM_AtariIII driver scaffold + isolation oracle (2026-04-29)
+
+**Intent:** align with updated `Atari_example.md` snippet-entry scope by creating a
+standalone driver lane (not modifying `spm_faster_structure_learning.py`) and
+closing Entry 5 (`Nm/Ne` + clear `a{g}`/`b{f}`) with an oracle.
+
+**Code added:**
+
+- `python_src/toolbox/DEM/DEM_AtariIII.py`
+  - entry-marked orchestration for Entries 1..5 (`# %%% ENTRY n` comments),
+  - per-entry checkpoint/capture hooks:
+    - `RGMS_ATARI_ENTRY{N}_USE_CHECKPOINT`
+    - `RGMS_ATARI_CAPTURE_ENTRY{N}_{PRE|POST}`
+    - `RGMS_ATARI_TAG`
+    - `RGMS_ATARI_TRAINING_T` (int, minimum 1000, default 10000),
+  - Entry 5 helper `_entry5_forget_parameters(...)`.
+
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry5.py`
+  - MATLAB vs Python Entry 5 boundary oracle:
+    - runs snippet prelude through Entry 4 on both sides,
+    - applies Entry 5 and compares `Nm`, `Ne`,
+      per-model `numel(a)`, `numel(b)`, and all-emptied flags.
+
+**Validation:**
+
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry5.py -q -s` -> pass
+
+**Ledger updates (minimal, aligned):**
+
+- `Atari_example.md`
+  - Entry 4: added driver-orchestration file reference.
+  - Appended new Entry 5 section with implementation, tests, flags, capture path,
+    and downstream consequence.
+
+**Files read this iteration:** `python_src/toolbox/DEM/spm_MDP_pong.py`, `python_src/toolbox/DEM/spm_MDP_generate.py`, `tests/oracle/toolbox/DEM/test_spm_MDP_pong_generate_integration.py`, `Atari_example.md`.
+
+**Files created:** `python_src/toolbox/DEM/DEM_AtariIII.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry5.py`  
+**Files modified:** `Atari_example.md`, `logs/log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 live-Engine replay magnitude diagnostics (2026-04-28)
+
+**Intent:** continue after enforcing a single MATLAB truth (live Engine) by quantifying
+the **size** of remaining scalar-`E` mismatches, not just mismatch counts.
+
+**Code change:** `tests\oracle\test_spm_MDP_MI.py`
+
+- In `test_spm_MDP_MI_rgm_workload_fast_replay_oracle`, added replay diagnostics for
+  `py_vs_live` absolute deltas:
+  - collected all `abs(py-live)` values for mismatching pairs,
+  - printed `max`, `p50`, `p90`, `p99`,
+  - printed tolerance bucket counts (`<=1e-16`, `<=2e-16`, `<=5e-16`, `<=1e-15`).
+- No gate-policy change: default assert is still exact-equality vs live Engine unless
+  legacy captured mode is explicitly enabled.
+- Added a regression guardrail assert on replay mismatches:
+  `max(abs(py-live)) <= 1e-15` (keeps current ULP-scale envelope explicit while
+  exact equality remains xfailed/open).
+
+**Run 1 (default faithful path):**
+
+- Command: `pytest tests/oracle/test_spm_MDP_MI.py -k rgm_workload_fast_replay_oracle -s -q`
+- Key output on `fsl_rgm_mi_workload_full_native_mi.pkl`:
+  - `pairs=1711`
+  - `py_self=0`
+  - `py_vs_live=907`
+  - `cap_vs_live=276`
+  - `py_vs_cap_stored=764`
+  - `py_vs_live abs stats`:
+    - `max=6.6613381477509392e-16`
+    - `p50=1.3877787807814457e-17`
+    - `p90=2.2204460492503131e-16`
+    - `p99=4.4408920985006262e-16`
+    - `<=1e-16: 640`
+    - `<=2e-16: 735`
+    - `<=5e-16: 906`
+    - `<=1e-15: 907`
+
+Interpretation: remaining live mismatches are tiny (sub-`1e-15`) and overwhelmingly
+ULP-scale; only one mismatch exceeds `5e-16`, with observed max `~6.66e-16`.
+
+**Run 2 (experiment sweep; diagnostics only, no adoption):**
+
+- Swept:
+  - `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER` in `{default, scalar_fwd, scalar_rev}`
+  - `RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC` in `{default, t1_minus_sum23, t1_minus_t3_minus_t2}`
+- Best live mismatch count observed: `py_vs_live=873` under
+  `sub_assoc=t1_minus_sum23` (both `default` and `scalar_fwd/rev` reached this).
+- But these modes produce large `py_self` drift against checkpointed Python baseline
+  (for example `py_self=785`, `838`, `934`), so they are diagnostic-only and not
+  faithful default candidates.
+
+**Files read this iteration:** `rules\rgms-rules.mdc`, `notes\andrew Python Matlab Translation Issues.md`, `python_src\spm_MDP_MI.py`, `tests\oracle\test_spm_MDP_MI.py`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_MDP_MI.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 term-level mismatch isolation (2026-04-28)
+
+**Intent:** continue byte-exact closure work by locating which MI scalar terms
+(`t1`, `t2`, `t3`) actually drive live-Engine replay misses.
+
+**Code change:** `tests\oracle\test_spm_MDP_MI.py`
+
+- Added helper `_matlab_mdp_mi_terms(eng, a)` that computes in MATLAB:
+  - `t1 = A(:)' * spm_log(A(:))`
+  - `t2 = sum(A,1) * spm_log(sum(A,1)')`
+  - `t3 = sum(A,2)' * spm_log(sum(A,2))`
+  - `te = t1 - t2 - t3`
+- Replay oracle now prints term-delta diagnostics for first 6 `py_vs_live`
+  mismatches:
+  `|dE|`, `|dt1|`, `|dt2|`, `|dt3|`.
+- Imported `python_src.spm_log` in this test for matched Python-side term breakdown.
+
+**Default faithful replay run (live gate):**
+
+- `py_vs_live=907`, `cap_vs_live=276`, `py_vs_cap_stored=764`, `py_self=0`.
+- Term diagnostics (first mismatches) show `|dE|` explained by `|dt1|` and/or
+  `|dt2|`; sampled `|dt3|` was `0` throughout this slice.
+
+**Diagnostic-only replay run (`RGMS_SPM_LOG_EXPERIMENT_KERNEL=log2_ln2`):**
+
+- `py_vs_live=874` (improves count only), `py_self=1041` (large drift from
+  captured Python baseline), so still non-faithful.
+- Term-delta pattern remains concentrated in `t1` / `t2`; sampled `t3` deltas
+  remain negligible/zero.
+
+Interpretation: current residual appears to be ULP/log rounding centered in
+joint and column-marginal terms, not row-marginal term construction.
+
+**Files read this iteration:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 per-site log kernel sweep vs live gate (2026-04-28)
+
+**Intent:** test whether live `py_vs_live` misses can be reduced by changing only
+selected MI log sites (`t1`/`t2`/`t3`) instead of all sites.
+
+**Code change:** `python_src\spm_MDP_MI.py`
+
+- Added diagnostics-only env gate `RGMS_MDP_MI_EXPERIMENT_LOG_SITES` in `_spm_MI`:
+  - default/off: unchanged faithful `spm_log(...)` everywhere,
+  - `all_log2_ln2`: use `np.fmax(np.log2(x)*np.log(2), -32)` for all MI terms,
+  - comma list (`t1`, `t2`, `t3`): apply `log2_ln2` only to selected term sites.
+- Default runtime behavior unchanged when env is unset.
+
+**Validation:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `5 passed, 1 xfailed`.
+
+**Live replay sweep (`1711` pairs, same checkpoint file):**
+
+- `default`: `py_vs_live=907`
+- `all_log2_ln2`: `py_vs_live=874` (best count, still non-faithful)
+- `t1`: `1176`
+- `t2`: `900`
+- `t3`: `963`
+- `t1,t2`: `1103`
+- `t1,t3`: `1080`
+- `t2,t3`: `1129`
+
+Interpretation: selective per-site substitutions do not close byte-exactness; only
+global all-site substitution improves count materially, consistent with prior
+diagnostic status (not adopted as faithful default).
+
+**Files read this iteration:** `python_src\spm_MDP_MI.py`, `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `python_src\spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 term-ULP workload oracle (2026-04-28)
+
+**Intent:** add a stable, quantitative term-level regression check while byte-exact
+closure remains open.
+
+**Code change:** `tests\oracle\test_spm_MDP_MI.py`
+
+- Added `_python_mdp_mi_terms(a)` and `_ulp_distance_scalar(a,b)`.
+- Added `test_spm_MDP_MI_rgm_workload_term_ulp_profile_live_oracle`:
+  - iterates all replay `pair` records (`1711`) from `fsl_rgm_mi_workload*.pkl`,
+  - computes Python and live MATLAB term decomposition (`t1`, `t2`, `t3`, `te`),
+  - prints profile stats and asserts guardrails:
+    - `max ULP(t1) <= 4`
+    - `max ULP(t2) <= 4`
+    - `max ULP(t3) <= 4`
+    - `max abs(te) <= 1e-15`
+
+**Measured run output:**
+
+- `[RGM-MI-TERM-ULP] pairs=1711`
+- `t1(max/p99)=2/1.0`
+- `t2(max/p99)=2/2.0`
+- `t3(max/p99)=2/2.0`
+- `te(max/p99)=262144/4339.2`
+- `te_abs_max=6.6613381477509392e-16`
+
+Interpretation:
+
+- Component terms are tightly bounded (<=2 ULP on this workload).
+- Recombined `te` can show large ULP counts due to subtractive cancellation even
+  when absolute error is tiny; therefore absolute drift is the reliable `te`
+  guardrail in this lane.
+
+**Validation commands:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -k term_ulp_profile_live_oracle -s -q` -> pass
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `6 passed, 1 xfailed`
+
+**Files read this iteration:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 reduction-mode follow-up (`dot_*` vs scalar order) (2026-04-28)
+
+**Intent:** continue byte-exact closure by testing whether explicit dot-product
+reductions match MATLAB better than current matrix-expression / scalar-sum paths.
+
+**Code change:** `python_src\spm_MDP_MI.py`
+
+- Added diagnostics-only term-order modes:
+  - `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER=dot_fwd|ddot_fwd`
+  - `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER=dot_rev|ddot_rev`
+- Implemented as explicit `np.dot` on flattened float64 vectors for joint/column/row terms.
+- Fixed shape normalization (`ravel(order="F")`) for `spm_log` outputs before `np.dot`.
+- Default mode remains unchanged.
+
+**Validation:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `6 passed, 1 xfailed`.
+
+**Replay sweep (default sub-association, live gate):**
+
+- `default`: `py_self=0`, `py_vs_live=907`
+- `scalar_fwd`: `py_self=109`, `py_vs_live=905`
+- `scalar_rev`: `py_self=314`, `py_vs_live=884`
+- `dot_fwd`: `py_self=0`, `py_vs_live=907`
+- `dot_rev`: `py_self=681`, `py_vs_live=1050`
+
+Interpretation:
+
+- `dot_fwd` exactly matches `default` behavior on this workload.
+- Reverse-order reductions can move mismatch counts but are not faithful
+  (self-drift increases and/or live parity worsens).
+- No new faithful mode improved beyond current default.
+
+**Files read this iteration:** `python_src\spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `python_src\spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 cancellation-band profiling (2026-04-28)
+
+**Intent:** test whether remaining live mismatches cluster only in extreme
+subtractive-cancellation cases, or are spread across ordinary `te` scales.
+
+**Code change:** `tests\oracle\test_spm_MDP_MI.py`
+
+- Extended `test_spm_MDP_MI_rgm_workload_term_ulp_profile_live_oracle` to collect:
+  - `cancel_abs = |t1 - (t2 + t3)|` per pair,
+  - mismatch flags (`py_te != mat_te`),
+  - mismatch counts per cancellation band.
+- Added printed diagnostics:
+  - `[RGM-MI-CANCEL-BANDS] <=1e-12, (1e-12,1e-9], (1e-9,1e-6], (1e-6,1e-3], >1e-3`.
+
+**Measured output (`1711` pairs):**
+
+- `cancel_abs_p50=5.1769280138433404e-04`
+- `cancel_abs_p99=4.9682276069427733e-01`
+- bands:
+  - `<=1e-12`: `0/0`
+  - `(1e-12,1e-9]`: `0/0`
+  - `(1e-9,1e-6]`: `0/0`
+  - `(1e-6,1e-3]`: `695/1370` (`0.507`)
+  - `>1e-3`: `212/341` (`0.622`)
+
+Interpretation:
+
+- The replay corpus does not sit in an extreme near-cancellation tail.
+- Mismatches are distributed across ordinary-scale cancellation magnitudes, so
+  closure likely requires broad numerical alignment (not only tiny-`te` special handling).
+
+**Validation:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -k term_ulp_profile_live_oracle -s -q` -> pass
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `6 passed, 1 xfailed`
+
+**Files read this iteration:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 stratified mismatch signatures (2026-04-28)
+
+**Intent:** avoid narrow inference from aggregate stats by capturing concrete mismatch
+signatures across cancellation bands.
+
+**Code change:** `tests\oracle\test_spm_MDP_MI.py`
+
+- Added `_float64_hex(x)` helper for deterministic bit-pattern diagnostics.
+- Extended `test_spm_MDP_MI_rgm_workload_term_ulp_profile_live_oracle` to print
+  stratified mismatch signatures (sample rows from:
+  - `band=mid` (`1e-6 < |t1-(t2+t3)| <= 1e-3`)
+  - `band=high` (`|t1-(t2+t3)| > 1e-3`))
+- Each row now includes:
+  - `|dE|`, `ulpE`, `ulp1/ulp2/ulp3`,
+  - `E_py` / `E_mat` as IEEE-754 hex,
+  - `d1/d2/d3` term deltas.
+
+**Observed signature pattern (sampled rows):**
+
+- Mid band examples: `ulpE` can be large (for example `4096`) while `|dE|` remains
+  tiny (`~1e-16 .. 2e-16`), with tiny component term ULPs (`ulp1/ulp2 <= 2`, `ulp3=0`).
+- High band examples: `ulpE` is modest (`4..16`) with similar absolute `|dE|`, and
+  term deltas again centered in `t1`/`t2`, `t3` mostly unchanged.
+
+Interpretation: mismatch behavior is consistent with floating spacing / scale effects
+on recomposed `E`, not a large hidden component drift in `t3` or a single pathological
+subset.
+
+**Validation:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -k term_ulp_profile_live_oracle -s -q` -> pass
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `6 passed, 1 xfailed`
+
+**Files read this iteration:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 persisted mismatch corpus + micro replay gate (2026-04-28)
+
+**Intent:** implement the next agreed fast inner loop for byte-level closure: a
+deterministic stratified mismatch corpus and a dedicated replay oracle.
+
+**Code change:** `tests\oracle\test_spm_MDP_MI.py`
+
+- Added corpus helpers:
+  - `_mi_mismatch_corpus_file()`
+  - `_build_mi_mismatch_corpus_live(eng, max_mid=24, max_high=24)`
+- Added test:
+  - `test_spm_MDP_MI_rgm_mismatch_corpus_micro_replay_oracle(eng)`
+  - behavior:
+    - if `RGMS_MDP_MI_MISMATCH_CORPUS_REFRESH=1` (or file missing), rebuild and save corpus,
+    - otherwise load existing corpus and replay only selected records,
+    - assert `py_self_mismatch == 0` and `max_abs(py-live) <= 1e-15`.
+
+**Artifact created:**
+
+- `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_mi_mismatch_corpus_live.pkl`
+- selected: `48` records (`24` mid cancellation band + `24` high band), deterministic ranking:
+  `ulpE desc, abs_dE desc, ulp_t1 desc, ulp_t2 desc, then stream/i/j asc`.
+
+**Measured micro replay output (current faithful path):**
+
+- `py_self=0`
+- `py_vs_live=48` (expected: mismatch exemplars by construction)
+- `max_abs=4.5796699765787707e-16`
+- `max_ulp=262144` (expected scale sensitivity on recomposed near values)
+
+**Validation:**
+
+- refresh+run:
+  `RGMS_MDP_MI_MISMATCH_CORPUS_REFRESH=1 pytest tests/oracle/test_spm_MDP_MI.py -k mismatch_corpus_micro_replay_oracle -s -q`
+- focused:
+  `pytest tests/oracle/test_spm_MDP_MI.py -k "mismatch_corpus_micro_replay_oracle or term_ulp_profile_live_oracle" -s -q`
+- module:
+  `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `7 passed, 1 xfailed`
+
+**Notes update:**
+
+- `notes\andrew Python Matlab Translation Issues.md` now documents corpus purpose,
+  refresh command, and current measured stats.
+
+**Files read this iteration:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** `tests\oracle\toolbox\DEM\_checkpoint_data\fsl_rgm_mi_mismatch_corpus_live.pkl`  
+**Files modified:** `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 candidate run matrix: compensated reduction + recomposition (2026-04-28)
+
+**Intent:** execute the planned “actually try things” matrix using the new mismatch
+corpus fast lane plus full live replay before any adoption decision.
+
+**Code changes:**
+
+- `python_src\spm_MDP_MI.py`
+  - added diagnostics-only env `RGMS_MDP_MI_EXPERIMENT_REDUCTION` with Kahan modes:
+    - `kahan_t1`, `kahan_t2`, `kahan_t3`, `kahan_t1_t2`, `kahan_all`
+  - applied in scalar/dot reduction branches through `_reduce_prod(...)`.
+- `tests\oracle\test_spm_MDP_MI.py`
+  - `test_spm_MDP_MI_rgm_mismatch_corpus_micro_replay_oracle` now honors
+    `RGMS_MDP_MI_CORPUS_ALLOW_SELF_DRIFT=1` for experiment sweeps.
+
+**Phase A — reduction-only sweep**  
+(`term_order=scalar_fwd`, `sub_assoc=default`, self drift allowed for diagnostics)
+
+- `default`:  
+  - corpus: `py_self=0`, `py_vs_live=48/48`, `max_abs=4.58e-16`  
+  - full: `py_self=0`, `py_vs_live=907`
+- `kahan_t1`:  
+  - corpus: `py_self=27`, `py_vs_live=44/48`  
+  - full: `py_self=214`, `py_vs_live=996`
+- `kahan_t2` (**best full-workload among these**):  
+  - corpus: `py_self=20`, `py_vs_live=46/48`  
+  - full: `py_self=94`, `py_vs_live=890`
+- `kahan_t1_t2`:  
+  - corpus: `py_self=37`, `py_vs_live=43/48`  
+  - full: `py_self=275`, `py_vs_live=977`
+- `kahan_all`:  
+  - corpus: `py_self=46`, `py_vs_live=38/48`, `max_abs=3.47e-16`  
+  - full: `py_self=363`, `py_vs_live=974`
+
+**Phase B — recomposition sweep on best reduction (`kahan_t2`)**
+
+- `sub_assoc=default`: full `py_vs_live=890`, `py_self=94`
+- `sub_assoc=t1_minus_sum23`: full `py_vs_live=875` but `py_self=788`
+- `sub_assoc=t1_minus_t3_minus_t2`: full `py_vs_live=1040` (regression)
+
+**Conclusion from this matrix:**
+
+- No candidate is currently adoptable as faithful default because all improved
+  candidates still introduce substantial Python self drift.
+- `kahan_t2` is the strongest signal for future targeted work (best full mismatch
+  count among compensated reductions while remaining numerically bounded).
+
+**Validation with clean env after sweeps:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `7 passed, 1 xfailed`.
+
+**Files read this iteration:** `tests\oracle\test_spm_MDP_MI.py`, `python_src\spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `python_src\spm_MDP_MI.py`, `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Bottleneck #1 fidelity-first extension: `fsum` family + repeat-stability split (2026-04-28)
+
+**Intent:** continue broad, non-tailored parity work by trying another general
+numerical family (`math.fsum`) and by separating true runtime repeat stability
+from checkpoint-baseline drift.
+
+**Code changes:**
+
+- `python_src\spm_MDP_MI.py`
+  - added diagnostics-only reduction modes under `RGMS_MDP_MI_EXPERIMENT_REDUCTION`:
+    - `fsum_t1`, `fsum_t2`, `fsum_t3`, `fsum_t1_t2`, `fsum_all`
+  - implemented via `_fsum_dot` + `_reduce_prod` (default path unchanged).
+- `tests\oracle\test_spm_MDP_MI.py`
+  - micro-corpus oracle now records `py_repeat` (two immediate Python evaluations on
+    same `p`) in addition to `py_self` (vs stored baseline).
+  - enforces `py_repeat == 0` always.
+
+**Experiment sweep (scalar_fwd, corpus-first then full replay, self drift allowed):**
+
+- `default`:
+  - full: `py_self=0`, `py_vs_live=907`
+- `kahan_t2`:
+  - full: `py_self=94`, `py_vs_live=890`
+- `fsum_t2` (**best full mismatch count observed in this sweep**):
+  - full: `py_self=120`, `py_vs_live=874`
+  - corpus: `py_self=21`, `py_repeat=0`, `py_vs_live=46/48`
+- `fsum_t1_t2`:
+  - full: `py_self=292`, `py_vs_live=953`
+- `fsum_all`:
+  - full: `py_self=388`, `py_vs_live=922`
+
+**Recomposition with best fsum candidate (`fsum_t2`):**
+
+- `sub_assoc=default`: `py_vs_live=874`, `py_self=120`
+- `sub_assoc=t1_minus_sum23`: `py_vs_live=875`, `py_self=788`
+- `sub_assoc=t1_minus_t3_minus_t2`: `py_vs_live=1033`, `py_self=464`
+
+**Interpretation:**
+
+- `fsum_t2` is currently the strongest broad, non-tailored parity candidate
+  (`py_vs_live` improvement), and is repeat-stable (`py_repeat=0`).
+- It is not yet promotable as default due to significant baseline drift
+  (`py_self` non-zero on full replay), so it remains diagnostics-only.
+
+**Final clean-env validation:**
+
+- `pytest tests/oracle/test_spm_MDP_MI.py -q` -> `7 passed, 1 xfailed`.
+
+**Files read this iteration:** `python_src\spm_MDP_MI.py`, `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `python_src\spm_MDP_MI.py`, `tests\oracle\test_spm_MDP_MI.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
+### Cross-lane safety check for best candidate (`fsum_t2`) (2026-04-29)
+
+**Intent:** follow-through on the identified next step: verify that the current
+best Bottleneck #1 candidate does not introduce additional divergence in the
+Bottleneck #2 spectral replay lane.
+
+**Commands run (tag-scoped spectral replay):**
+
+- Baseline:
+  - `RGMS_RGM_SPECTRAL_REPLAY_TAG=initial`
+  - `pytest tests/oracle/toolbox/DEM/test_spm_rgm_group.py -k "spectral_workload_blocker_micro_oracle or spectral_workload_fast_replay_oracle" -q -s`
+- Candidate:
+  - same command plus
+  - `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER=scalar_fwd`
+  - `RGMS_MDP_MI_EXPERIMENT_REDUCTION=fsum_t2`
+
+**Observed result (baseline and candidate identical):**
+
+- spectral fast replay:
+  - `py_self(jmax/order/chosen)=0/0/0`
+  - `py_vs_mat(order/chosen)=7/6`
+  - `j_index_diag_only=8`
+- blocker micro:
+  - `order=5`
+  - `chosen=5`
+
+Interpretation:
+
+- In this captured spectral replay lane (`sub_mi` workload records), enabling
+  `fsum_t2` does not change Bottleneck #2 outcomes.
+- This is a useful no-regression signal for cross-lane stability, though it does
+  not close Bottleneck #2 itself.
+
+**Post-check hygiene:**
+
+- cleared all experiment env flags
+- re-ran `pytest tests/oracle/test_spm_MDP_MI.py -q` in clean env:
+  `7 passed, 1 xfailed`.
+
+**Files read this iteration:** `tests\oracle\toolbox\DEM\test_spm_rgm_group.py`, `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `notes\andrew Python Matlab Translation Issues.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no  
+
+---
+
 ### Bottleneck #1 full MI boundary workload capture + replay gate (2026-04-28)
 
 **Goal:** capture **full** MATLAB/Python MI boundary data for `spm_MDP_MI` inside `spm_rgm_group` (no partial slices), then replay quickly as a strict oracle.
@@ -172,7 +901,19 @@ runtime/test files scoped within their corresponding linear entries.
 **Follow-up (same day):**
 
 - `tests\oracle\test_spm_MDP_MI.py`: added `test_spm_MDP_MI_outer_product_zero_sites_derivatives_finite_oracle` (forces `0/0` ratio sites; asserts finite `dEdA`/`dEda` and MATLAB `assert_matlab_match` on all outputs).
-- Marked `test_spm_MDP_MI_rgm_workload_fast_replay_oracle` as **`xfail(strict=False)`** so `pytest tests/oracle/test_spm_MDP_MI.py` completes while the scalar MI replay gate remains an explicit progress oracle (still **764** pair mismatches vs stored MATLAB scalars until ULP-level `log` parity work closes it).
+- Marked `test_spm_MDP_MI_rgm_workload_fast_replay_oracle` as **`xfail(strict=False)`** so `pytest tests/oracle/test_spm_MDP_MI.py` completes while the scalar MI replay gate remains an explicit progress oracle (later reworked to gate vs **live** Engine; see MI replay harness entry below).
+
+**MI replay harness: single MATLAB truth (2026-04-28):**
+
+- Reworked `test_spm_MDP_MI_rgm_workload_fast_replay_oracle` to take the **`eng`** fixture and compare Python `E` to **live** `spm_MDP_MI(p)` on the Engine (primary gate).
+- Checkpoint `matlab_mi` is treated as **capture-time metadata** only; optional legacy gate via `RGMS_MDP_MI_REPLAY_LEGACY_CAPTURED_MATLAB=1` compares Python vs stored `matlab_mi` instead of live Engine.
+- Printed diagnostics include `cap_vs_live` drift count (stored MATLAB scalar vs Engine now) and `stream_summary` capture self-consistency only (cannot reconstruct full live `108×108` MI without parent `O` in this fast replay).
+- Observed counts on `fsl_rgm_mi_workload_full_native_mi.pkl`: `py_vs_live=907` mismatches, `cap_vs_live=276` drift pairs (explains why “two MATLAB truths” must not be mixed casually).
+
+**Regression spot-check (same day):**
+
+- `pytest tests/oracle/test_spm_log.py` — **10 passed**.
+- `pytest ...::test_spm_rgm_group_spectral_workload_fast_replay_oracle` with `RGMS_RGM_SPECTRAL_REPLAY_TAG=initial` still **FAIL** (`order=7`, `chosen=6` vs stored MATLAB references) — consistent with known Bottleneck #2 marginal eigen/sort sensitivity; **not** attributed to `spm_log` `fmax` (replay uses captured `sub_mi`, `py_self` stayed `0/0/0`).
 
 ### `spm_log` MATLAB-reference oracles + settled ULP note (2026-04-28)
 

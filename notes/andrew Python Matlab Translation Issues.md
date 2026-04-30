@@ -57,6 +57,176 @@ locks in that ceiling so libm regressions are caught.
 MATLAB-faithful; use only for controlled Bottleneck #1 experiments, never as
 the default translation.
 
+## `spm_MDP_MI` workload replay: one MATLAB truth (Engine)
+
+The fast replay test `tests/oracle/test_spm_MDP_MI.py::test_spm_MDP_MI_rgm_workload_fast_replay_oracle`
+loads **inputs** (`p_mat`) from `fsl_rgm_mi_workload*.pkl` and compares Python
+scalar `E` to **live** MATLAB Engine `spm_MDP_MI(p)` by default.
+
+Checkpoint field `matlab_mi` is **capture-time metadata** and can drift from a
+later Engine run (path/version/order); it is **not** a second co-equal MATLAB
+oracle unless explicitly opted in:
+
+- Default: live Engine gate only (`RGMS_MDP_MI_REPLAY_LEGACY_CAPTURED_MATLAB` unset).
+- Legacy opt-in: set `RGMS_MDP_MI_REPLAY_LEGACY_CAPTURED_MATLAB=1` to assert against
+  stored `matlab_mi` instead (harness regression against a frozen capture only).
+
+Measured on `fsl_rgm_mi_workload_full_native_mi.pkl` (1711 pair records), current
+faithful default gives `py_vs_live=907` while all mismatch magnitudes are
+ULP-scale: max `6.6613381477509392e-16`, p50 `1.3877787807814457e-17`,
+p90 `2.2204460492503131e-16`, p99 `4.4408920985006262e-16` (all `<=1e-15`).
+Experimental regrouping (`RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC=t1_minus_sum23`) can
+lower mismatch count to `873`, but this is a non-faithful arithmetic-association
+variant and is retained for diagnostics only.
+
+Term-level replay diagnostics (first live mismatches) decompose
+`E = t1 - t2 - t3` with:
+
+- `t1 = A(:)' * spm_log(A(:))`
+- `t2 = sum(A,1) * spm_log(sum(A,1)')`
+- `t3 = sum(A,2)' * spm_log(sum(A,2))`
+
+On sampled mismatches, `|dE|` is explained by `t1` and/or `t2` ULP drift, while
+`t3` has been `0` in the sampled set. This supports the current hypothesis that
+remaining byte-exact misses are log/dot-product rounding at the joint/column
+marginal terms, not a broad algebraic shape/control-flow mismatch.
+
+Additional diagnostics (`RGMS_MDP_MI_EXPERIMENT_LOG_SITES`) allow selective
+`log2*ln(2)` use in `_spm_MI` terms (`t1`, `t2`, `t3`) while default remains
+MATLAB-faithful. On live replay (`1711` pairs), no selective subset beat the
+faithful baseline by much (`t2` alone gave `900` vs baseline `907`), and several
+subsets regressed heavily (`t1`-involving subsets). Best count still required
+switching **all** MI log sites together (`all_log2_ln2` gave `874`) and remains
+diagnostic-only because it is not MATLAB-faithful.
+
+Term-ULP profile oracle (`test_spm_MDP_MI_rgm_workload_term_ulp_profile_live_oracle`)
+shows per-term MATLAB vs Python drift on this workload:
+
+- `t1` max ULP: `2` (p99 `1`)
+- `t2` max ULP: `2` (p99 `2`)
+- `t3` max ULP: `2` (p99 `2`)
+- recomposed `te=t1-t2-t3` max absolute drift: `6.6613381477509392e-16`
+
+Despite tiny per-term ULP drift, `te` ULP distance itself can be very large due
+subtractive cancellation and local spacing effects; use `abs(py_te-mat_te)` for
+the recomposed scalar guardrail, and reserve ULP checks for the individual terms.
+
+Additional reduction-order probes in `_spm_MI`:
+
+- `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER=dot_fwd` (explicit `np.dot`) reproduces the
+  default replay profile exactly (`py_self=0`, `py_vs_live=907`), suggesting the
+  default matrix-expression path and dot reduction are effectively equivalent here.
+- `...=scalar_rev` improves live mismatch count (`py_vs_live=884`) but introduces
+  substantial self drift (`py_self=314`), so it is diagnostic-only and not a
+  faithful replacement.
+- `...=dot_rev` regresses strongly (`py_vs_live=1050`), further indicating that
+  reverse-order summation is not MATLAB-faithful on this workload.
+
+Cancellation-band profiling on the same replay workload (`1711` pairs) shows no
+extreme near-zero cancellation regime in this corpus (`|t1-(t2+t3)| <= 1e-6` had
+zero rows). The observed bands and mismatch rates were:
+
+- `(1e-6,1e-3]`: `695/1370` mismatches (`~0.507`)
+- `>1e-3`: `212/341` mismatches (`~0.622`)
+
+This indicates current mismatches are not concentrated in a tiny cancellation tail;
+they remain spread across ordinary-scale MI magnitudes, consistent with broad
+ULP-level log/dot rounding effects rather than a narrow pathological subset.
+
+Stratified mismatch signatures (sampled rows from both `(1e-6,1e-3]` and `>1e-3`
+bands) show the same pattern:
+
+- `ulp(t1)` / `ulp(t2)` are tiny (`0..2` in sampled rows),
+- `ulp(t3)` is often `0`,
+- recomposed `E` can have larger ULP counts in lower-magnitude `E` rows even when
+  absolute error stays around `1e-16 .. 2e-16`.
+
+Representative examples include:
+
+- mid band `(1e-6,1e-3]`: `ulpE` up to `4096` while `|dE| <= 2.22e-16`
+- high band `>1e-3`: `ulpE` small (`4..16`) with similar absolute `|dE|`
+
+This reinforces that absolute-delta gating is the stable progress metric for the
+recomposed scalar, while per-term ULPs remain the right place to constrain bit-level
+drift component-wise.
+
+To accelerate byte-exact iteration without rescanning all `1711` pairs every run,
+the harness now supports a persisted stratified mismatch corpus:
+
+- file: `tests/oracle/toolbox/DEM/_checkpoint_data/fsl_rgm_mi_mismatch_corpus_live.pkl`
+- refresh: run
+  `RGMS_MDP_MI_MISMATCH_CORPUS_REFRESH=1 pytest tests/oracle/test_spm_MDP_MI.py -k mismatch_corpus_micro_replay_oracle -s -q`
+- micro replay test:
+  `test_spm_MDP_MI_rgm_mismatch_corpus_micro_replay_oracle`
+
+Current corpus characteristics:
+
+- selected records: `48` (`24` mid-band + `24` high-band)
+- deterministic selection rank:
+  `ulpE desc, abs_dE desc, ulp_t1 desc, ulp_t2 desc, then stream/i/j asc`
+- replay on current faithful path:
+  - `py_self=0` (no Python drift on this corpus)
+  - `py_vs_live=48` (all are known mismatch exemplars by construction)
+  - `max_abs=4.5796699765787707e-16` (still within the `1e-15` envelope)
+
+This corpus is for fast, high-signal candidate screening; full workload replay
+remains the authoritative gate for broad behavior.
+
+Compensated-reduction experiments (`RGMS_MDP_MI_EXPERIMENT_REDUCTION`) were added
+for `_spm_MI` scalar reductions (`t1`, `t2`, `t3`) with modes:
+`kahan_t1`, `kahan_t2`, `kahan_t3`, `kahan_t1_t2`, `kahan_all` (diagnostics-only;
+default behavior unchanged).
+
+Observed sweep outcomes (with `RGMS_MDP_MI_EXPERIMENT_TERM_ORDER=scalar_fwd`):
+
+- Baseline scalar-fwd/default reduction: `py_vs_live=905` (full), `py_self=109`.
+- `kahan_t2` was the best full-workload reduction-only candidate:
+  - full replay: `py_vs_live=890`, `py_self=94`
+  - corpus replay: `py_vs_live=46/48`, `py_self=20/48`
+- `kahan_t1`, `kahan_t1_t2`, and `kahan_all` improved corpus mismatch counts but
+  regressed full-workload `py_vs_live` and/or increased `py_self` substantially.
+
+Recomposition sweep on top of `kahan_t2`:
+
+- `sub_assoc=default`: `py_vs_live=890`, `py_self=94`
+- `sub_assoc=t1_minus_sum23`: `py_vs_live=875`, but `py_self=788` (too unstable)
+- `sub_assoc=t1_minus_t3_minus_t2`: `py_vs_live=1040` (regression)
+
+Interpretation: compensated reduction on `t2` is the strongest currently observed
+numerical lever, but still not faithful enough for adoption because self drift
+remains non-zero on both corpus and full workload.
+
+Refinement: micro-corpus oracle now reports **`py_repeat`** (same-runtime repeat
+evaluation on identical `p`) separately from `py_self` (drift vs captured
+historical Python value). This avoids conflating deterministic candidate behavior
+with baseline drift from the stored checkpoint.
+
+`math.fsum` reduction experiments (`RGMS_MDP_MI_EXPERIMENT_REDUCTION=fsum_*`) were
+added as a second general-purpose, non-tailored family:
+
+- `fsum_t2` currently gives the best observed full-workload live mismatch count in
+  this family: `py_vs_live=874` (vs default `907`, scalar_fwd baseline `905`).
+- It remains deterministic in-run (`py_repeat=0` on corpus), but still differs from
+  captured Python baseline (`py_self=120` on full replay), so it is not adopted as
+  default yet.
+- `fsum_t1_t2` / `fsum_all` reduce some corpus mismatches but regress full-workload
+  parity and/or increase baseline drift materially.
+
+This keeps candidate evaluation faithful to MATLAB while preserving extensibility:
+we test general numerical reduction strategies, then promote only if they improve
+live MATLAB parity without introducing unacceptable global regression signals.
+
+Cross-lane safety check (Bottleneck #2 spectral replay, tag `initial`) with
+`fsum_t2` enabled showed **no change** from baseline:
+
+- spectral fast replay: `py_vs_mat(order/chosen)=7/6`
+- blocker micro: `order=5`, `chosen=5`
+
+Because this spectral replay path recomputes grouping from captured `sub_mi`
+workload records, the MI reduction experiment does not alter these specific
+stored-block outcomes. This is useful as a non-regression signal: enabling
+`fsum_t2` did not introduce new Bottleneck #2 divergence in this lane.
+
 ## Shared `matlab_compat.py`
 
 Decision: repo-root `matlab_compat.py` is an approved narrow exception to the

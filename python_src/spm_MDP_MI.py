@@ -1,4 +1,5 @@
 import os
+import math
 
 import numpy as np
 
@@ -75,6 +76,24 @@ def _spm_MI(A):
     A = as_matlab_array(A)
     mode = str(os.getenv("RGMS_MDP_MI_EXPERIMENT_TERM_ORDER", "")).strip().lower()
     sub_assoc = str(os.getenv("RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC", "")).strip().lower()
+    log_sites_mode = str(os.getenv("RGMS_MDP_MI_EXPERIMENT_LOG_SITES", "")).strip().lower()
+    reduction_mode = str(os.getenv("RGMS_MDP_MI_EXPERIMENT_REDUCTION", "")).strip().lower()
+
+    def _spm_log_site(x, site: str):
+        """Diagnostics-only per-term kernel toggle for Bottleneck #1 sweeps."""
+        if log_sites_mode in ("", "default", "none", "off", "0", "false", "no"):
+            return spm_log(x)
+        if log_sites_mode == "all_log2_ln2":
+            return np.fmax(np.log2(x) * np.log(2.0), -32.0)
+        enabled = {part.strip() for part in log_sites_mode.split(",") if part.strip()}
+        if enabled.issubset({"t1", "t2", "t3"}):
+            if site in enabled:
+                return np.fmax(np.log2(x) * np.log(2.0), -32.0)
+            return spm_log(x)
+        raise ValueError(
+            "unknown RGMS_MDP_MI_EXPERIMENT_LOG_SITES mode: "
+            f"{log_sites_mode!r}; expected default/none, all_log2_ln2, or comma list of t1,t2,t3"
+        )
 
     def _combine_three_scalars(t_a: np.ndarray, t_b: np.ndarray, t_c: np.ndarray) -> np.float64:
         """Float64 scalar combination for Bottleneck #1 experiment sweeps only."""
@@ -90,19 +109,78 @@ def _spm_MI(A):
             return np.float64(np.float64(x - z) - y)
         raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC mode: {sub_assoc!r}")
 
+    def _kahan_dot(a_vec: np.ndarray, b_vec: np.ndarray) -> float:
+        """Compensated summation of elementwise products (diagnostics-only)."""
+        s = np.float64(0.0)
+        c = np.float64(0.0)
+        for i in range(a_vec.size):
+            y = np.float64(a_vec[i] * b_vec[i]) - c
+            t = s + y
+            c = np.float64((t - s) - y)
+            s = np.float64(t)
+        return float(s)
+
+    def _fsum_dot(a_vec: np.ndarray, b_vec: np.ndarray) -> float:
+        """High-precision scalar reduction via math.fsum (diagnostics-only)."""
+        return float(math.fsum(float(a_vec[i] * b_vec[i]) for i in range(a_vec.size)))
+
+    def _reduce_prod(a_vec: np.ndarray, b_vec: np.ndarray, term: str) -> float:
+        """Diagnostics-only reduction selector for Bottleneck #1 sweeps."""
+        a_vec = np.asarray(a_vec, dtype=np.float64).ravel(order="F")
+        b_vec = np.asarray(b_vec, dtype=np.float64).ravel(order="F")
+        if reduction_mode in ("", "default", "none", "off", "0", "false", "no", "npdot"):
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("kahan_t1", "kahan_joint"):
+            if term == "t1":
+                return _kahan_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("kahan_t2", "kahan_col"):
+            if term == "t2":
+                return _kahan_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("kahan_t3", "kahan_row"):
+            if term == "t3":
+                return _kahan_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("kahan_t1_t2", "kahan_joint_col"):
+            if term in ("t1", "t2"):
+                return _kahan_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("kahan_all", "kahan"):
+            return _kahan_dot(a_vec, b_vec)
+        if reduction_mode in ("fsum_t1", "fsum_joint"):
+            if term == "t1":
+                return _fsum_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("fsum_t2", "fsum_col"):
+            if term == "t2":
+                return _fsum_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("fsum_t3", "fsum_row"):
+            if term == "t3":
+                return _fsum_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("fsum_t1_t2", "fsum_joint_col"):
+            if term in ("t1", "t2"):
+                return _fsum_dot(a_vec, b_vec)
+            return float(np.dot(a_vec, b_vec))
+        if reduction_mode in ("fsum_all", "fsum"):
+            return _fsum_dot(a_vec, b_vec)
+        raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_REDUCTION mode: {reduction_mode!r}")
+
     if mode in ("", "default", "matmul", "none", "off", "0", "false", "no"):
         if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
             A_col = _column(A)
             I = (
-                A_col.T @ spm_log(A_col)
-                - _sum_dim(A, 1) @ spm_log(_sum_dim(A, 1).T)
-                - _sum_dim(A, 2).T @ spm_log(_sum_dim(A, 2))
+                A_col.T @ _spm_log_site(A_col, "t1")
+                - _sum_dim(A, 1) @ _spm_log_site(_sum_dim(A, 1).T, "t2")
+                - _sum_dim(A, 2).T @ _spm_log_site(_sum_dim(A, 2), "t3")
             )
             return matlab_scalar(I)
         A_col = _column(A)
-        t1 = A_col.T @ spm_log(A_col)
-        t2 = _sum_dim(A, 1) @ spm_log(_sum_dim(A, 1).T)
-        t3 = _sum_dim(A, 2).T @ spm_log(_sum_dim(A, 2))
+        t1 = A_col.T @ _spm_log_site(A_col, "t1")
+        t2 = _sum_dim(A, 1) @ _spm_log_site(_sum_dim(A, 1).T, "t2")
+        t3 = _sum_dim(A, 2).T @ _spm_log_site(_sum_dim(A, 2), "t3")
         I = _combine_three_scalars(t1, t2, t3)
         return matlab_scalar(I)
 
@@ -110,9 +188,9 @@ def _spm_MI(A):
     rs = np.asarray(_sum_dim(A, 2), dtype=np.float64).ravel(order="F")
     flat = np.asarray(A, dtype=np.float64).ravel(order="F")
     if mode in ("scalar_fwd", "fwd"):
-        t_joint = float(np.sum(flat * np.asarray(spm_log(flat), dtype=np.float64)))
-        t_col = float(np.sum(cs * np.asarray(spm_log(cs), dtype=np.float64)))
-        t_row = float(np.sum(rs * np.asarray(spm_log(rs), dtype=np.float64)))
+        t_joint = _reduce_prod(flat, _spm_log_site(flat, "t1"), "t1")
+        t_col = _reduce_prod(cs, _spm_log_site(cs, "t2"), "t2")
+        t_row = _reduce_prod(rs, _spm_log_site(rs, "t3"), "t3")
         if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
             return matlab_scalar(t_joint - t_col - t_row)
         if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
@@ -124,9 +202,34 @@ def _spm_MI(A):
         fr = flat[::-1]
         csr = cs[::-1]
         rsr = rs[::-1]
-        t_joint = float(np.sum(fr * np.asarray(spm_log(fr), dtype=np.float64)))
-        t_col = float(np.sum(csr * np.asarray(spm_log(csr), dtype=np.float64)))
-        t_row = float(np.sum(rsr * np.asarray(spm_log(rsr), dtype=np.float64)))
+        t_joint = _reduce_prod(fr, _spm_log_site(fr, "t1"), "t1")
+        t_col = _reduce_prod(csr, _spm_log_site(csr, "t2"), "t2")
+        t_row = _reduce_prod(rsr, _spm_log_site(rsr, "t3"), "t3")
+        if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
+            return matlab_scalar(t_joint - t_col - t_row)
+        if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
+            return matlab_scalar(np.float64(t_joint - (t_col + t_row)))
+        if sub_assoc in ("t1_minus_t3_minus_t2", "j_minus_r_minus_c", "joint_row_col"):
+            return matlab_scalar(np.float64(np.float64(t_joint - t_row) - t_col))
+        raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC mode: {sub_assoc!r}")
+    if mode in ("dot_fwd", "ddot_fwd"):
+        t_joint = _reduce_prod(flat, _spm_log_site(flat, "t1"), "t1")
+        t_col = _reduce_prod(cs, _spm_log_site(cs, "t2"), "t2")
+        t_row = _reduce_prod(rs, _spm_log_site(rs, "t3"), "t3")
+        if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
+            return matlab_scalar(t_joint - t_col - t_row)
+        if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
+            return matlab_scalar(np.float64(t_joint - (t_col + t_row)))
+        if sub_assoc in ("t1_minus_t3_minus_t2", "j_minus_r_minus_c", "joint_row_col"):
+            return matlab_scalar(np.float64(np.float64(t_joint - t_row) - t_col))
+        raise ValueError(f"unknown RGMS_MDP_MI_EXPERIMENT_SUB_ASSOC mode: {sub_assoc!r}")
+    if mode in ("dot_rev", "ddot_rev"):
+        fr = flat[::-1]
+        csr = cs[::-1]
+        rsr = rs[::-1]
+        t_joint = _reduce_prod(fr, _spm_log_site(fr, "t1"), "t1")
+        t_col = _reduce_prod(csr, _spm_log_site(csr, "t2"), "t2")
+        t_row = _reduce_prod(rsr, _spm_log_site(rsr, "t3"), "t3")
         if sub_assoc in ("", "default", "chain", "matlab", "none", "off", "0", "false", "no"):
             return matlab_scalar(t_joint - t_col - t_row)
         if sub_assoc in ("t1_minus_sum23", "j_minus_cr", "joint_minus_sum"):
