@@ -23,6 +23,335 @@ runtime/test files scoped within their corresponding linear entries.
 
 ---
 
+### DEM_AtariIII Entry 8 oracle refactor to checkpoint artifacts (2026-05-01)
+
+**Scope:** keep deep Entry 8 parity assertions, but move MATLAB truth generation to
+pre-captured checkpoint artifacts so routine test runs do not replay MATLAB in-loop.
+
+**File modified:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`
+
+- Added artifact capture/load flow:
+  - `RGMS_ATARI_ENTRY8_CAPTURE_REFRESH=1` forces MATLAB recapture.
+  - `RGMS_ATARI_ENTRY8_CAPTURE_TAG=<tag>` selects artifact suffix.
+  - Artifact path:
+    `tests\oracle\toolbox\DEM\_checkpoint_data\atari_entry\dem_atari_entry8_oracle_capture_t<training_t>_outer<n_outer>_<tag>.pkl`
+- Capture now stores:
+  - MATLAB boundary `mdp7_mat`
+  - Entry 8 ordered inputs `o_seq`
+  - per-call MATLAB expected sequence `mdp_seq_mat` (incremental one-merge-per-step capture)
+  - MATLAB final `mdp8_mat`
+- Deep oracle now compares Python per-call merges against captured `mdp_seq_mat`
+  (no repeated live MATLAB replay inside the parity loop).
+
+**Additional file modified:** `Atari_example.md`
+
+- Entry 8 section now documents the new capture-refresh/tag environment variables and artifact path.
+
+**Validation commands / results:**
+
+- `RGMS_ATARI_ENTRY8_OUTER=2; RGMS_ATARI_TRAINING_T=10000; RGMS_ATARI_ENTRY8_CAPTURE_TAG=dev; RGMS_ATARI_ENTRY8_CAPTURE_REFRESH=1; pytest ...entry8_training_merge_deep_parity... -q` → **PASS** in `234.92s` (capture rebuild + test).
+- Same command without refresh (`RGMS_ATARI_ENTRY8_CAPTURE_REFRESH` unset) → **PASS** in `10.23s` (`WALL_SECONDS=11`).
+- `pytest ...::test_DEM_AtariIII_entries_1_to_8_python_smoke -q` → **PASS** (`25.15s`).
+
+**Why this change:** aligns test workflow with boundary pre-capture policy and removes
+the previous in-loop live MATLAB replay bottleneck while preserving deep per-call parity checks.
+
+**Files read this iteration:** `rgms-rules.mdc`, `Python Matlab Translation Issues.md`,
+`notes\andrew Python Matlab Translation Issues.md`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`, `Atari_example.md`, `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`, `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 9 translation bootstrap + oracles (2026-05-01)
+
+**Scope:** begin Entry 9 implementation path with dependency-first order:
+`spm_set_goals` -> `spm_RDP_compress` -> `spm_RDP_basin` -> `DEM_AtariIII entry_stop=9`.
+
+**MATLAB staging copied into repo mirror:**
+
+- `matlab_src\toolbox\DEM\spm_set_goals.m`
+- `matlab_src\toolbox\DEM\spm_RDP_compress.m`
+- `matlab_src\toolbox\DEM\spm_RDP_basin.m`
+
+**Python files added:**
+
+- `python_src\toolbox\DEM\spm_set_goals.py`
+- `python_src\toolbox\DEM\spm_RDP_compress.py`
+- `python_src\toolbox\DEM\spm_RDP_basin.py`
+
+**Driver update:**
+
+- `python_src\toolbox\DEM\DEM_AtariIII.py`
+  - now supports `entry_stop=9` (`>9` rejected)
+  - adds `_entry9_basin_training_loop(...)`
+  - keeps `entry_stop=8` behavior intact; `entry_stop=9` runs merge+basis+counters+break loop
+
+**Oracle tests added:**
+
+- `tests\oracle\toolbox\DEM\test_spm_RDP_basin.py`
+  - `test_spm_set_goals_oracle`
+  - `test_spm_RDP_compress_first_oracle`
+  - `test_spm_RDP_basin_oracle`
+- `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry9.py`
+  - `test_DEM_AtariIII_entries_1_to_9_python_smoke`
+  - `test_DEM_AtariIII_entry9_deep_parity_matlab_boundary_oracle`
+
+**Commands / results:**
+
+- `pytest tests/oracle/toolbox/DEM/test_spm_RDP_basin.py -q` -> **3 passed**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry9.py::test_DEM_AtariIII_entries_1_to_9_python_smoke -q` -> **pass**
+- `RGMS_ATARI_ENTRY8_OUTER=2; RGMS_ATARI_TRAINING_T=10000; pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry9.py::test_DEM_AtariIII_entry9_deep_parity_matlab_boundary_oracle -q` -> **pass** (`221.38s`)
+
+**Documentation update:**
+
+- `Atari_example.md` now includes a new **Entry 9** section with implementation, tests, and acceptance-status scope.
+
+**Files read this iteration:** `rgms-rules.mdc`, `Python Matlab Translation Issues.md`,
+`notes\andrew Python Matlab Translation Issues.md`, `Atari_example.md`, `Migration Plan.md`,
+`python_src\toolbox\DEM\DEM_AtariIII.py`,
+`python_src\toolbox\DEM\spm_faster_structure_learning.py`,
+`python_src\toolbox\DEM\spm_merge_structure_learning.py`,
+`python_src\toolbox\DEM\spm_dir_reduce.py`, `python_src\spm_dir_norm.py`,
+`python_src\spm_softmax.py`,
+`c:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_set_goals.m`,
+`c:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_RDP_compress.m`,
+`c:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_RDP_basin.m`,
+`tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`.
+
+**Files created:** `python_src\toolbox\DEM\spm_set_goals.py`, `python_src\toolbox\DEM\spm_RDP_compress.py`,
+`python_src\toolbox\DEM\spm_RDP_basin.py`, `tests\oracle\toolbox\DEM\test_spm_RDP_basin.py`,
+`tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry9.py`  
+**Files modified:** `python_src\toolbox\DEM\DEM_AtariIII.py`, `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 8 full128 capture-build completion check (2026-05-01)
+
+Checked background run output for:
+
+- `RGMS_ATARI_ENTRY8_OUTER=128`
+- `RGMS_ATARI_ENTRY8_CAPTURE_REFRESH=1`
+- `RGMS_ATARI_ENTRY8_CAPTURE_TAG=full128`
+- `test_DEM_AtariIII_entry8_training_merge_deep_parity_matlab_boundary_oracle`
+
+Result from terminal output:
+
+- **failed/aborted** with `Fatal Python error: Aborted`
+- trace ends inside MATLAB engine pull path (`_mat_full_numeric` / `_pull_mdp_from_matlab`)
+- `BUILD_EXIT=3`
+- `BUILD_WALL_SECONDS=11843` (~3h17m)
+
+Action:
+
+- Updated Entry 8 section in `Atari_example.md` to reflect this current full128 artifact-build status while retaining prior one-time live exhaustive pass evidence.
+
+---
+
+### Entry 9 isolation hardening (2026-05-01)
+
+Follow-up to Entry 9 review findings:
+
+1. **Driver boundary hooks fixed**
+   - `python_src\toolbox\DEM\DEM_AtariIII.py` now uses Entry 9-specific checkpoint/capture hooks:
+     - pre: `RGMS_ATARI_ENTRY9_USE_CHECKPOINT`, `RGMS_ATARI_CAPTURE_ENTRY9_PRE`
+     - post: `RGMS_ATARI_CAPTURE_ENTRY9_POST`
+   - removed previous Entry 8 post-capture reuse at Entry 9 return path.
+
+2. **Entry 9 deep oracle converted to artifact-first**
+   - `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry9.py` now supports:
+     - `RGMS_ATARI_ENTRY9_CAPTURE_REFRESH=1`
+     - `RGMS_ATARI_ENTRY9_CAPTURE_TAG=<tag>`
+     - artifact path:
+       `tests\oracle\toolbox\DEM\_checkpoint_data\atari_entry\dem_atari_entry9_oracle_capture_t<training_t>_outer<n_outer>_<tag>.pkl`
+   - deep test now loads/reuses capture by default when present.
+
+3. **Validation**
+   - smoke: `test_DEM_AtariIII_entries_1_to_9_python_smoke` -> pass
+   - deep capture-build:
+     `RGMS_ATARI_ENTRY8_OUTER=2 RGMS_ATARI_TRAINING_T=10000 RGMS_ATARI_ENTRY9_CAPTURE_TAG=dev RGMS_ATARI_ENTRY9_CAPTURE_REFRESH=1 pytest ...entry9_deep_parity... -q`
+     -> pass in `247.49s`
+   - deep artifact reuse (no refresh) -> pass in `12.50s` (`WALL_SECONDS=14`)
+
+4. **Doc update**
+   - `Atari_example.md` Entry 9 now includes Entry 9 checkpoint/capture envs and artifact-first status/timings for current scope.
+
+---
+
+### Entry 9 scope-ladder run evidence (2026-05-01)
+
+Ran artifact-first ladder checks for `test_DEM_AtariIII_entry9_deep_parity_matlab_boundary_oracle`:
+
+- `outer=4`, tag `ladder4`, refresh on:
+  - **build pass** in `455.95s` (`BUILD_OUTER4_WALL_SECONDS=458`)
+  - **reuse pass** in `19.48s` (`REUSE_OUTER4_WALL_SECONDS=21`)
+- `outer=8`, tag `ladder8`, refresh on:
+  - **build pass** in `837.95s` (`BUILD_OUTER8_WALL_SECONDS=840`)
+  - **reuse pass** in `35.90s` (`REUSE_OUTER8_WALL_SECONDS=38`)
+
+Follow-up:
+
+- `outer=16`, tag `ladder16`, refresh-on build has been launched and is currently running.
+
+---
+
+### Entry 9 outer=4 full-field-path parity probe (2026-05-01)
+
+Per request to tighten beyond curated persisted fields, added strict recursive path-set
+comparison test:
+
+- `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry9.py::test_DEM_AtariIII_entry9_outer4_full_field_path_parity_oracle`
+
+Current outcome:
+
+- raw strict run **failed** with large path-set deltas.
+- representative mismatch source is unresolved MATLAB vs Python container-path
+  canonicalization (e.g., cell/list wrapper depth/index path shape), not yet reduced to
+  a normalized one-to-one path grammar.
+
+Action taken:
+
+- marked the test `xfail(strict=True)` as a tracked scope sentinel so this known gap is explicit
+  without destabilizing the active suite.
+- verification: `1 xfailed` on targeted run.
+
+### Entry 7 full-sequence MATLAB-boundary replay oracle (2026-04-30)
+
+**Scope (strict Entry 7 isolation):** validate `spm_merge_structure_learning.py` by replaying the **entire Entry 7 merge-call sequence** using MATLAB-generated boundary objects, then comparing Python vs MATLAB after **each** merge call.
+
+**New test file:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry7_full_sequence.py`
+
+- Added MATLAB fixture path setup including SPM DEM toolbox path.
+- Added helpers to pull MATLAB data structures into Python:
+  - full pre-Entry-7 `MDP0` (per-level `G`, `T`, `a`, `b`, `id`, `sA/sB/sC`, `ss.D/E/ID/IE`)
+  - ordered `Oseq` list containing every Entry 7 merge input `PDP.O(:,t+s)` produced by MATLAB loop logic.
+- Added per-call signature extraction/comparison:
+  - MATLAB: `sigA`/`sigB` computed after each `spm_merge_structure_learning` call.
+  - Python: same signature shape/sum keys computed after each replayed call.
+  - Assertion includes call index and first mismatch location/value if divergence occurs.
+
+**Command run:**  
+`pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry7_full_sequence.py -q`
+
+**Result:** **PASS** (`1 passed`, runtime ~106 s).
+
+**Interpretation:** with canonical MATLAB boundary state and canonical MATLAB merge input sequence, Python `spm_merge_structure_learning` matches MATLAB across the full Entry 7 call sequence (no per-call divergence observed in `sigA`/`sigB`).
+
+**Cross-check command:**  
+`pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry7.py tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry7_full_sequence.py -q`
+
+**Cross-check result:** new full-sequence test passes; pre-existing in-context Entry 7 tests in `test_DEM_AtariIII_entry7.py` still fail at known upstream-boundary mismatch points (`idA`/`G` lineage and downstream signature drift), unchanged by this addition.
+
+**Files modified:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry7_full_sequence.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared runtime files touched:** no
+
+---
+
+### Entry 7 full-sequence oracle deepened to element-wise parity (2026-04-30)
+
+**Reason:** signature-only checks (shape/sum) were broadened to strict tensor-value comparison for all factors, per merge call.
+
+**Change (`tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry7_full_sequence.py`):**
+
+- Replaced signature comparison with full per-call MDP comparison against MATLAB:
+  - `sA/sB/sC`
+  - `id.A`, `id.D`, `id.E`
+  - stream-group metadata `G`
+  - every `a{g}` tensor, element-wise
+  - every `b{f}` tensor, element-wise
+- Failure messages now report exact merge `call=<k>`, level, factor index, and first mismatching coordinate/value.
+- Added canonicalization for MATLAB-equivalent trailing singleton dimensions (`(1,1,1)` vs `(1,1)`) to avoid false shape mismatches while preserving value checks.
+
+**Run 1 (strict compare, before singleton-shape canonicalization):**
+- Failed at `call=1`, `lev=1 b[59]`, shape mismatch `py=(1,1,1)` vs `mat=(1,1)`.
+
+**Run 2 (after canonicalization):**
+- Command: `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry7_full_sequence.py -q`
+- Result: **PASS** (`1 passed`, runtime ~111 s).
+
+**Conclusion:** in isolated Entry 7 replay from MATLAB boundary inputs, Python and MATLAB now match under per-call, element-wise checks of `a` and `b` (plus metadata fields listed above).
+
+---
+
+### Entry 7 isolated oracle: no-ambiguity field coverage extension (2026-04-30)
+
+**Goal:** remove residual ambiguity by extending per-call comparisons beyond `a`/`b` and basic metadata.
+
+**Test file updated:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry7_full_sequence.py`
+
+**Added strict checks per merge call:**
+
+- `T` scalar equality per level.
+- full `ss` block equality per level:
+  - `ss.D`
+  - `ss.E`
+  - `ss.ID`
+  - `ss.IE`
+- retained strict checks for:
+  - `a`/`b` factor tensors (element-wise, with trailing-singleton canonicalization only)
+  - `sA/sB/sC`
+  - `id.A/id.D/id.E`
+  - `G`
+
+**Attempted `X`/`P` verification and finding:**
+
+- Direct MATLAB pull of `MDPm{n}.X`/`MDPm{n}.P` failed with `Unrecognized field name 'X'`.
+- This confirms `X`/`P` are local internals from `spm_merge_fast` and are not persisted in top-level `MDP` return object.
+- Test now enforces parity by asserting Python top-level per-level objects do not expose `X`/`P` either.
+
+**Command:**  
+`pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry7_full_sequence.py -q`
+
+**Result:** **PASS** (`1 passed`, runtime ~113 s).
+
+**Conclusion:** isolated Entry 7 MATLAB-boundary replay now has per-call strict parity over all persisted output fields in the returned `MDP` object.
+
+### Entry 6 boundary-parity replay alignment (2026-04-30, interim)
+
+**Purpose:** close the immediate Entry 6 boundary-parity blocker by aligning the boundary-input oracle harness with existing MATLAB-random-buffer replay policy already used in snippet-scale generate integration tests.
+
+**What changed (single file):**
+
+- Updated `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`:
+  - added helper `_matlab_rand_stream_after_reset(...)` that captures MATLAB `rand(N,1)` after `rng(0,'twister')`,
+  - in `test_DEM_AtariIII_entry6_boundary_inputs_parity_oracle`, replaced local NumPy seeding-only setup with
+    `patch("numpy.random.rand", side_effect=rand_seq)` around `run_dem_atariiii(entry_stop=6)`.
+
+**Important clarification (test methodology):**
+
+- No functional mocking of Entry 6 logic, driver logic, or MATLAB outputs was introduced.
+- The patch only controls Python RNG draw source to replay MATLAB draws, so boundary equality tests compare semantics under aligned randomness.
+
+**Results after harness alignment:**
+
+- Target boundary gate:
+  - `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry6.py::test_DEM_AtariIII_entry6_boundary_inputs_parity_oracle -q`
+  - **PASS**.
+- Full Entry 6 suite:
+  - `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry6.py -q`
+  - **5 passed**.
+
+**Interpretation at this checkpoint:**
+
+- Prior `PDP.o` boundary mismatch was setup-driven by unaligned RNG streams in this specific gate.
+- With MATLAB rand-buffer replay aligned, boundary parity gate and full Entry 6 suite pass.
+- This entry records only the harness-alignment step and immediate results; broader RNG-policy discussion is intentionally deferred.
+
+**Files read this iteration:** `logs\log_0.md`.
+
+**Files created:** none  
+**Files modified:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry6.py`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
 ### Entry 5/6 interim status update (2026-04-30)
 
 **Purpose:** record the latest Entry 5/6 lane work before full Entry 6 closure, with emphasis on strict MATLAB-faithful Entry 6 semantics and current parity evidence.
@@ -4923,5 +5252,209 @@ pytest tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py -k "not ex
 **Files modified:** `tests\oracle\toolbox\DEM\test_spm_faster_structure_learning.py`, `logs\log_0.md`  
 **Files deleted:** none  
 **Shared files touched:** no  
+
+---
+
+### DEM_AtariIII Entry 8 driver + oracle (2026-04-30)
+
+**Scope:** translate snippet **Entry 8** only (training-window assimilations via repeated
+`spm_merge_structure_learning`); **exclude** Entry 9 `spm_RDP_basin` until translated.
+
+**Driver (`python_src\toolbox\DEM\DEM_AtariIII.py`):**
+
+- `run_dem_atariiii` now supports `entry_stop=8`.
+- Fixed missing early return for `entry_stop==7` (previously fell through).
+- Added `_entry8_training_assimilations(...)` matching MATLAB:
+  - `NT = 100`
+  - outer `i = 1:128` implemented as `1..n_outer` with default `n_outer=128`
+  - `t = (0:(NT+Ne)) + rem(i,100-1)*NT`
+  - inner `s = 1:Ne` merge calls on `PDP.O(:,t+s)`
+- Added optional harness env `RGMS_ATARI_ENTRY8_OUTER` (clamped `1..128`, default `128`) for faster oracle runs without changing MATLAB-default behavior when unset.
+
+**Tests (`tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`):**
+
+- Smoke pins `RGMS_ATARI_TRAINING_T=1000` and `RGMS_ATARI_ENTRY8_OUTER=1` to avoid long default `T=10000` smoke runs.
+- Slow oracle (`test_DEM_AtariIII_entry8_training_merge_deep_parity_matlab_boundary_oracle`) builds MATLAB `Oseq8`
+  (ordered `PDP.O(:,t+s)` inputs for Entry 8), imports MATLAB `rgms_mdp7`, replays merges in Python, and asserts
+  **full persisted `MDP` equality after every merge call** vs MATLAB incremental `MDP` (same persisted-field surface as
+  the Entry 7 full-sequence isolated oracle), plus top-level `X`/`P` absence checks.
+
+**Commands / results:**
+
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry8.py -q -m "not slow"` → **PASS** (smoke only).
+- `RGMS_ATARI_ENTRY8_OUTER=2; pytest ...::test_DEM_AtariIII_entry8_training_merge_deep_parity_matlab_boundary_oracle -q` → **PASS** (~250s) as a faster deep gate.
+
+**Files modified:** `python_src\toolbox\DEM\DEM_AtariIII.py`, `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`, `logs\log_0.md`  
+**Files created:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 10 `spm_RDP_sort` MATLAB staging + artifact-first capture (2026-05-01)
+
+**Objective:** enable **isolated** future testing of `spm_RDP_sort` by persisting MATLAB
+pre-sort / post-sort `MDP` (and `j`) on the same reproducible **post–Entry 9** boundary as
+`test_DEM_AtariIII_entry9` (`rgms_mdp9` → `rgms_mdp10_pre` → `spm_RDP_sort`).
+
+**What changed:**
+- Staged `spm_RDP_sort.m` under `matlab_src\toolbox\DEM\` (from read-only SPM tree).
+- Added `tests\oracle\toolbox\DEM\test_spm_RDP_sort.py` with `_load_or_build_sort_artifact`,
+  env `RGMS_ATARI_ENTRY10_SORT_CAPTURE_REFRESH` / `RGMS_ATARI_ENTRY10_SORT_CAPTURE_TAG`, and
+  slow test `test_spm_RDP_sort_capture_artifact_build_or_reuse`. Placeholder
+  `test_spm_RDP_sort_matlab_boundary_oracle` remains skipped until Python translation exists.
+- Updated `Atari_example.md` Entry 10 with capture path, env flags, and test names.
+
+**Commands / results:**
+- `pytest tests/oracle/toolbox/DEM/test_spm_RDP_sort.py --collect-only` → **PASS** (2 tests collected).
+
+**Files read:** `spm-main\toolbox\DEM\spm_RDP_sort.m`, `Atari_example.md`, `test_DEM_AtariIII_entry9.py`  
+**Files created:** `matlab_src\toolbox\DEM\spm_RDP_sort.m`, `tests\oracle\toolbox\DEM\test_spm_RDP_sort.py`  
+**Files modified:** `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 10 isolation tests + partial `spm_RDP_sort` (2026-05-02)
+
+**Objective:** keep **Entry 10** verification isolated from other entry test modules; add
+`spm_RDP_sort.py` with oracle coverage; extend MATLAB capture with `B_mat` / `p_mat` for
+localization.
+
+**What changed:**
+- Added `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry10.py` (duplicated MATLAB boundary string,
+  no imports from `test_DEM_AtariIII_entry9.py`); capture helpers `load_or_build_entry10_sort_artifact`,
+  auto-rebuild when pickle lacks `B_mat`/`p_mat`.
+- Refactored `test_spm_RDP_sort.py` to depend only on Entry 10 capture + Entry 8 `_pull_mdp` /
+  `_assert_mdp_full_equal`; added passing `test_spm_RDP_sort_flow_B_and_p_match_capture`; full
+  `test_spm_RDP_sort_matlab_boundary_oracle` marked **`xfail` (non-strict)** (pruning loop vs MATLAB).
+- Implemented `python_src\toolbox\DEM\spm_RDP_sort.py` + `spm_RDP_sort_flow_B` helper.
+- Updated `Atari_example.md` Entry 10 test/acceptance bullets.
+
+**Commands / results:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py tests/oracle/toolbox/DEM/test_spm_RDP_sort.py -q`
+  → **2 passed**, **1 skipped** (driver smoke), **1 xfailed** (full sort oracle).
+
+**Files created:** `tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry10.py`, `python_src\toolbox\DEM\spm_RDP_sort.py`  
+**Files modified:** `test_spm_RDP_sort.py`, `test_DEM_AtariIII_entry10.py`, `Atari_example.md`, `logs\log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 10 `spm_RDP_sort` — document `eig(B,'nobalance')` class (2026-05-02)
+
+**Inspected:** Diagnosis converged with existing policy in
+`notes/andrew Python Matlab Translation Issues.md` §`spm_rgm_group` spectral step
+(MATLAB `eig(...,'nobalance')` vs native `eig`; NESS `p` tie structure and pruning
+order). No change to `spm_RDP_sort.py` pruning logic in this iteration.
+
+**What changed:** Added subsection **``spm_RDP_sort`` NESS vector: same
+``eig(B,'nobalance')`` discrepancy class** to
+`notes/andrew Python Matlab Translation Issues.md` (cross-reference to structure
+learning / `rgm_eig_pair` verification pattern; Entry-10 measured 62 vs 55
+distinct `p` levels; redundant-work warning). Removed temporary `_agent_tmp_*`
+debug scripts from repo root.
+
+**Files read:** `notes/andrew Python Matlab Translation Issues.md`,
+`python_src/toolbox/DEM/spm_faster_structure_learning.py` (hook pattern)  
+**Files created:** none  
+**Files modified:** `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`  
+**Files deleted:** `_agent_tmp_sort_k_compare.py`, `_agent_tmp_brute_eps.py`,
+`_agent_tmp_prune_artifact.py`, `_agent_tmp_compare_eig.py`  
+**Shared files touched:** no
+
+---
+
+### Entry 10 `spm_RDP_sort` — MATLAB `eig` hook + full boundary oracle green (2026-05-02)
+
+**What changed:** Keyword-only ``eig`` on ``spm_RDP_sort`` (default ``numpy.linalg.eig``); test harness
+``_make_matlab_spm_RDP_sort_eig`` mirrors ``test_spm_faster_structure_learning`` ``_make_matlab_rgm_eig_pair``.
+Removed ``xfail`` from ``test_spm_RDP_sort_matlab_boundary_oracle``; it passes Engine ``eig(B,'nobalance')``
+into Python for NESS then asserts ``MDP``/``j`` vs capture. Updated ``Atari_example.md`` acceptance bullets
+and replaced the ``spm_RDP_sort`` “implementation hint” paragraph in
+``notes/andrew Python Matlab Translation Issues.md`` with the settled implementation note.
+
+**Commands / results:** ``pytest tests/oracle/toolbox/DEM/test_spm_RDP_sort.py -v`` → **2 passed**.
+
+**Files read:** ``spm_RDP_sort.py``, ``test_spm_RDP_sort.py``, ``test_spm_faster_structure_learning.py`` (pattern)  
+**Files created:** none  
+**Files modified:** ``python_src/toolbox/DEM/spm_RDP_sort.py``,
+``tests/oracle/toolbox/DEM/test_spm_RDP_sort.py``, ``Atari_example.md``,
+``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Atari_example.md — Entry 10 editorial pass (2026-05-02)
+
+**What changed:** Entry 10 section rewritten for concise status (done vs open), single test list with
+accurate ``p``/oracle wording, merged redundant capture/env bullets, less in-line jargon.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``  
+**Files read:** ``Atari_example.md`` (Entry 10)  
+**Files created / deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 10 — goals, paths-to-hits `P`, `entry_stop=10` driver (2026-05-02)
+
+**What changed:** Extended MATLAB capture pipeline (sort → ``spm_set_goals`` → ``P``); artifact keys
+``mdp10_goals_mat``, ``P_mat``, ``hid_mat``, ``entry10_nt``; stale-pickle guard requires them.
+Added ``dem_atariiii_paths_to_hits_P`` and ``run_dem_atariiii(entry_stop=10)`` in ``DEM_AtariIII.py``.
+New oracle ``test_entry10_set_goals_and_paths_to_hits_oracle``; driver smoke runs ``entry_stop=10`` with
+fast env. Updated ``Atari_example.md`` Entry 10 status.
+
+**Commands:** ``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py`` (with capture refresh once
+for new keys), ``pytest tests/oracle/toolbox/DEM/test_spm_RDP_sort.py``,
+``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry9.py::test_DEM_AtariIII_entries_1_to_9_python_smoke``.
+
+**Files modified:** ``test_DEM_AtariIII_entry10.py``, ``DEM_AtariIII.py``, ``Atari_example.md``,
+``logs/log_0.md``  
+**Files created:** none  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 11 — staged MATLAB + doc (2026-05-02)
+
+**What changed:** Copied ``spm_set_costs.m``, ``spm_mdp2rdp.m``, and ``spm_mdp2rdp_a.m`` from read-only SPM
+into ``matlab_src/toolbox/DEM/``. Added **ordered** ``### Entry 11`` block to ``Atari_example.md`` (snippet
+lines, port order, planned tests, downstream). Python ports and oracles **not** started in this iteration
+(avoid partial untested translation).
+
+**Files created:** ``matlab_src/toolbox/DEM/spm_set_costs.m``,
+``matlab_src/toolbox/DEM/spm_mdp2rdp.m``, ``matlab_src/toolbox/DEM/spm_mdp2rdp_a.m`` (staged copies)  
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``  
+**Files read:** ``Atari_example.md`` (snippet), SPM ``toolbox/DEM`` sources  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 11 — `spm_set_costs` capture + oracle green (2026-05-02)
+
+**What changed:** Extended Entry 10 sort capture to include MATLAB ``mdp11_costs_mat`` after
+``spm_set_costs(rgms_mdp10_goals,[2,3],[C,-C])``, pulling ``mdp10_goals_mat`` **before** that call so
+goals-only snapshot is not overwritten by in-place MDP mutation. Stale-pickle guard requires
+``mdp11_costs_mat``. Completed ``tests/oracle/toolbox/DEM/test_spm_set_costs.py`` oracle:
+deepcopy ``mdp10_goals_mat`` → Python ``spm_set_costs(...,[2,3],[32,-32])`` vs artifact.
+Fixed ``spm_set_costs.py`` to use scalar MI only: ``spm_MDP_MI`` returns ``(E,dEda,dEdA)`` in Python;
+added local ``_spm_mdp_mi_scalar``.
+
+**Commands:** ``RGMS_ATARI_ENTRY10_SORT_CAPTURE_REFRESH=1 pytest tests/oracle/toolbox/DEM/test_spm_set_costs.py -v`` → **PASS**.
+``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py`` → **3 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_set_costs.py``,
+``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py``,
+``tests/oracle/toolbox/DEM/test_spm_set_costs.py``, ``Atari_example.md``, ``logs/log_0.md``  
+**Files read:** ``spm_set_costs.m``, ``test_DEM_AtariIII_entry10.py``, ``spm_MDP_MI.py``  
+**Files created:** none  
+**Files deleted:** none  
+**Shared files touched:** no
 
 ---

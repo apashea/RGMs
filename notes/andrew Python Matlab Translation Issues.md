@@ -493,6 +493,51 @@ further local Python tie-break tweaks alone.
 accepting non-byte grouping when LAPACK layouts differ), ask the user first, then
 record the settled rule here or in the repo-root `Python Matlab Translation Issues.md`.
 
+## `spm_RDP_sort` NESS vector: same `eig(B,'nobalance')` discrepancy class as `spm_rgm_group`
+
+This is **not** a new numerical phenomenon; it is the same cross-cutting issue
+already documented above for `spm_rgm_group`’s spectral step (MATLAB
+`eig(...,'nobalance')` vs a native Python/SciPy/NumPy `eig` pipeline, BLAS
+vendor differences, and **ULP-level** drift in the principal vector that still
+passes loose `allclose` checks against a MATLAB capture).
+
+**MATLAB source (`matlab_src/toolbox/DEM/spm_RDP_sort.m`).** After building the
+normalised flow matrix `B`, MATLAB does `[e,v]=eig(B,'nobalance');`,
+`[~,j]=max(real(diag(v)));`, then `p = spm_dir_norm(abs(e(:,j)))'` (row NESS
+vector), then a **stable** ascending `sort(p,'ascend')` to drive the NESS pruning
+loop, then a descending sort on retained indices, then `spm_RDP_compress`.
+
+**Entry-10 boundary (Atari sort capture, small `training_t` / `n_outer`).**
+Measured with the same `B` built in Python as in the capture (`B` matches
+`B_mat` bitwise): MATLAB Engine `eig(B,'nobalance')` reproduces the captured
+`p_mat` **exactly** (including the **multiset of float values** in `p`, e.g. 62
+distinct probabilities on that boundary), while `np.linalg.eig(B)` on the
+identical `B` can still agree with `p_mat` to ~1e-15 **elementwise** yet collapse
+to **fewer distinct float levels** (e.g. 55 on that boundary). That changes the
+**effective tie structure** for MATLAB’s stable `sort`, hence the **removal
+order** in the pruning `for i=k` loop, hence the surviving state index in `j`
+even when `B` and `spm_dir_norm` paths match the capture.
+
+**Verification policy (already established for structure learning).** For
+**gated** parity of the full `spm_RDP_sort` pipeline (NESS `p`, pruning mask,
+final `j`, compressed `MDP`), treat **MATLAB outputs** (capture artifacts and/or
+live Engine) as the reference for this eigen-step—just as
+`spm_faster_structure_learning` exposes optional `rgm_eig_pair` and the harness
+uses `RGMS_FSL_RGM_MATLAB_EIG=1` / `_make_matlab_rgm_eig_pair(...)` to inject
+MATLAB `eig(...,'nobalance')` into `spm_rgm_group` for oracle work. Do **not**
+re-diagnose the pruning `if all(any(B(d,d)),1))` loop or `np.lexsort` tie policy
+in isolation when the dominant eigenvector from native `eig(B)` is not the same
+**discrete** object MATLAB used; that work is **redundant** once the eigen-step
+mismatch class is recognised.
+
+**Implementation (2026-05-02).** ``python_src/toolbox/DEM/spm_RDP_sort.py`` ``spm_RDP_sort`` accepts a
+keyword-only ``eig`` hook ``(B) -> (w, V)`` (same layout as ``numpy.linalg.eig``). The Entry-10 boundary
+oracle ``test_spm_RDP_sort_matlab_boundary_oracle`` passes MATLAB ``eig(B,'nobalance')`` via
+``_make_matlab_spm_RDP_sort_eig`` in ``tests/oracle/toolbox/DEM/test_spm_RDP_sort.py``, analogous to
+``rgm_eig_pair`` → ``spm_rgm_group(..., eig_pair=...)``. Default callers omit ``eig`` and keep native
+``numpy.linalg.eig`` for the committed Pass-1 transliteration unless/until toolchain alignment
+(MKL-linked NumPy/SciPy, etc.) is explicitly authorised and proven sufficient.
+
 ## `spm_MDP_generate` prescribed `s` / `u` and local `spm_induction`
 
 **Copying prescribed states/controls:** MATLAB `try … find(MDP.s); k(i)=MDP.s(i)` copies
