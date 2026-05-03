@@ -11,6 +11,7 @@ import copy
 import os
 import pickle
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -19,8 +20,68 @@ from python_src.toolbox.DEM.DEM_AtariIII import dem_atariiii_paths_to_hits_P
 from python_src.toolbox.DEM.spm_set_goals import spm_set_goals
 from tests.oracle.toolbox.DEM.test_DEM_AtariIII_entry8 import (
     _assert_mdp_full_equal,
+    _mat_cell_matrix_numeric,
+    _mat_cell_scalar_list,
+    _mat_cell_vector_list,
+    _mat_float,
+    _mat_full_numeric,
+    _mat_groups,
+    _mat_int,
     _pull_mdp_from_matlab,
 )
+
+
+def _pull_nested_rdp_from_matlab(eng, expr: str) -> dict[str, Any]:
+    """Pull MATLAB nested ``RDP`` / ``MDP.MDP...`` struct into nested Python ``dict``."""
+    out: dict[str, Any] = {}
+    if _mat_int(eng, f"isfield({expr},'L')"):
+        out["L"] = _mat_int(eng, f"{expr}.L")
+    if _mat_int(eng, f"isfield({expr},'T')"):
+        out["T"] = _mat_float(eng, f"{expr}.T")
+
+    for cell_name in ("A", "B", "C", "a", "b"):
+        if _mat_int(eng, f"isfield({expr},'{cell_name}')"):
+            nc = _mat_int(eng, f"numel({expr}.{cell_name})")
+            cells: list[list[np.ndarray]] = []
+            for k in range(1, nc + 1):
+                cells.append([_mat_full_numeric(eng, f"{expr}.{cell_name}{{{k}}}")])
+            out[cell_name] = cells
+
+    for vec_name in ("sA", "sB", "sC"):
+        if _mat_int(eng, f"isfield({expr},'{vec_name}')"):
+            arr = np.asarray(eng.eval(f"double({expr}.{vec_name}(:))"), dtype=np.int64).ravel(order="F")
+            out[vec_name] = [int(x) for x in arr.tolist()]
+
+    if _mat_int(eng, f"isfield({expr},'U')"):
+        out["U"] = np.asarray(eng.eval(f"double({expr}.U)"), dtype=np.float64)
+
+    if _mat_int(eng, f"isfield({expr},'G')"):
+        out["G"] = _mat_groups(eng, f"{expr}.G")
+
+    if _mat_int(eng, f"isfield({expr},'ss')"):
+        ss_ex = f"{expr}.ss"
+        out["ss"] = {
+            "D": _mat_cell_matrix_numeric(eng, f"{ss_ex}.D"),
+            "E": _mat_cell_matrix_numeric(eng, f"{ss_ex}.E"),
+            "ID": _mat_cell_matrix_numeric(eng, f"{ss_ex}.ID"),
+            "IE": _mat_cell_matrix_numeric(eng, f"{ss_ex}.IE"),
+        }
+
+    if _mat_int(eng, f"isfield({expr},'id')"):
+        id_ex = f"{expr}.id"
+        id_out: dict[str, Any] = {}
+        if _mat_int(eng, f"isfield({id_ex},'A')"):
+            id_out["A"] = [[float(v)] for v in _mat_cell_scalar_list(eng, f"{id_ex}.A")]
+        if _mat_int(eng, f"isfield({id_ex},'D')"):
+            id_out["D"] = _mat_cell_vector_list(eng, f"{id_ex}.D")
+        if _mat_int(eng, f"isfield({id_ex},'E')"):
+            id_out["E"] = _mat_cell_vector_list(eng, f"{id_ex}.E")
+        out["id"] = id_out
+
+    if _mat_int(eng, f"isfield({expr},'MDP')"):
+        out["MDP"] = _pull_nested_rdp_from_matlab(eng, f"{expr}.MDP")
+
+    return out
 
 
 def _matlab_build_entry10_training_end_boundary(dem_eng, training_t: int, n_outer: int) -> None:
@@ -141,7 +202,13 @@ def _capture_entry10_sort_artifact(dem_eng, training_t: int, n_outer: int) -> di
         nargout=0,
     )
     mdp11_costs_mat = _pull_mdp_from_matlab(dem_eng, "rgms_mdp11_costs")
+    dem_eng.eval(
+        "rgms_rdp11 = spm_mdp2rdp(rgms_mdp11_costs); rgms_rdp11.T = 64;",
+        nargout=0,
+    )
+    rdp11_nested_mat = _pull_nested_rdp_from_matlab(dem_eng, "rgms_rdp11")
     return {
+        "entry10_capture_v": 3,
         "training_t": int(training_t),
         "n_outer": int(n_outer),
         "tag": entry10_sort_capture_tag(),
@@ -149,6 +216,7 @@ def _capture_entry10_sort_artifact(dem_eng, training_t: int, n_outer: int) -> di
         "mdp10_post_mat": _pull_mdp_from_matlab(dem_eng, "rgms_mdp10_post"),
         "mdp10_goals_mat": mdp10_goals_mat,
         "mdp11_costs_mat": mdp11_costs_mat,
+        "rdp11_nested_mat": rdp11_nested_mat,
         "j_mat": j_vec,
         "B_mat": b_mat,
         "p_mat": p_mat,
@@ -166,12 +234,14 @@ def load_or_build_entry10_sort_artifact(dem_eng, training_t: int, n_outer: int) 
             old = pickle.load(f)
         if (
             isinstance(old, dict)
+            and old.get("entry10_capture_v") == 3
             and "B_mat" in old
             and "p_mat" in old
             and "mdp10_goals_mat" in old
             and "P_mat" in old
             and "hid_mat" in old
             and "mdp11_costs_mat" in old
+            and "rdp11_nested_mat" in old
         ):
             return old
         refresh = True
@@ -219,6 +289,7 @@ def test_entry10_spm_RDP_sort_capture_artifact_build_or_reuse(dem_eng_entry10):
     assert "P_mat" in artifact and isinstance(artifact["P_mat"], np.ndarray)
     assert "hid_mat" in artifact and isinstance(artifact["hid_mat"], np.ndarray)
     assert "mdp11_costs_mat" in artifact and isinstance(artifact["mdp11_costs_mat"], list)
+    assert "rdp11_nested_mat" in artifact and isinstance(artifact["rdp11_nested_mat"], dict)
     p = entry10_sort_capture_path(training_t, n_outer)
     assert p.is_file(), f"expected capture at {p}"
 

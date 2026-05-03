@@ -4,7 +4,7 @@ Driver-lane transliteration scaffold for DEM_AtariIII.m (non-visual path).
 This module is intentionally entry-aligned with `Atari_example.md`. It orchestrates
 already-translated `spm_*` functions and keeps per-entry checkpoint/capture hooks so
 later entries can be isolated against MATLAB boundary states. `entry_stop` is implemented for
-**1..10** (Entry 10: NESS sort, goals, paths-to-hits `P`); **11+** is not wired.
+**1..11** (Entry 11: `spm_set_costs`, `spm_mdp2rdp`, `RDP.T = 64`); **12+** is not wired.
 """
 
 from __future__ import annotations
@@ -24,7 +24,9 @@ from python_src.toolbox.DEM.spm_merge_structure_learning import spm_merge_struct
 from python_src.toolbox.DEM.spm_MDP_generate import spm_MDP_generate
 from python_src.toolbox.DEM.spm_MDP_pong import spm_MDP_pong
 from python_src.toolbox.DEM.spm_RDP_basin import spm_RDP_basin
+from python_src.toolbox.DEM.spm_mdp2rdp import spm_mdp2rdp
 from python_src.toolbox.DEM.spm_RDP_sort import spm_RDP_sort
+from python_src.toolbox.DEM.spm_set_costs import spm_set_costs
 from python_src.toolbox.DEM.spm_set_goals import spm_set_goals
 
 
@@ -253,12 +255,12 @@ def dem_atariiii_paths_to_hits_P(
 
 def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     """
-    Run DEM_AtariIII driver entries up to `entry_stop` (implemented through Entry 10).
+    Run DEM_AtariIII driver entries up to `entry_stop` (implemented through Entry 11).
     """
     if entry_stop < 1:
         raise ValueError("entry_stop must be >= 1")
-    if entry_stop > 10:
-        raise NotImplementedError("Entries 11+ are not translated in DEM_AtariIII.py yet")
+    if entry_stop > 11:
+        raise NotImplementedError("Entries 12+ are not translated in DEM_AtariIII.py yet")
 
     ctx: dict[str, Any] = {}
 
@@ -434,6 +436,29 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     if _capture_enabled(10, "post"):
         _save_context(10, "post", ctx)
     if entry_stop == 10:
+        return ctx
+
+    # %%% ENTRY 11 (costs, nested RDP, ledger horizon T = 64)
+    if _use_checkpoint(11):
+        ctx = _load_context(11, "pre")
+    elif _capture_enabled(11, "pre"):
+        _save_context(11, "pre", ctx)
+
+    mdp_e11 = ctx["MDP"]
+    c_val = float(ctx["C"])
+    mdp_e11 = spm_set_costs(
+        mdp_e11,
+        np.array([2.0, 3.0], dtype=np.float64),
+        np.array([c_val, -c_val], dtype=np.float64),
+    )
+    ctx["MDP"] = mdp_e11
+    rdp = spm_mdp2rdp(mdp_e11)
+    rdp["T"] = 64.0
+    ctx["RDP"] = rdp
+
+    if _capture_enabled(11, "post"):
+        _save_context(11, "post", ctx)
+    if entry_stop == 11:
         return ctx
 
     return ctx

@@ -5458,3 +5458,48 @@ added local ``_spm_mdp_mi_scalar``.
 **Shared files touched:** no
 
 ---
+
+### Entry 11 — `spm_mdp2rdp` / `spm_mdp2rdp_a` + RDP capture oracle (2026-05-02)
+
+**What changed:** Added Pass 1 ``python_src/toolbox/DEM/spm_mdp2rdp.py`` (dispatcher + uppercase ``A``/``B``
+path) and ``spm_mdp2rdp_a.py`` (Dirichlet ``a``/``b`` path used by Atari). Extended Entry 10 capture with
+MATLAB ``rgms_rdp11 = spm_mdp2rdp(rgms_mdp11_costs); rgms_rdp11.T = 64`` → ``rdp11_nested_mat``;
+``_pull_nested_rdp_from_matlab`` in ``test_DEM_AtariIII_entry10.py``. **Critical pulls:** ``_pull_mdp_from_matlab``
+now includes optional ``C`` and ``U`` (was dropping preferences / policy masks → wrong ``spm_mdp2rdp`` parity).
+Artifact version ``entry10_capture_v == 3`` invalidates stale pickles. Oracle ``test_spm_mdp2rdp.py`` with
+nested dict/array comparison helpers.
+
+**Bug fixes vs MATLAB:** ``G`` stream trim uses dict key ``1`` (MATLAB ``G(1)``); trailing-factor trim must
+**not** subset ``sA``/``sC`` in the first ``spm_mdp2rdp_a`` block (matches ``.m``).
+
+**Commands:** ``pytest tests/oracle/toolbox/DEM/test_spm_mdp2rdp.py`` → **PASS**;
+``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py`` → **3 passed**;
+``pytest tests/oracle/toolbox/DEM/test_spm_set_costs.py`` → **PASS**.
+
+**Files created:** ``python_src/toolbox/DEM/spm_mdp2rdp.py``, ``python_src/toolbox/DEM/spm_mdp2rdp_a.py``,
+``tests/oracle/toolbox/DEM/test_spm_mdp2rdp.py``  
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry8.py`` (pull ``C``, ``U``),
+``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py``, ``Atari_example.md``, ``logs/log_0.md``  
+**Files read:** ``spm_mdp2rdp.m``, ``spm_mdp2rdp_a.m``, ``test_DEM_AtariIII_entry10.py``  
+**Files deleted:** none  
+**Shared files touched:** yes — ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry8.py`` (pull helper only)
+
+---
+
+### Entry 11 — `run_dem_atariiii(entry_stop=11)` driver (2026-05-02)
+
+**What changed:** ``DEM_AtariIII.py`` Entry 11 block: ``spm_set_costs`` → ``spm_mdp2rdp`` → ``RDP.T = 64``;
+``ctx["RDP"]`` and updated ``ctx["MDP"]`` (post-costs). Guard raised for ``entry_stop > 11``. Docstring updated
+(**1..11**). New ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py`` (driver smoke + cumulative 1..11
+smoke). ``Atari_example.md`` Entry 11 status updated.
+
+**Commands:** ``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py`` → **2 passed**;
+``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py::test_DEM_AtariIII_entry10_driver_smoke`` → **PASS**.
+
+**Files created:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py``  
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``Atari_example.md``, ``logs/log_0.md``  
+**Files read:** ``DEM_AtariIII.py``, ``test_DEM_AtariIII_entry10.py`` (smoke pattern)  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---

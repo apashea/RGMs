@@ -149,6 +149,13 @@ def _pull_mdp_from_matlab(eng, mdp_expr: str) -> list[dict]:
                 "IE": _mat_cell_matrix_numeric(eng, f"{mdp_expr}{{{n}}}.ss.IE"),
             },
         }
+        if _mat_int(eng, f"isfield({mdp_expr}{{{n}}},'C')"):
+            nc = _mat_int(eng, f"numel({mdp_expr}{{{n}}}.C)")
+            mdp_n["C"] = [
+                [_mat_full_numeric(eng, f"{mdp_expr}{{{n}}}.C{{{k}}}")] for k in range(1, nc + 1)
+            ]
+        if _mat_int(eng, f"isfield({mdp_expr}{{{n}}},'U')"):
+            mdp_n["U"] = np.asarray(eng.eval(f"double({mdp_expr}{{{n}}}.U)"), dtype=np.float64)
         out.append(mdp_n)
     return out
 
