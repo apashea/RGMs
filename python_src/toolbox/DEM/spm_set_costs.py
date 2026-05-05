@@ -147,12 +147,12 @@ def spm_set_costs(MDP: list[dict[str, Any]], S, chi):
                 )
                 nu = int(b_f.shape[2])
                 if float(np.prod(np.asarray(u_prod, dtype=np.float64))) * float(nu) < 8.0:
-                    u_row = np.asarray(mdp[n - 1]["U"], dtype=bool)
+                    u_row = np.atleast_1d(np.asarray(mdp[n - 1]["U"], dtype=bool))
                     if u_row.ndim == 2 and u_row.shape[0] == 1:
                         u_row = u_row.ravel()
                     if u_row.size < f_pol:
                         u_row = np.resize(u_row, max(f_pol, len(mdp[n - 1]["b"])))
-                    u_new = np.asarray(u_row, dtype=bool).copy()
+                    u_new = np.atleast_1d(np.asarray(u_row, dtype=bool).copy())
                     u_new[int(f_pol) - 1] = True
                     if u_new.ndim == 1:
                         mdp[n - 1]["U"] = u_new.reshape(1, -1)

@@ -719,6 +719,54 @@ MATLAB RNG entry points (`randi`, `randn`, internal toolbox calls) unless those
 are also bridged or the test uses a different strategy (for example structural
 comparison without bit-identical RNG, or a full portable generator port).
 
+## `spm_backwards` (from `spm_MDP_VB_XXX.m`)
+
+**Staged MATLAB:** `matlab_src\toolbox\DEM\spm_backwards.m` (extracted from
+`spm_MDP_VB_XXX.m` with local `spm_norm` and `spm_children` so the Engine can call
+it on the path).
+
+**Python:** `python_src\toolbox\DEM\spm_backwards.py` — Pass 1 transliteration in
+progress.
+
+**Oracle:** `tests\oracle\toolbox\DEM\test_spm_backwards.py` now passes on the
+minimal `Nm=1, Nf=1, T=2` Engine case (`F` and `Q{1,1,1}`), after fixing
+`pagetranspose` semantics in Python (`swap first two dims per page`, not last two).
+
+**Integration status:** this closes standalone `spm_backwards` parity on the current
+gate, but `spm_backwards` is still not yet wired into the main
+`spm_MDP_VB_XXX` `OPTIONS.B` tail.
+
+---
+
+## `spm_MDP_VB_XXX` (Entry 12): local `spm_sample` and RNG surface
+
+**MATLAB source:** `spm_MDP_VB_XXX.m` ends with a file-local `spm_sample(P)` (same
+pattern as staged `spm_MDP_generate.m`):
+
+- **`islogical(P)`:** `i = find(P); i = i(randperm(numel(i),1));`
+- **else:** `P = cumsum(P); i = find(rand*P(end) < P,1);`
+
+A scan of `spm_MDP_VB_XXX.m` for **`rand` / `randn` / `randi`** shows **only** the
+numeric-branch draw inside **`spm_sample`** (no other stochastic primitives in that
+file). So for Pass 1 translation, mirroring **`spm_MDP_generate`’s `_spm_sample`**
+—including **logical vs numeric branching**, **twister `randperm` consumption**
+for `2 ≤ k ≤ 4` (see **MATLAB local `spm_sample` has two incompatible paths** and
+**`randperm(k,1)` is not universally “one `rand()`”** above)—is the correct basis
+for **draw-aligned** MATLAB vs Python oracles on this engine.
+
+**Oracle discipline:** use the same artifact workflow as
+**`test_spm_MDP_pong_generate_integration`**: record MATLAB **`rand(N,1)`** after
+the **same preamble** and generator label (`rng(seed,'twister')`), patch
+**`numpy.random.rand`** in Python to consume that buffer in order, and compare
+outputs at the agreed boundary (`PDP` / nested `MDP` fields). If future SPM edits
+add **`randn`** / **`randi`** / other draws in `spm_MDP_VB_XXX.m`, revisit this
+subsection and extend the replay bridge explicitly.
+
+**Implemented slice:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py` defines **`_spm_sample`**
+(Pass 1 duplicate of `spm_MDP_generate._spm_sample`). Closed-oracle coverage:
+**`tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`** (MATLAB Engine inline
+scripts + drift guard vs `spm_MDP_generate`).
+
 ## `spm_MDP_pong`: `nP` output, `RGB.V` layout, PNG read vs MATLAB `imread`
 
 **`nP` when `Np==0`:** Unmodified SPM `spm_MDP_pong.m` never assigns `nP` if the
@@ -769,3 +817,95 @@ scope in `structure_learning_plan_week2.md`.
 mistake used `np.ones((2,...))`, which incorrectly set **both** outcome rows to
 true initially; Port uses **`zeros`** then **`a[0,:,:] = True`** to mirror the
 `.m` source.
+
+## `spm_MDP_VB_XXX`: `Pu_carry` vs `spm_forwards` / `spm_VBX`
+
+MATLAB sets **`Pu = spm_softmax(G, alpha)`** after **`spm_forwards`** builds **`G`**
+(`spm_MDP_VB_XXX.m` ~1326, with **`G`** from ~1261).
+
+**Current Python (`spm_MDP_VB_XXX.py`, `_vb_run_partial_t_loop`):** each **`t`**: generation, then
+**`if OPTIONS.O`** **`_vb_generate_outcomes_if_options_o`** (**~873–949**), **`_vb_shared_probabilistic_outcomes`**
+(**~952–969**, uses **`_vb_Fm_neg_t_o_m`** from **`n<0`**), then **`BP`/`IP`**. If **`O{m,:,t}`** is still not ready,
+**`Pu_carry`** uses **`spm_softmax(0, alpha)`**.
+Otherwise **`spm_forwards`** (**`spm_VBX`**) and **`_vb_belief_after_forwards`** (**~1264–1346**).
+**`run_dem_atariiii(entry_stop=12)`** now calls **`spm_MDP_VB_XXX(RDP, {_rgms_partial_ok: 1})`** and returns a
+staged **`PDP`**. The function still raises **`NotImplementedError`** if **`_rgms_partial_ok`** is not set. A
+**full** nested Atari **`RDP`** can still fail inside the partial loop (degenerate policy / empty factors) until
+hierarchy and the remaining MATLAB time loop are translated. End-to-end **`RDP`→`PDP`** numeric parity
+remains a separate capture/oracle track.
+
+## Empty policy rows / `Nu == 0` in `spm_MDP_checkX` and `spm_MDP_VB_XXX._spm_norm`
+
+Nested RDPs can produce factors with **zero** control count **`Nu(f)=0`** (e.g. **`B{f}`** with a
+degenerate third dimension). **Guards (2026-05):** `spm_MDP_checkX` uses **`zeros((0,1))`** for default **`E{f}`**
+instead of **`spm_dir_norm(ones((0,1)))`**; **`spm_dir_norm`** skips **`1/size(A,1)`** when **`size(A,1)==0`**;
+**`_spm_norm`** in **`spm_MDP_VB_XXX`** returns empty arrays without **`1/Ns`** NaN repair when **`Ns==0`**.
+**`spm_set_costs`** uses **`np.atleast_1d`** on **`U`** so scalar/broadcast **`U`** does not yield a 0-D boolean
+working vector.
+
+### Degenerate **`spm_sample`**, **`Np==0`**, **`spm_induction`** (2026-05-04)
+
+Nested Atari **`RDP`** can yield zero-sum / NaN probability columns before **`cumsum`**, **`Np==0`** (empty **`V`** rows)
+while MATLAB still writes **`BP{m,f,1}`** on uncontrolled factors, **`Pu_carry`** length zero at **`t>1`**, and
+**`id.hid`** stored as a **1-D** NumPy vector. Python mirrors **`spm_MDP_generate._spm_sample`** in **`spm_MDP_VB_XXX`**:
+uniform fallback when total mass is non-positive / non-finite; **`r==1`** maps to the last bin; **`BP`/`IP`** inner
+policy dimension uses **`max(Np,1)`** slots; **`_vb_belief_after_forwards`** treats **`Np==0`** **`G`** without reshaping
+to **`(0,-1)`**; **`_vb_prior_QP_paths_states_one_model`** skips **`spm_sample`** on empty **`Pu`** and skips **`V`**
+indexing when **`V`** has zero rows; **`spm_forwards._spm_induction_vb`** promotes **`hid`** to **`Ns×1`**, skips
+factors with empty **`B{f}`** tensors (subset **`hid`** rows to **`hif_kept`**), and returns empty **`R`** when no valid
+induction tensor remains; **`_vb_gp_transition_column`** returns zeros when **`size(B,3)==0`**. Treat as **numerical
+stability** on degenerate graphs; run Engine oracles on captured **`RDP`** slices when claiming MATLAB parity.
+
+## `spm_MDP_VB_XXX` local `spm_multiply` (~2603) — not elementwise `p.*q`
+
+**MATLAB** (nested in ``spm_MDP_VB_XXX.m``): ``p = spm_softmax(spm_log(p) + spm_log(q))`` — renormalised **log-domain** product.
+
+**Do not** replace with ``spm_norm(p .* q)`` when porting hierarchical ``id.E`` / ``id.D`` updates (~1063, ~1071). **Python**
+uses file-local ``_spm_multiply`` + existing ``_spm_log`` / ``spm_softmax``; see ``test_vb_local_spm_multiply_is_softmax_log_sum``.
+
+## Nested `spm_action` in `spm_MDP_VB_XXX` (~2688–2766)
+
+**MATLAB** implements explicit-action selection for generative-process agents as a **nested** function
+``spm_action(MDP,A,Q,t)``. The hierarchical subordinate call (~1087) uses ``Q = mdp.D`` and ``t = mdp.T``.
+
+**Python** mirrors this as file-local ``_spm_action`` (same arguments). ``spm_parents`` is called with
+``id`` (likelihood index structure) for both outcome prediction and inner free-energy terms; MATLAB line ~2753
+writes ``spm_parents(MDP.ID, ...)`` but the likelihood graph lives on ``id`` — Python follows ``id`` for both loops.
+
+Main-loop process control (~814–816: ``spm_action(MDP(m),A(m,:),Q(m,:,t),t-1)``) is wired through
+``_vb_gen_control_one_model`` → ``_spm_action``, passing ``bundle['A'][m]``, per-factor ``Q`` at timestep ``t_idx``,
+and fourth argument ``t_idx`` (MATLAB ``t-1`` when Python ``t_idx`` matches the inner loop index). Process models
+without ``GV`` still raise ``NotImplementedError``.
+
+## Hierarchical `S` → `O` before child `spm_MDP_VB_XXX` (~1136–1151)
+
+**MATLAB** removes ``O``/``o`` from the subordinate ``mdp``, then if ``isfield(mdp,'S')`` sets
+``mdp.O = mdp.S(:, seg(j))`` with ``j = (seg <= size(mdp.S,2))`` and
+``seg = (1:mdp.T) + size(mdp.Q.O{mdp.L},2)`` when ``mdp.Q`` exists, else ``seg = (1:mdp.T)``.
+
+**Python** uses ``_vb_hierarchical_apply_S_as_O_if_present`` immediately after ``child.pop("O")``/``"o"``, before
+the recursive call. ``Q.O{mdp.L}`` is approximated as the list index ``L-1`` of the child’s ``Q['O']`` cell (width =
+last axis of that array). If no column index is valid, ``O`` is **n×0** (not omitted), matching ``S(:,seg(j))`` with
+all-false ``j``.
+
+## Hierarchical `mdp.Q` record append (`try/catch`) (~1180–1209)
+
+**MATLAB** updates child ``mdp.Q`` after recursion by:
+
+- optional ``mdp.Q.a{mdp.L} = mdp.a`` when ``a`` exists,
+- appending ``s,u,P,X,Y,O,o,j,E`` at level ``L`` with ``[old new]``,
+- accumulating scalar ``mdp.Q.F = mdp.Q.F + sum(mdp.F)``,
+- falling back in ``catch`` to direct assignment at level ``L`` and ``mdp.Q.F = sum(mdp.F)``.
+
+**Python** mirrors this with ``_vb_hierarchical_update_parent_Q_from_child``.
+For current partial outputs, ``Q`` may still be a plain list (not MATLAB-like struct); in that case we preserve
+that list as-is. Where ``Q`` is struct-like, we apply append-first / assignment-fallback semantics.
+
+## `spm_VBX`: `_spm_VBX_sparse` reduced prior shape
+
+MATLAB **`R{f} = P{f}(s{f})`** keeps a **column** of selected masses. NumPy boolean indexing
+**`Pf[mask]`** returns a **1-D** vector; leaving it 1-D made **`spm_cross`** / **`_spm_times`**
+reshape it like **`(1, N)`**, broadcasting **`exp(L) * R`** to **`N×N`** instead of element-wise
+**`(N,1)`** as in MATLAB **`spm_times`**. **Policy:** in **`_spm_VBX_sparse`**, set
+**`R[f] = Pf[mask].reshape(-1, 1)`** so **`R{f}`** matches MATLAB’s column layout (fixes **`F`**
+and **`P`** on the no-**`ff`** **`spm_VBX`** path and any caller, including **`spm_forwards`**).

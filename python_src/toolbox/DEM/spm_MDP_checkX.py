@@ -203,22 +203,28 @@ def _spm_MDP_checkX_single(MDP: dict) -> None:
     if not _hasfield(MDP, "E"):
         e_list = []
         for f in range(nf):
-            e_list.append(
-                np.asarray(
-                    spm_dir_norm(np.ones((int(nu[f]), 1), dtype=np.float64)),
-                    dtype=np.float64,
+            if int(nu[f]) <= 0:
+                e_list.append(np.zeros((0, 1), dtype=np.float64))
+            else:
+                e_list.append(
+                    np.asarray(
+                        spm_dir_norm(np.ones((int(nu[f]), 1), dtype=np.float64)),
+                        dtype=np.float64,
+                    )
                 )
-            )
         _setfield(MDP, "E", e_list)
     else:
         E = _getfield(MDP, "E")
         for f in range(nf):
             ef = E[f]
             if ef is None or (isinstance(ef, np.ndarray) and ef.size == 0):
-                E[f] = np.asarray(
-                    spm_dir_norm(np.ones((int(nu[f]), 1), dtype=np.float64)),
-                    dtype=np.float64,
-                )
+                if int(nu[f]) <= 0:
+                    E[f] = np.zeros((0, 1), dtype=np.float64)
+                else:
+                    E[f] = np.asarray(
+                        spm_dir_norm(np.ones((int(nu[f]), 1), dtype=np.float64)),
+                        dtype=np.float64,
+                    )
         _setfield(MDP, "E", E)
     E = _getfield(MDP, "E")
     for f in range(nf):

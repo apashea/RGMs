@@ -21,7 +21,8 @@ def spm_dir_norm(A):
     A0 = np.sum(A, axis=0, keepdims=True)
     i = np.asarray(A0, dtype=bool).ravel(order="F")
     A = np.divide(A, A0)
-    A[:, ~i] = 1 / siz[0]
+    if siz[0] > 0:
+        A[:, ~i] = 1 / siz[0]
     A = np.reshape(A, siz, order="F")
 
     return A

@@ -1,40 +1,30 @@
-import numpy as np
-from scipy.special import psi
+"""
+Bayesian model reduction log-evidence for Dirichlet hyperparameters.
 
-from matlab_compat import as_matlab_array
+Pass 1 transliteration of ``spm_MDP_log_evidence.m`` (SPM toolbox).
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
 from python_src.spm_betaln import spm_betaln
 
 
 def spm_MDP_log_evidence(qA, pA, rA):
-    qA = as_matlab_array(qA)
-    pA = as_matlab_array(pA)
-    rA = as_matlab_array(rA)
+    """
+    FORMAT F, sA = spm_MDP_log_evidence(qA, pA, rA)
 
-    # change in free energy or log model evidence
-    p = 1 / 512
-    rA = rA + p
-    pA = pA + p
-    qA = qA + p
+    Returns free energy ``F`` and reduced sufficient statistics ``sA`` (nargout < 3).
+    """
+    p = 1.0 / 32.0
+    rA = np.asarray(rA, dtype=np.float64) + p
+    pA = np.asarray(pA, dtype=np.float64) + p
+    qA = np.asarray(qA, dtype=np.float64) + p
     sA = qA + rA - pA
-
-    # free energy and posterior
-    F = spm_betaln(qA) + spm_betaln(rA) - spm_betaln(pA) - spm_betaln(sA)
-    sA = np.maximum(sA - p, 0)
-
-    # dEdA = d/drA (spm_betaln(rA) - spm_betaln(sA))
-    def d_betaln(x):
-        return psi(x) - psi(_sum_default(x))
-
-    dFdA = d_betaln(rA) - d_betaln(sA + p)
-
-    return F, sA, dFdA
+    F = np.asarray(spm_betaln(qA) + spm_betaln(rA) - spm_betaln(pA) - spm_betaln(sA), dtype=np.float64)
+    sA = np.maximum(sA - p, 0.0)
+    return F, sA
 
 
-def _sum_default(X):
-    X = as_matlab_array(X)
-    if X.ndim == 0:
-        return np.sum(X)
-    for axis, size in enumerate(X.shape):
-        if size != 1:
-            return np.sum(X, axis=axis, keepdims=True)
-    return np.sum(X, axis=0, keepdims=True)
+__all__ = ["spm_MDP_log_evidence"]

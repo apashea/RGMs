@@ -23,6 +23,270 @@ runtime/test files scoped within their corresponding linear entries.
 
 ---
 
+### Entry-12 driver flips to full-mode + full-lane regressions fixed (2026-05-05)
+
+**Scope:** Executed the next goal-critical step: `run_dem_atariiii(entry_stop=12)` now calls
+`spm_MDP_VB_XXX(ctx["RDP"])` (no `_rgms_partial_ok`) and sets `_entry12_use_partial_vb = False`.
+
+During this full-mode activation, two real `spm_forwards` blockers surfaced and were fixed in-order:
+
+1. **Risk term shape path:** `spm_dot(R,Q(r))` can be vector-valued; removed invalid scalar-only cast and handle
+   scalar / `Ni`-vector cases.
+2. **Induction horizon edge (`N==0`):** `_spm_induction_vb` now returns empty constraints early instead of indexing
+   `G[0,:]` on zero-row arrays.
+
+**Tests updated for full-mode driver contract:**
+
+- `test_DEM_AtariIII_entry12_driver_wires_vb_full_mode`
+- `test_entry12_driver_full_pdp_contract_matches_ledger`
+
+**Additional regressions added:**
+
+- `test_spm_forwards_accepts_vector_spm_dot_risk_term`
+- `test_spm_induction_n_zero_returns_empty_without_index_error`
+
+**``pytest`` ladder:**
+
+- `test_spm_MDP_VB_XXX_spm_sample.py`: 42 passed
+- `test_spm_forwards.py`: 4 passed
+- `test_DEM_AtariIII_entry12_driver.py`: 1 passed
+- `test_DEM_AtariIII_entry12.py`: 2 passed, 2 skipped
+
+**Docs updated:**
+
+- `Atari_example.md` Entry 12 driver line now states full-mode call and full-mode contract test name.
+
+**Files read:** `python_src/toolbox/DEM/DEM_AtariIII.py`, `python_src/toolbox/DEM/spm_forwards.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `tests/oracle/toolbox/DEM/test_spm_forwards.py`, terminal outputs from all listed pytest runs
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/DEM_AtariIII.py`, `python_src/toolbox/DEM/spm_forwards.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `tests/oracle/toolbox/DEM/test_spm_forwards.py`, `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### End-of-main return path: remove artificial non-partial terminal stub (2026-05-05)
+
+**Scope:** Continued contiguous `spm_MDP_VB_XXX.m` end-of-main window (~1691–1732) by replacing the Python
+artificial full-mode terminal `NotImplementedError` with assembled return behavior:
+
+- always run `_vb_assemble_mdp_results_1691(...)` after the staged sweep,
+- if `_rgms_partial_ok` is set: keep existing `_vb_build_partial_output(...)`,
+- else return assembled model output (`dict` for single model, `list` for multiple models).
+
+This aligns better with MATLAB’s post-loop assembly and return flow rather than enforcing a synthetic global stub.
+
+**Tests updated:**
+
+- `test_spm_MDP_VB_XXX_full_mode_returns_assembled_output_after_checkX` (replaces old stub-raise assertion)
+- `test_spm_MDP_VB_XXX_hierarchical_branch_continues_to_global_stub` updated to assert assembled return.
+
+**``pytest``:**
+
+- `test_spm_MDP_VB_XXX_spm_sample.py`: 42 passed
+- `test_DEM_AtariIII_entry12_driver.py`: 1 passed
+- `test_DEM_AtariIII_entry12.py`: 2 passed, 2 skipped
+
+**Files read:** `matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m` (~1691–1732), `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry-12 stabilization + hierarchy recurse-mode alignment (2026-05-05)
+
+**Scope:** Applied the next ordered slice in `spm_MDP_VB_XXX` hierarchy and re-stabilized Entry-12 integration:
+
+1. **Hierarchy recurse mode (~1160):** `_vb_hierarchical_subordinate_outcomes` now takes `recurse_partial`.
+   Child call uses `spm_MDP_VB_XXX(child, {"_rgms_partial_ok":1})` only when parent run is partial; otherwise uses
+   empty options (closer to MATLAB full recurse semantics).
+2. **Entry-12 runtime blocker in `spm_forwards` risk term:** fixed `spm_dot(R,Q(r))` handling where result may be a
+   vector (covert-policy-sized) instead of scalar. Removed forced `float(...)` cast; now supports scalar and `Ni`-vector.
+
+**Tests added/updated:**
+
+- `test_vb_hierarchical_child_recurse_option_follows_parent_mode`
+- `test_spm_induction_handles_empty_cid_without_unbound_d_flat` (kept green)
+- `test_spm_forwards_accepts_vector_spm_dot_risk_term`
+
+**``pytest``:**
+
+- `test_spm_MDP_VB_XXX_spm_sample.py`: 42 passed
+- `test_spm_forwards.py`: 3 passed
+- `test_DEM_AtariIII_entry12_driver.py`: 1 passed
+- `test_DEM_AtariIII_entry12.py`: 2 passed, 2 skipped
+
+**Files read:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/spm_forwards.py`, `matlab_src/toolbox/DEM/spm_forwards.m`, `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`, `tests/oracle/toolbox/DEM/test_spm_forwards.py`
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/spm_forwards.py`, `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`, `tests/oracle/toolbox/DEM/test_spm_forwards.py`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry-12 blocker fix: ``_spm_induction_vb`` empty-``cid`` path (2026-05-05)
+
+**Scope:** Fixed runtime blocker observed during Entry-12 integration (`UnboundLocalError: d_flat`) in
+``python_src/toolbox/DEM/spm_forwards.py``. In ``_spm_induction_vb``, branch ``if id.cid exists and is empty`` now
+initializes ``d_flat = None`` (matching downstream guard usage) so induction no longer crashes on this path.
+
+Added regression test ``test_spm_induction_handles_empty_cid_without_unbound_d_flat`` in
+``tests/oracle/toolbox/DEM/test_spm_forwards.py``.
+
+**``pytest``:**
+- ``test_spm_forwards.py``: 2 passed
+- ``test_DEM_AtariIII_entry12_driver.py``: 1 passed
+- ``test_DEM_AtariIII_entry12.py``: 2 passed, 2 skipped
+
+**Files read:** ``python_src/toolbox/DEM/spm_forwards.py``, ``matlab_src/toolbox/DEM/spm_forwards.m``, ``tests/oracle/toolbox/DEM/test_spm_forwards.py``
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_forwards.py``, ``tests/oracle/toolbox/DEM/test_spm_forwards.py``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Hierarchical ``mdp.Q`` record append (~1180–1209) (2026-05-05)
+
+**Scope:** Added ``_vb_hierarchical_update_parent_Q_from_child`` to mirror MATLAB ``try/catch`` update of child
+``mdp.Q`` after recursion: set ``Q.a{L}`` when available; append ``s,u,P,X,Y,O,o,j,E`` at level ``L``; accumulate
+``Q.F`` with ``sum(F)``; fallback to direct assignment when append fails. Added ``_vb_hierarchical_q_concat`` helper.
+Current partial-output compatibility retained: if child ``Q`` is non-dict/list-only, preserve it as-is.
+
+**Tests:** added ``test_vb_hierarchical_update_parent_Q_append_and_accumulate_F`` and
+``test_vb_hierarchical_update_parent_Q_fallback_assign_on_concat_failure``.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` (41 passed).
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1180–1209)
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_backwards` parity pass — LL tensor fix attempt (2026-05-04)
+
+**Scope:** Continued the `spm_backwards` parity closure work. In
+`python_src/toolbox/DEM/spm_backwards.py`, updated the first suspected divergence in
+inference: `LL` accumulation now preserves full vector/tensor outputs from
+`spm_log(spm_dot(...))` rather than collapsing to scalars before `L` assembly.
+Also aligned `Lcell` update and `sm_in` free-energy bookkeeping in the
+`isfield(id{m},'independent')` branch to operate on vector columns.
+
+**Status:** `test_spm_backwards_nm1_one_factor_T2_oracle` remains xfail
+(expected), but this removes one incorrect scalarization layer and keeps the
+comparison focused on the remaining dependent-factor `spm_dot`/reshape chain.
+
+**`pytest`:** `tests/oracle/toolbox/DEM/test_spm_backwards.py` → **1 passed, 1 xfailed**.
+
+**Files read:** `python_src/toolbox/DEM/spm_backwards.py`, `logs/log_0.md`.
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_backwards.py`, `logs/log_0.md`.
+
+**Files deleted:** none.
+
+**Shared files touched:** no
+
+---
+
+### `spm_backwards` parity closure on minimal oracle (2026-05-04)
+
+**Scope:** Continued targeted divergence isolation for `spm_backwards` and found
+the root cause in Python page-transpose semantics: `_pagetranspose` was swapping
+the last two axes; MATLAB `pagetranspose` swaps the first two dimensions on each
+page. Updated `python_src/toolbox/DEM/spm_backwards.py` accordingly.
+
+Also removed the temporary `xfail` marker in
+`tests/oracle/toolbox/DEM/test_spm_backwards.py` after oracle success.
+
+**`pytest`:**
+
+- `tests/oracle/toolbox/DEM/test_spm_backwards.py` → **2 passed**
+- Combined Entry-12 dependency suite (`test_spm_MDP_VB_XXX_spm_sample.py`,
+  `test_spm_forwards.py`, `test_spm_VBX.py`, `test_spm_backwards.py`) →
+  **24 passed, 2 warnings**
+
+**Files read:** `python_src/toolbox/DEM/spm_backwards.py`,
+`tests/oracle/toolbox/DEM/test_spm_backwards.py`, `Atari_example.md`,
+`notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`.
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_backwards.py`,
+`tests/oracle/toolbox/DEM/test_spm_backwards.py`, `Atari_example.md`,
+`notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`.
+
+**Files deleted:** temporary debug probes
+(`tests/oracle/toolbox/DEM/_tmp_compare_backwards.py`,
+`tests/oracle/toolbox/DEM/_tmp_lp_probe.py`).
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — `OPTIONS.B` replay hook wired to `spm_backwards` (2026-05-04)
+
+**Scope:** Added `_vb_optional_backwards_replay(...)` in
+`python_src/toolbox/DEM/spm_MDP_VB_XXX.py` and invoked it after the partial
+time loop. This mirrors MATLAB `~1463–1481` at current stage:
+
+- if `OPTIONS.B==1`, smooth unchanging path factors (`P{m,f,t}=P{m,f,T}` when
+  factor is uncontrollable),
+- call standalone `spm_backwards(...)`,
+- write back `Q/P/qa/qb` into bundle and attach returned `F` to model state.
+
+Added focused unit test
+`test_spm_MDP_VB_XXX_options_B_calls_spm_backwards_in_partial_mode` in
+`tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py` via monkeypatch
+to verify this hook executes in partial mode and stores replay `F`.
+
+**`pytest`:**
+
+- `test_spm_MDP_VB_XXX_spm_sample.py` → **21 passed**
+- Combined dependency suite (`test_spm_forwards.py`, `test_spm_VBX.py`,
+  `test_spm_backwards.py`, `test_spm_MDP_VB_XXX_spm_sample.py`) →
+  **25 passed, 3 warnings**
+
+**Files read:** `spm_MDP_VB_XXX.py`, `test_spm_MDP_VB_XXX_spm_sample.py`,
+`Atari_example.md`, `logs/log_0.md`.
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`,
+`tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`,
+`Atari_example.md`, `logs/log_0.md`.
+
+**Files deleted:** none.
+
+**Shared files touched:** no
+
+---
+
 ### DEM_AtariIII Entry 8 oracle refactor to checkpoint artifacts (2026-05-01)
 
 **Scope:** keep deep Entry 8 parity assertions, but move MATLAB truth generation to
@@ -5500,6 +5764,953 @@ smoke). ``Atari_example.md`` Entry 11 status updated.
 **Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``Atari_example.md``, ``logs/log_0.md``  
 **Files read:** ``DEM_AtariIII.py``, ``test_DEM_AtariIII_entry10.py`` (smoke pattern)  
 **Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Atari ledger Entry 11 wording + Entry 12 stub (2026-05-02)
+
+**What changed:** Removed incorrect “placeholder XXX” wording from Entry 11 downstream line.
+Added minimal **### Entry 12** block (MATLAB line, planned Python path, staged Phase 3 port,
+tests/driver TBD, no unrelated milestones). Intentionally omits out-of-scope auxiliary demos.
+
+**Next engineering steps (when Entry 12 translation begins):** confirm `andrew` branch;
+copy `spm_MDP_VB_XXX.m` from read-only SPM into `matlab_src/toolbox/DEM/` for the one-file workflow;
+stage `spm_MDP_checkX.m` and other first-hop externals as needed when call sites are wired;
+cross-check remaining `spm_*` calls against `Migration Plan.md` dependency inventory (many symbols in
+`spm_MDP_VB_XXX.m` are **local subfunctions** in the same `.m` file — port stays single-module Pass 1).
+
+**Files read:** `Atari_example.md`, read-only `spm_MDP_VB_XXX.m` (grep inventory).
+
+**Files created:** none  
+**Files modified:** `Atari_example.md`, `logs/log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry 12 prep: staged `spm_MDP_VB_XXX.m` + RNG/testing notes (2026-05-02)
+
+**What changed:**
+
+- Copied read-only SPM ``spm_MDP_VB_XXX.m`` → ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` for the one-file workflow.
+- ``Atari_example.md`` Entry 12: **RNG / sampling (oracle planning)** — local ``spm_sample`` matches ``spm_MDP_generate``;
+  stochastic draws only via ``spm_sample`` in that ``.m``; pointer to branch notes for ``rand()`` replay.
+- ``notes/andrew Python Matlab Translation Issues.md``: new subsection **``spm_MDP_VB_XXX`` (Entry 12): local ``spm_sample`` and RNG surface**
+  (reuse ``spm_MDP_generate._spm_sample`` semantics; oracle pattern like Pong→generate integration).
+
+**Files read:** read-only ``spm_MDP_VB_XXX.m``, ``spm_MDP_generate.py``, ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``
+
+**Files created:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (staged copy)
+
+**Files modified:** ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — ``spm_MDP_VB_XXX`` bootstrap: ``_spm_sample`` + oracle (2026-05-02)
+
+**Scope:** Begin Pass 1 on ``spm_MDP_VB_XXX.m`` with the file-local stochastic helper only.
+Python mirrors MATLAB/staged ``spm_MDP_generate`` sampling semantics; oracle tests replay MATLAB
+``rand`` after ``rng(0,'twister')`` per branch RNG notes.
+
+**Added:**
+
+- ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py`` — ``_spm_sample`` only (main VB routine not yet ported).
+- ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`` — vs MATLAB inline + parity vs
+  ``spm_MDP_generate._spm_sample``.
+- ``Atari_example.md`` Entry 12 **Tests** line updated; ``notes/andrew Python Matlab Translation Issues.md``
+  Entry-12 subsection updated with implemented-slice pointer.
+
+**Validation:** ``conda run -n rgms pytest tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py -q`` → **7 passed**.
+
+**Coherent next steps:** OPTIONS/default struct handling + ``spm_MDP_checkX`` entry path; translate main loop in Migration Plan subsections; wire externals as encountered; Atari ``RDP`` boundary oracle once ``spm_MDP_VB_XXX`` is callable end-to-end.
+
+**Files read:** ``spm_MDP_VB_XXX.m`` (``spm_sample`` block), ``spm_MDP_generate.py``, ``Atari_example.md``
+
+**Files created:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``
+
+**Files modified:** ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — MATLAB VB capture + checkpoint lane (2026-05-02)
+
+**Scope:** Isolate Entry 12 for validation via artifact-first MATLAB checkpoint (full lane through ``rgms_rdp11``,
+then ``spm_MDP_VB_XXX``), without wiring Python VB into ``run_dem_atariiii`` yet.
+
+**Added:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`` — ``load_or_build_entry12_vb_artifact``,
+``entry12_capture_v == 1`` pickle (``rdp11_nested_mat``, ``pdp12_mdp_mat``, optional ``pdp12_F_mat``), slow capture test,
+fast path helper test.
+
+**Changed:** ``DEM_AtariIII.py`` — ``entry_stop == 12`` raises with pointer to capture tests; ``entry_stop > 12`` reserved.
+``Atari_example.md`` Entry 12 **MATLAB-testing path** — env + artifact pattern.
+
+**Validation:** ``pytest ... test_DEM_AtariIII_entry12.py::test_entry12_capture_helpers_tag_and_path_roundtrip`` → **PASS**
+(VB capture test is **slow**; run with refresh when building artifacts).
+
+**Files read:** ``test_DEM_AtariIII_entry10.py``, ``DEM_AtariIII.py``, ``Atari_example.md``
+
+**Files created:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``
+
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — dependency spine checklist + OPTIONS / ``spm_MDP_checkX`` entry slice (2026-05-02)
+
+**Atari_example.md:** Entry 12 **Dependency spine** — concise checkbox list of non-local ``spm_*`` + Phase 0 bundle; one line for
+same-file locals; **Excluded:** ``spm_figure``.
+
+**``spm_MDP_VB_XXX.py``:** ``_default_options_vb`` / merge, multi-epoch guard, ``spm_MDP_checkX`` on a deep copy, then
+``NotImplementedError`` for the variational core. No visualization.
+
+**Tests:** two stub tests in ``test_spm_MDP_VB_XXX_spm_sample.py``; ``pytest`` → **9 passed**.
+
+**Files modified:** ``Atari_example.md``, ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``,
+``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — locals + tensor setup through ``H`` / ``I`` (~590) (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** Added ``_spm_log``, ``_spm_norm``, ``_spm_wnorm`` (``digamma``), ``_spm_hnorm``; ``_vb_tensors_through_H``
+implements MATLAB GP/id prelude and likelihood / transition Dirichlet blocks through ``H`` (stops before ``id`` domain / ``spm_combinations``).
+
+**Tests:** ``pytest tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`` → **11 passed** (no ``RuntimeWarning`` on stub).
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — VB preliminaries (models list, hyperparameters, ``process``) (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** ``_vb_models_after_checkx``, ``_spm_is_process``, ``_vb_hyperparameters_mdp1``; entrypoint runs prelude then
+raises before likelihood / transition tensor block (~393+). Error message includes diagnostic ``Nm``, ``T``, ``alpha``, ``process_any``.
+
+**Tests:** ``test_spm_MDP_VB_XXX_spm_sample.py`` → **11 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — `id` / `ID` domains + `GV` / `V` via `spm_combinations` (~597–652) (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** New ``_vb_id_and_policy_blocks`` (``id`` ``iK``/``iW``/``iH``/``iI``, ``ID.control``, ``GU``/``GV``/``Um``/``V``,
+``Na``/``Np``, ``fu``/``fp``) merged into ``_vb_tensors_through_H`` return bundle. Import ``spm_combinations`` from
+``python_src/spm_combinations.py``. Stub error text now includes ``Na``/``Np`` diagnostic list.
+
+**``Atari_example.md``:** Entry 12 spine — ``spm_combinations`` checked; implementation / status lines updated to ~652.
+
+**Tests:** ``pytest tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py -q`` → **11 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~592–652), ``python_src/spm_combinations.py``, ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``,
+``Atari_example.md``, ``logs/log_0.md``.
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — `Q`/`X`/`S`/`P`, `s`/`u`/`o`, probabilistic `O`, process `GV`/`chi` (~652–733) (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** ``_vb_mdp_field_matrix`` (``find``/linear-index copy like MATLAB), ``_get_mdp_O_gt``, ``_vb_init_QXSP_outcomes_and_process``
+(mutates ``models``, ``options``, outcome shell ``O``; adds ``Q``, ``X``, ``S``, ``P``, ``sn`` to bundle). Entrypoint merges options via ``opts``,
+runs init after ``_vb_tensors_through_H``, stub message mentions ``OPTIONS.O``.
+
+**``Atari_example.md``:** Entry 12 implementation/status lines advanced to ~733 / next ``spm_MDP_get_M``.
+
+**Tests:** ``pytest tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py -q`` → **11 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~652–733), ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``.
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — local ``spm_MDP_get_M``, ``N=min(N,T)``, ``BP``/``IP`` prealloc (~737–743) (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** ``_mode_matlab_dim1`` (``scipy.stats.mode`` axis 0), ``_spm_MDP_get_M`` (mutates ``MDP.n``, builds ``M`` ``T×Nm``),
+``_vb_prealloc_BP_IP`` (MATLAB ``m = Nm`` sizing), ``_vb_policy_depth_and_get_M`` (bundles ``N_policy_depth``, ``M_update``, ``BP``, ``IP``).
+Entrypoint merges after ``Q``/``X``/``S``/``P`` init; stub cites ``M.shape``.
+
+**``test_spm_MDP_VB_XXX_spm_sample.py``:** three unit tests for ``get_M`` / ``BP``/``IP``.
+
+**``pytest ...test_spm_MDP_VB_XXX_spm_sample.py -q``** → **14 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~737–743, ~2769–2819), ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``.
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — Atari_example checklist review (2026-05-02)
+
+**``Atari_example.md``:** Entry 12 tightened — snapshot line, spine criteria (check when Python uses dependency), first MATLAB line refs for unchecked items,
+Phase 0 nuance (shared imports vs local helpers), same-file locals split done/not yet, condensed Python + Tests; MATLAB-testing path / RNG / downstream kept.
+
+**Files read:** ``Atari_example.md``, ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py`` (grep), ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (grep).
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — main loop GP ``u`` / ``s`` generation slice (~756–775, ~832–851, ~858–869) (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** ``_unwrap_gp_elem``, ``_vb_gp_transition_column``, ``_vb_generation_paths_states_share``, ``_vb_run_generation_paths_states_loop``
+(per-``t`` over ``M_update``). Stub text references belief propagation / outcomes. **Not** implemented: ~779–804, ~806–827, outcomes, ``spm_forwards``.
+
+**``test_spm_MDP_VB_XXX_spm_sample.py``:** generation slice unit test; stub regex updated.
+
+**``pytest ...test_spm_MDP_VB_XXX_spm_sample.py -q``** → **15 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — ``BP`` / ``IP`` belief tensors (~1224–1256), ``spm_dot`` (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** ``_tensor_nonempty``, ``_vb_fill_BP_IP_at_t`` (controlled vs uncontrolled factor branches), ``_vb_run_partial_t_loop`` replaces generation-only loop.
+Import ``spm_dot`` from ``python_src/spm_dot.py``. Stub message: partial t-loop + BP/IP.
+
+**``Atari_example.md``:** spine ``spm_dot`` checked; snapshot/Python lines updated.
+
+**``pytest ...test_spm_MDP_VB_XXX_spm_sample.py -q``** → **16 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — per-model generation order, ``Pu_carry``, ~779–804 + control (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** Refactor: ``_vb_gen_u_paths_one_model``, ``_vb_prior_QP_paths_states_one_model`` (``spm_dot``/``@``), ``_vb_gen_control_one_model`` (implicit control; process → ``NotImplementedError``), ``_vb_gen_states_one_model``; ``bundle['Pu_carry']`` list; ``Nm`` default from ``len(models)``.
+
+**``test_spm_MDP_VB_XXX_spm_sample.py``:** ``test_vb_prior_QP_runs_when_Pu_carry_set``.
+
+**``pytest ...test_spm_MDP_VB_XXX_spm_sample.py -q``** → **17 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — interim ``Pu_carry`` via ``spm_softmax(0, alpha)`` (2026-05-02)
+
+**``spm_MDP_VB_XXX.py``:** ``_vb_placeholder_pu_carry_softmax``, ``spm_softmax`` import; ``_vb_run_partial_t_loop(..., alpha)`` calls placeholder after ``BP``/``IP``. Documents deferral of real ``G`` from ``spm_forwards``.
+
+**``notes/andrew Python Matlab Translation Issues.md``:** new section on interim ``Pu_carry``.
+
+**``pytest ...test_spm_MDP_VB_XXX_spm_sample.py -q``** → **18 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — ``spm_index``, ``spm_edges`` deps for ``spm_VBX`` (2026-05-02)
+
+**Objective:** unblock Pass 1 ``spm_VBX`` / ``spm_forwards`` by translating DEM helpers used by ``spm_VBX.m``.
+
+**Staged MATLAB (``matlab_src/toolbox/DEM``):** ``spm_VBX.m`` (copy from SPM), ``spm_index.m``, ``spm_edges.m``.
+
+**``spm_index.py``:** faithful ``spm_index.m`` (early-return shapes for ``prod(siz)==1``; same failure mode as MATLAB when ``len(siz)==1`` but ``prod(siz)~=1`` via ``ValueError``).
+
+**``spm_edges.py``:** faithful ``spm_edges.m``; ndarray ``fg``/``gg`` use MATLAB semantics ``A(g, [s{:}])`` along dim 2 with trailing dims at slice 1; state-independent ``j`` uses Fortran-linear indexing into ``id.A`` (matches MATLAB ``id.A(g)`` on dense matrices); ``q`` returned as column vector for the state-dependent branch.
+
+**Tests:** ``tests/oracle/toolbox/DEM/test_spm_index.py``, ``test_spm_edges.py`` (MATLAB Engine oracles; ``spm_cross`` on path via ``addpath(matlab_src)``).
+
+**``pytest tests/oracle/toolbox/DEM/test_spm_index.py tests/oracle/toolbox/DEM/test_spm_edges.py -v``** → **9 passed**.
+
+**Files created:** ``python_src/toolbox/DEM/spm_index.py``, ``python_src/toolbox/DEM/spm_edges.py``, ``tests/oracle/toolbox/DEM/test_spm_index.py``, ``tests/oracle/toolbox/DEM/test_spm_edges.py``, ``matlab_src/toolbox/DEM/spm_VBX.m``, ``matlab_src/toolbox/DEM/spm_index.m``, ``matlab_src/toolbox/DEM/spm_edges.m``
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+**Next:** Pass 1 ``python_src/toolbox/DEM/spm_VBX.py`` + oracle, then ``spm_forwards``.
+
+---
+
+### Entry 12 — Pass 1 ``spm_VBX.py`` + oracle (2026-05-02)
+
+**``spm_VBX.py``:** Full Pass 1 transliteration of ``matlab_src/toolbox/DEM/spm_VBX.m`` (private helpers: ``_vbx_log``, ``_spm_margin``, ``_spm_times`` via ``spm_cross``, ``_spm_VBX_sparse``, ``_a_colon_s_logical``, ``_a_colon_s_index_dim2``, ``_spm_VBX_update_L``, ``_spm_VBX_update``). Wired ``spm_parents``, ``spm_edges``, ``spm_dot``, ``spm_softmax``, ``spm_combinations``, ``spm_sum``. **``spm_softmax``:** pass **column** ``F_col`` ``(Nq,1)`` — flattening to 1-D then ``as_matlab_array`` produced a single-row matrix and triggered the ``shape[0] < 2`` branch (uniform weights), which broke BMA (``F`` and ``P`` scales).
+
+**``test_spm_VBX.py``:** Engine oracle — two factors, ``P`` as **1×Nf row cell** layout (matches MATLAB ``repmat(P,Nq,1)`` → ``Nq×Nf``); ``id.g={1}``, ``id.ff``, ``id.A={[1 2]}``; tensors pulled from MATLAB after ``rng(2)`` so Python compares identical inputs.
+
+**``pytest``** (``test_spm_index``, ``test_spm_edges``, ``test_spm_VBX``) → **10 passed**.
+
+**Files created:** ``python_src/toolbox/DEM/spm_VBX.py``, ``tests/oracle/toolbox/DEM/test_spm_VBX.py``
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+**Next:** ``spm_forwards`` (calls ``spm_VBX``), then replace interim ``Pu_carry`` with real ``G``.
+
+---
+
+### Entry 12 — Standalone ``spm_induction`` + refactor (2026-05-03)
+
+**Objective:** expose ``spm_induction`` as a first-class DEM helper (``spm_forwards`` calls ``spm_induction(B(m,:,:),H(m,:),P(m,:,t),(T-t),id{m})`` with MATLAB row-cell layout).
+
+**``matlab_src/toolbox/DEM/spm_induction.m``:** copied verbatim from the local function in ``matlab_src/toolbox/DEM/spm_MDP_generate.m`` (same signature ``[R,hif] = spm_induction(B,Q,N,id)``).
+
+**``python_src/toolbox/DEM/spm_induction.py``:** Pass 1 port of that local function; Kronecker stack uses ``spm_kron(Q[f], Qf)`` for CSR or dense posteriors; ``_q_posterior_entry`` handles sparse ``Q`` in the ``cid`` constraint loop.
+
+**``spm_MDP_generate.py``:** removed duplicate ``_spm_induction`` / ``_spm_shiftdim_m32``; imports ``spm_induction`` as ``_spm_induction``.
+
+**``test_spm_induction.py``:** Engine oracle (two factors, ``id.hid``).
+
+**``pytest``** ``test_spm_MDP_generate.py`` + ``test_spm_induction.py`` → **4 passed**.
+
+**Files created:** ``matlab_src/toolbox/DEM/spm_induction.m``, ``python_src/toolbox/DEM/spm_induction.py``, ``tests/oracle/toolbox/DEM/test_spm_induction.py``
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_generate.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+**Next:** Pass 1 ``spm_forwards`` in ``spm_MDP_VB_XXX.py`` (or ``python_src/toolbox/DEM/spm_forwards.py`` + import), with staged oracle inputs; stub or port ``spm_MDP_BMR`` only if pA path exercised.
+
+---
+
+### Entry 12 — ``spm_forwards``, BMR, VB wire (2026-05-03)
+
+**``matlab_src/toolbox/DEM/spm_forwards.m``:** extracted from ``spm_MDP_VB_XXX.m`` (main ``spm_forwards`` + local ``spm_induction(B,H,Q,N,id)`` + ``spm_children``) for MATLAB Engine oracles.
+
+**``matlab_src/toolbox/DEM/spm_MDP_BMR.m``**, **``spm_MDP_log_evidence.m``:** copied from SPM read-only tree into ``matlab_src`` for addpath tests.
+
+**``python_src/toolbox/DEM/spm_MDP_log_evidence.py``**, **``spm_MDP_BMR.py``:** Pass 1 ports.
+
+**``python_src/toolbox/DEM/spm_forwards.py``:** Pass 1 ``spm_forwards`` + ``spm_children`` + private ``_spm_induction_vb`` (five-arg VB induction, distinct from ``spm_induction`` in ``spm_MDP_generate``).
+
+**``spm_VBX.py``:** when ``id`` has no ``ff``, ``spm_edges`` returns scalar ``j,i``; normalize to single-element lists before the BMA loop (minimal ``spm_MDP_checkX`` MDPs).
+
+**``spm_MDP_VB_XXX.py``:** ``_vb_run_partial_t_loop`` calls ``spm_forwards`` once per updating model when ``O{m,:,t}`` is populated; otherwise keeps ``_vb_placeholder_pu_carry_softmax`` until outcomes (~873+) fill ``O``.
+
+**``tests/oracle/toolbox/DEM/test_spm_MDP_BMR.py``:** Engine oracles for log-evidence and BMR.
+
+**``pytest``:** ``test_spm_MDP_BMR``, ``test_spm_MDP_VB_XXX_spm_sample::test_spm_MDP_VB_XXX_stub_raises_after_checkX``, ``test_spm_VBX`` — passed in the iteration slice.
+
+**Files created:** ``matlab_src/toolbox/DEM/spm_forwards.m``, ``matlab_src/toolbox/DEM/spm_MDP_BMR.m``, ``matlab_src/toolbox/DEM/spm_MDP_log_evidence.m``, ``python_src/toolbox/DEM/spm_forwards.py``, ``python_src/toolbox/DEM/spm_MDP_log_evidence.py``, ``python_src/toolbox/DEM/spm_MDP_BMR.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_BMR.py``
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``python_src/toolbox/DEM/spm_VBX.py``, ``logs/log_0.md``
+
+**Shared files touched:** yes — ``spm_VBX.py`` (edges scalar/list normalization).
+
+**Next:** full-oracle ``test_spm_forwards.py`` with non-empty ``O`` / ``ff`` id; outcomes block (~873+) so ``O`` is always ready and ``Pu`` matches MATLAB; ``spm_backwards``.
+
+---
+
+### ``spm_forwards`` oracle + ``spm_VBX`` ``R`` column shape (2026-05-03)
+
+**Issue:** Oracle ``test_spm_forwards`` (one factor, 2-D ``A``, no ``ff``) matched ``G`` but not ``F``; isolated MATLAB vs Python ``spm_VBX`` on the same tensors showed both ``F`` and ``P`` wrong.
+
+**Root cause:** ``_spm_VBX_sparse`` set ``R[f] = Pf[mask]``, which NumPy returns as **1-D**. ``_spm_times`` then calls ``spm_cross`` on a 1-D vector; ``as_matlab_array`` reshapes to ``(1, N)``, so ``exp(L) * spm_cross(R)`` broadcast to an ``N×N`` tensor instead of element-wise ``(N,1)`` behaviour in MATLAB ``spm_times``.
+
+**Fix:** ``R[f] = Pf[mask].reshape(-1, 1)`` in ``python_src/toolbox/DEM/spm_VBX.py`` (``_spm_VBX_sparse``).
+
+**Oracle:** ``tests/oracle/toolbox/DEM/test_spm_forwards.py`` — ``t=1``, ``T=2``, ``N=1``, two policies, one factor; MATLAB saves ``O``, ``P``, ``A``, ``B`` **before** ``spm_forwards`` so Python sees the same priors as MATLAB’s first ``spm_VBX`` call; ``id.g`` aligned with ``test_spm_VBX`` as ``[1]`` (not a nested 1×1 array).
+
+**Cleanup:** Removed temporary ``_tmp_matlab_A_layout.py``, ``_tmp_vbx_f_check.py``, and ``misc/_debug_spm_vbx_shapes.py`` (per project rules, avoid ad-hoc ``misc/``).
+
+**``pytest``:** ``test_spm_VBX.py``, ``test_spm_forwards.py`` → **2 passed**.
+
+**Files read:** ``spm_VBX.m``, ``spm_VBX.py``, ``spm_dot.m``, ``spm_dot.py``, ``test_spm_forwards.py``, ``log_0.md``
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_VBX.py``, ``tests/oracle/toolbox/DEM/test_spm_forwards.py``, ``logs/log_0.md``
+
+**Files deleted:** ``tests/oracle/toolbox/DEM/_tmp_matlab_A_layout.py``, ``tests/oracle/toolbox/DEM/_tmp_vbx_f_check.py``, ``misc/_debug_spm_vbx_shapes.py``
+
+**Shared files touched:** no (``spm_VBX`` is toolbox DEM, not ``matlab_compat.py``)
+
+**Next:** Re-attempt a **two-factor + ``id.ff``** ``spm_forwards`` oracle once desired (3-D ``A`` layout from Engine is stable); continue Entry-12 path toward real ``Pu`` / ``spm_MDP_VB_XXX`` parity and ``spm_backwards``.
+
+---
+
+### Entry 12 — ledger + notes sync (2026-05-03)
+
+**Scope:** Align ``Atari_example.md`` Entry 12 and ``notes/andrew Python Matlab Translation Issues.md`` with implemented code: partial ``t``-loop, conditional ``spm_forwards`` / ``spm_VBX``, ``spm_VBX`` ``R[f]`` column fix, split modules (``spm_forwards.py``, ``spm_induction.py``), dependency checkboxes, test list.
+
+**Files modified:** ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py`` (module docstring only), ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — belief slice after ``spm_forwards`` (~1264–1346) (2026-05-03)
+
+**Scope:** Port MATLAB block immediately after ``spm_forwards``: ``G`` augmentation at ``t==1`` from ``E``/``V``;
+``R = spm_softmax(G)``, ``w``, ``v`` into ``bundle['R_policy']`` / ``w_policy`` / ``v_policy``; path posteriors
+``P{m,f,t-1}`` when ``t>1`` and ``Nu>1``; ``Pu = spm_softmax(G,alpha)`` and ``P{m,f,t}`` from ``Pu`` and ``V``.
+
+**Prealloc:** ``_vb_policy_depth_and_get_M`` now adds zero-filled ``R_policy``, ``w_policy``, ``v_policy``.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py``, ``test_spm_forwards.py``, ``test_spm_VBX.py`` → **20 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md`` (Entry 12 Python line), ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — ``OPTIONS.O`` outcomes ~873–949 before ``BP``/``IP`` (2026-05-03)
+
+**Scope:** Match MATLAB time-step order: first ``if OPTIONS.O`` block runs **before** ``BP``/``IP``. Partial Pass 1:
+``n==m`` ELBO softmax, ``n>0`` copy from other agent, ``n<0`` store ``Fm`` in ``bundle['_vb_Fm_neg_t_o_m']`` for a future ~952 loop,
+``n==0`` tensor sample from ``GP.A{g}``. ``bundle['options_vb']`` attached at entry.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py``, ``test_spm_forwards.py``, ``test_spm_VBX.py`` → **20 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — shared probabilistic outcomes ~952–969 (2026-05-03)
+
+**Scope:** After first ``OPTIONS.O`` block, MATLAB sums ``Fm{g,j}`` over ``j ~= m`` for ``MDP(m).n(g,t) < 0``,
+then ``O{m,g,t} = spm_softmax(F)``, ``spm_sample(spm_softmax(F*512))`` for ``o``. Implemented as
+``_vb_shared_probabilistic_outcomes`` reading ``bundle['_vb_Fm_neg_t_o_m']``.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py``, ``test_spm_forwards.py``, ``test_spm_VBX.py`` → **20 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — specified-outcome one-hot fill (~933–939) (2026-05-04)
+
+**Scope:** In the first ``OPTIONS.O`` block, MATLAB fills ``O{m,o,t}`` with a one-hot vector when
+``MDP(m).o(o,t)`` is already specified and ``O{m,o,t}`` is empty. Python now mirrors this branch in
+``_vb_generate_outcomes_if_options_o`` using ``bundle['No'][m,o]`` and 1-based outcome index ``o``.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py``, ``test_spm_forwards.py``, ``test_spm_VBX.py`` → **20 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — ledger clarity pass (`Atari_example.md`) (2026-05-04)
+
+**Scope:** Cleaned Entry 12 section for clarity and concision without changing status claims:
+collapsed duplicated status lines, simplified dependency bullets, separated “implemented vs remaining”
+sections, and kept checkpoint/oracle/testing references intact.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — hierarchical branch start (`MDP.MDP` ~973+) (2026-05-04)
+
+**Scope:** Added ``_vb_hierarchical_subordinate_outcomes`` and integrated it into the per-``t`` loop after
+shared outcomes and before ``BP``/``IP``. Implemented child extraction/defaults (B/D/E via ``spm_MDP_size`` +
+``_spm_norm``), forward-prior updates from child ``P``/``X``, empirical parent-driven ``D/E`` updates via
+``spm_parents`` + ``spm_dot``, non-process child ``u/s`` sampling, and child-to-parent outcome mapping
+(``id.D`` / ``id.E``) for when recursion returns.
+
+**Current blocker boundary:** if subordinate recursion reaches the still-stubbed global solver end,
+raise explicit ``NotImplementedError`` for hierarchical recursion completion.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py``, ``test_spm_forwards.py``, ``test_spm_VBX.py`` → **20 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — hierarchical branch gating test (2026-05-04)
+
+**Scope:** Added targeted test in ``test_spm_MDP_VB_XXX_spm_sample.py`` to assert the
+``MDP.MDP`` path is exercised and fails at the dedicated hierarchical blocker boundary
+(``hierarchical MDP.MDP branch``), not the generic terminal stub.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` → **19 passed**; combined
+``test_spm_MDP_VB_XXX_spm_sample.py`` + ``test_spm_forwards.py`` + ``test_spm_VBX.py`` → **21 passed**.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — ledger concise refresh (2026-05-04)
+
+**Scope:** Tightened Entry 12 text in ``Atari_example.md`` to stay concise while accurate:
+condensed MATLAB-testing path details, shortened RNG note, and kept blocker/driver status explicit.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — hierarchical child→parent mapping checkpoint (2026-05-04)
+
+**Scope:** Added focused unit test ``test_vb_hierarchical_child_mapping_updates_parent_O`` in
+``test_spm_MDP_VB_XXX_spm_sample.py``. Uses monkeypatched child ``spm_MDP_VB_XXX`` return to verify
+hierarchical mapping semantics in ``_vb_hierarchical_subordinate_outcomes``:
+``id.D`` -> ``O{m,g,t} = X{f}(:,1)``, ``id.E`` -> ``O{m,g,t} = P{f}(:,end)``, and child ``Q`` pass-back.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` → **20 passed**; combined with
+``test_spm_forwards.py`` + ``test_spm_VBX.py`` → **22 passed**.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — staged child recursion continuation (2026-05-04)
+
+**Scope:** Replaced dedicated hierarchical recursion blocker with staged continuation for child calls:
+``_vb_hierarchical_subordinate_outcomes`` now calls ``spm_MDP_VB_XXX(child, {'_rgms_partial_ok':1})``.
+Added internal ``_vb_build_partial_output`` and ``_rgms_partial_ok`` option handling so recursive child
+calls can return MATLAB-like partial ``id/X/P/Q`` structures while top-level still raises the existing
+global terminal ``NotImplementedError``.
+
+**Tests:** Updated hierarchical gate test to
+``test_spm_MDP_VB_XXX_hierarchical_branch_continues_to_global_stub`` and re-ran combined suite.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` + ``test_spm_forwards.py`` + ``test_spm_VBX.py`` → **22 passed**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — artifact-based Python partial structural checkpoint (2026-05-04)
+
+**Scope:** Added ``test_entry12_python_partial_structural_checkpoint_from_artifact`` to
+``test_DEM_AtariIII_entry12.py``. It loads/reuses Entry-12 artifact capture and runs
+``spm_MDP_VB_XXX(rdp11, {'_rgms_partial_ok':1})`` to compare stable structural subset
+(level count, ``id`` keys, ``a``/``b`` counts) against MATLAB ``pdp12`` pull.
+
+**Environment guard:** if MATLAB capture cannot complete in this environment (known
+``spm_MDP_VB_XXX`` sampling-index error), test marks ``skip`` instead of false failure.
+
+**``pytest``:** checkpoint test (skip in this env) + dependency suite →
+``22 passed, 1 skipped``.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — artifact capture v2 + X/P geometry checkpoint (2026-05-04)
+
+**Scope:** Extended ``_capture_entry12_vb_artifact`` to **v2** (``entry12_capture_v == 2``), persisting
+per-factor ``(rows, cols)`` for level-1 MATLAB ``X`` and ``P`` (``pdp12_l0_X_shapes``,
+``pdp12_l0_P_shapes``). Loader accepts v1 and v2 pickles. ``test_entry12_python_partial_structural_checkpoint_from_artifact``
+asserts these shapes against partial Python output when the keys are present (v1 artifacts skip the geometry block).
+
+**``pytest``:** ``test_DEM_AtariIII_entry12.py`` → **1 passed, 2 skipped** (MATLAB capture tests skipped in this env).
+
+**Files read:** ``test_DEM_AtariIII_entry12.py``, ``Atari_example.md``, ``logs/log_0.md``.
+
+**Files created:** none
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_backwards` staged MATLAB + Python Pass 1 + xfail oracle (2026-05-04)
+
+**Scope:** Extracted local ``spm_backwards`` from ``spm_MDP_VB_XXX.m`` into
+``matlab_src/toolbox/DEM/spm_backwards.m`` (adds file-local ``spm_norm`` and ``spm_children`` for
+Engine). Added ``python_src/toolbox/DEM/spm_backwards.py`` (Pass 1, dependent + independent + path
+blocks). Oracle ``tests/oracle/toolbox/DEM/test_spm_backwards.py``:
+``test_spm_backwards_nm1_one_factor_T2_oracle`` is **xfail** (``F`` / ``Q`` still diverge from
+MATLAB on the minimal grid; next pass: align dependent tensor + ``spm_dot`` chain), plus
+``test_spm_backwards_smoke_runs_without_matlab``.
+
+**``pytest``:** ``test_spm_backwards.py`` → **1 passed, 1 xfailed**; combined with
+``test_spm_MDP_VB_XXX_spm_sample`` + ``test_spm_forwards`` + ``test_spm_VBX`` → **23 passed, 1 xfailed**.
+
+**Files read:** ``spm_MDP_VB_XXX.m`` (local function), ``spm_backwards.m`` (staged), ``notes/andrew Python Matlab Translation Issues.md``, ``Atari_example.md``.
+
+**Files created:** ``matlab_src/toolbox/DEM/spm_backwards.m``, ``python_src/toolbox/DEM/spm_backwards.py``, ``tests/oracle/toolbox/DEM/test_spm_backwards.py``.
+
+**Files modified:** ``Atari_example.md`` (Entry 12 dependency line), ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``.
+
+**Files deleted:** none.
+
+**Shared files touched:** no
+
+---
+
+### `spm_MDP_VB_XXX` post-replay Dirichlet learning (~1485–1587) (2026-05-04)
+
+**Scope:** After ``OPTIONS.B`` backwards replay, added
+``_vb_accumulate_dirichlet_parameter_learning`` in
+``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``: updates ``a``/``b``/``c``/``d``/``e`` (``spm_children`` for
+``c``), ``spm_MDP_MI`` for active learning when ``beta`` (3-arg path for ``a``; 2-arg ``b`` path uses
+the same slot as MATLAB’s two-argument ``spm_MI(pb,H)``), ``spm_softmax`` / ``[0,1]`` prior when
+``beta==0``, and ``Fa``–``Fe`` via ``spm_KL_dir``. Does not include ``OPTIONS.Y`` posterior predictive
+block.
+
+**Tests:** ``test_spm_MDP_VB_XXX_learning_a_beta_zero_partial`` (``beta==0`` closed form
+``a = qa*eta/(eta+1)`` + negative ``Fa[0]``). Re-ran ``test_spm_MDP_VB_XXX_spm_sample.py`` → **22 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (1485–1587), ``matlab_src/spm_MDP_MI.m`` (nargin
+slots), ``notes/andrew Python Matlab Translation Issues.md`` (spot-check).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_MDP_VB_XXX` `OPTIONS.Y` + `X`/`S` save layout (~1591–1617) (2026-05-04)
+
+**Scope:** After Dirichlet learning, added ``_vb_posterior_predictive_Y`` (MATLAB ~1591–1606: ``spm_parents`` +
+``spm_dot`` on ``bundle['A']``; ``A{g}`` **function_handle** raises ``NotImplementedError`` with explicit
+message) and ``_vb_reorganize_X_S_from_QP`` (~1613–1617: copy ``Q``/``P`` columns into ``X``/``S``).
+Partial output now forwards ``Y``, ``j``, ``i`` when present. Learning regression uses ``Y:0`` to isolate
+Dirichlet algebra from predictive bookkeeping.
+
+**Tests:** ``test_spm_MDP_VB_XXX_options_Y_partial_fills_Y_j_i``,
+``test_spm_MDP_VB_XXX_partial_X_columns_match_Q_after_sync``. Combined lane (forwards + VBX +
+VB_XXX + backwards) → **28 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1591–1618).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_MDP_VB_XXX` MATLAB ~1691–1718 assemble into returned `MDP` (2026-05-04)
+
+**Scope:** Added ``_vb_shiftdim_o_ng_t_cells``, ``_vb_normalize_AB_from_ab_if_missing``, ``_vb_assemble_mdp_results_1691``
+(copy ``T``, ``U``←``V``, ``R``/``v``/``w`` from policy bookkeeping, ``X``/``P`` from ``bundle['X']`` / ``bundle['S']``,
+``O`` after MATLAB-equivalent ``shiftdim`` to ``O[t][g]``, ``id``, optional ``A``/``B`` from Dirichlet parameters).
+Call only on ``_rgms_partial_ok`` before ``_vb_build_partial_output``; partial output now takes ``X``/``P`` from the
+assembled model. Helpers ``_vb_coerce_U_dense`` / ``_vb_mdp_U_as_float_array`` and hierarchical ``U_raw`` sparse handling
+fix re-entry when nested child returns with ``U`` as ``csr_matrix`` (post-assemble ``U``←``V``). Test
+``test_spm_MDP_VB_XXX_partial_assemble_1691_R_v_w_U_O``.
+
+**``pytest``:** combined lane (forwards, VBX, VB_XXX, backwards) → **29 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1691–1718).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_Gcdf` + `spm_MDP_VB_XXX` ``OPTIONS.N`` neural slice (~1623–1688) (2026-05-04)
+
+**Scope:** Added ``python_src/spm_Gcdf.py`` (Pass 1 from SPM ``spm_Gcdf.m``, staged as ``matlab_src/spm_Gcdf.m``),
+oracle ``tests/oracle/test_spm_Gcdf.py``. In ``spm_MDP_VB_XXX.py``, ``_vb_options_N_neural_simulated_responses``
+implements MATLAB ~1623–1688 (kernels, ``xn``/``wn``/``dn``/``un``, sum-to-one on **last** factor only per MATLAB).
+Runs after ``X``/``S`` sync and before assemble; partial output forwards ``xn``, ``wn``, ``dn``, ``un``.
+Test ``test_spm_MDP_VB_XXX_options_N_partial_neural_shapes``.
+
+**``pytest``:** dependency lane including ``test_spm_Gcdf.py`` + VB_XXX suite → **32 passed**.
+
+**Files read:** ``Documents/MATLAB/spm-main/spm_Gcdf.m``, ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1623–1688).
+
+**Files created:** ``python_src/spm_Gcdf.py``, ``matlab_src/spm_Gcdf.m``, ``tests/oracle/test_spm_Gcdf.py``
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `Atari_example.md` Entry 12 consolidation (2026-05-04)
+
+**Scope:** Replaced cluttered / conflicting Entry-12 bullets with a **single status table** vs
+``spm_MDP_VB_XXX.m`` regions, explicit **Migration Plan subordination** (helpers vs in-file line order),
+corrected **``spm_backwards``** status (integrated + oracle; Atari stress optional), and one **blocking**
+subsection (main loop / hierarchy / validation). Removed duplicate “what remains” lists.
+
+**Files read:** ``Atari_example.md`` (Entry 12), ``Migration Plan.md`` (grep 3.1 / VB_XXX).
+
+**Files created:** none
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_MDP_VB_XXX` in-loop `F` / `G` / `Z` / `Pa` bookkeeping (~1412–1416 + path `Z`) (2026-05-04)
+
+**Scope:** `_vb_belief_after_forwards` now accumulates MATLAB path-complexity **`Z`** (~1306–1307) when updating
+`P{m,f,t-1}` for multi-control factors. `_vb_run_partial_t_loop` stores per-time **`F`** (ELBO scalar from
+`spm_forwards`), augmented policy **`G`** column, **`Z`**, and latest **`Pa`** on each model after each belief step;
+`_vb_ensure_per_t_traces` preallocates length-`T` **`F`**/**`Z`** and list **`G`**. **`OPTIONS.B`** still overwrites
+**`F`** with `spm_backwards` output afterward (MATLAB-accurate). Follow-on iteration added active **`a`/`b`** in-loop
+learning (~1349–1409); **`sn`** in-loop and **`id.ig`** remain future slices.
+
+**``pytest``:** `test_spm_MDP_VB_XXX_spm_sample.py`, `test_spm_forwards.py`, `test_spm_backwards.py`, `test_spm_VBX.py` → **30 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1264–1418).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md`` (Entry 12 table row), ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_MDP_VB_XXX` in-loop active learning ~1349–1409 (`spm_cross`) (2026-05-04)
+
+**Scope:** Added `_vb_active_learning_in_loop` after `_vb_belief_after_forwards` and **before** per-time
+``F``/``G``/``Z`` logging: likelihood ``qa``/``A``/``W``/``K`` from ``spm_cross(O,Qj)`` over ``spm_children`` ×
+``spm_parents``; transition ``qb``/``B``/``I`` when ``t>1`` from ``spm_cross(spm_cross(Q_t,Q_{t-1}),P_{t-1})``.
+Imports ``spm_cross`` from ``python_src/spm_cross.py``. ``test_spm_MDP_VB_XXX_learning_a_beta_zero_partial`` now
+monkeypatches the in-loop step off so it still isolates the post-loop ~1485 ``beta==0`` blend. New Engine oracles
+``test_spm_cross_VB_in_loop_da_O_Qj_matches_matlab`` and ``test_spm_cross_VB_in_loop_db_transition_matches_matlab``.
+
+**``pytest``:** combined lane (`VB_XXX`, `test_spm_forwards`, `test_spm_backwards`, `test_spm_VBX`) → **32 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1349–1409).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `spm_MDP_VB_XXX` ``id.ig``, in-loop ``sn``, terminal trim (~1418–1449) (2026-05-04)
+
+**Scope:** `_vb_in_loop_id_ig_and_sn` after per-agent ``F``/``G``/``Z``/``Pa``: ``id{m}.ig(t)=id{m}.i`` when ``i``
+present; ``OPTIONS.N`` fills ``sn{m,f}(:,i,t)`` from ``Q{m,f,i}``. End of each time index when ``t==T``:
+`_vb_trim_mdp_o_s_u_at_terminal_horizon` keeps first ``T`` columns of ``o``/``s``/``u``. Assemble forwards ``sn`` onto
+``models[mi]`` when ``N``; partial output copies ``sn``. New tests: ``sn`` last slice vs ``Q``, ``id.ig`` smoke, trim
+column widths.
+
+**``pytest``:** combined lane (`VB_XXX`, forwards, backwards, VBX) → **35 passed**.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1418–1449).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `run_dem_atariiii(entry_stop=12)` + degenerate-geometry guards (2026-05-04)
+
+**Scope:** Wired Entry 12 in ``python_src/toolbox/DEM/DEM_AtariIII.py``: ``ctx['PDP'] = spm_MDP_VB_XXX(ctx['RDP'], {_rgms_partial_ok: 1})``, checkpoint hooks **12** pre/post, ``ctx['_entry12_use_partial_vb']``. New ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py`` monkeypatches ``spm_MDP_VB_XXX`` to assert wiring.
+
+Defensive fixes for nested edge geometry: ``spm_MDP_checkX`` default ``E`` when ``Nu(f)<=0``; ``spm_dir_norm`` skip ``1/size(A,1)`` when ``size(A,1)==0``; ``spm_set_costs`` ``atleast_1d(U)``; ``spm_MDP_VB_XXX._spm_norm`` empty-row early return. ``notes/andrew Python Matlab Translation Issues.md`` updated.
+
+**``pytest``:** ``test_DEM_AtariIII_entry12_driver``, ``test_DEM_AtariIII_entry11``, ``test_spm_MDP_checkX``, ``test_spm_MDP_VB_XXX_spm_sample``.
+
+**Files created:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py``
+
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``python_src/toolbox/DEM/spm_MDP_checkX.py``, ``python_src/spm_dir_norm.py``, ``python_src/toolbox/DEM/spm_set_costs.py``, ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``, ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** ``spm_dir_norm.py`` (empty-shape guard)
+
+---
+
+### Entry-12 path: degenerate sampling + ``Np==0`` + ``spm_forwards`` induction (2026-05-04)
+
+**Scope:** Nested Atari ``RDP`` hit empty / zero-sum probability vectors in ``_spm_sample``, ``Np==0`` policy grids with
+still-required ``BP{m,f,1}`` slots, empty ``Pu`` in ``_vb_prior_QP_paths_states_one_model``, scalar ``G`` when ``Np==0``,
+1-D ``id.hid``, and degenerate ``B`` slices / missing BP tensors in ``_spm_induction_vb``. Mirrored numeric-path fixes in
+``spm_MDP_generate._spm_sample``. Guards: ``_vb_gen_u_paths_one_model`` skips empty ``E{f}`` columns;
+``_vb_gp_transition_column`` when ``size(B,3)==0``. ``run_dem_atariiii(12)`` smoke completes (partial VB).
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` (32), ``test_spm_forwards.py`` (1).
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_forwards.m`` (subset), ``spm_MDP_VB_XXX.m`` (subset).
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``python_src/toolbox/DEM/spm_MDP_generate.py``, ``python_src/toolbox/DEM/spm_forwards.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 parity testing (`Atari_example.md`): capture v3 + driver contract (2026-05-04)
+
+**Scope:** MATLAB Entry-12 artifact **v3**: ``pdp12_l0_Q_shapes``, ``pdp12_l0_o_shape`` … ``pdp12_l0_w_shape``.
+``test_entry12_python_partial_structural_checkpoint_from_artifact`` asserts ``T``, ``Q`` shapes, ``|F|``, assembly shapes.
+New ``test_entry12_driver_partial_pdp_contract_matches_ledger``. Ledger Entry 12 **Testing** section expanded.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``Atari_example.md`` Entry 12 — concise revision (source-order plan only) (2026-05-04)
+
+**Scope:** Entry 12 pruned: **Current plan** block (``spm_MDP_VB_XXX.m`` only, line ranges, hierarchy path); removed Migration Plan bullet and large status table; shortened tests list.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``spm_MDP_VB_XXX`` local ``spm_multiply`` (~2603) — hierarchy ``id`` prior updates (2026-05-04)
+
+**Scope:** MATLAB ``spm_multiply`` is ``spm_softmax(spm_log(p)+spm_log(q))``, not ``norm(p.*q)``. Added ``_spm_multiply``; replaced wrong ``_spm_norm``-of-product in ``_vb_hierarchical_subordinate_outcomes`` (~1061–1071 analog). Oracle: ``test_vb_local_spm_multiply_is_softmax_log_sum``, ``test_vb_spm_multiply_matches_matlab_softmax_log_chain``. Note in ``notes/andrew Python Matlab Translation Issues.md``; docstring fix for hierarchy partial status.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` (34 passed).
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Hierarchical `S` → `O` (`spm_MDP_VB_XXX.m` ~1136–1151) (2026-05-04)
+
+**Scope:** Added ``_vb_hierarchical_apply_S_as_O_if_present`` (``seg`` with optional ``Q.O{L}`` column offset, logical
+``j`` via ``seg <= size(S,2)``, all-false → ``O`` is ``n×0``). Invoked in ``_vb_hierarchical_subordinate_outcomes`` after
+``O``/``o`` removal, before child ``spm_MDP_VB_XXX``. Tests: ``test_vb_hierarchical_S_to_O_*`` in
+``test_spm_MDP_VB_XXX_spm_sample.py``.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` (37 passed).
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (hierarchy block ~1125–1155)
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Nested ``_spm_action`` + hierarchical process child (~1087–1105, ~2688–2766) (2026-05-04)
+
+**Scope:** Implemented file-local ``_spm_action`` from MATLAB nested ``spm_action`` (accuracy objective over
+``MDP.ID.control`` modalities, policy sweep over ``GV``, ``spm_softmax(F,chi)`` + ``spm_sample``). Hierarchical
+``_vb_hierarchical_subordinate_outcomes`` now runs this when the child is a process model (``GA``/``GB``/``GU``) and
+``GV`` is present, then applies ``u``/``s`` column narrowing and the ``GE``/``GD``/``s`` sampling loop (~1093–1105).
+Unit test: ``test_vb_spm_action_updates_u_from_selected_policy``. *(Superseded 2026-05-05: main-loop ``spm_action``
+now wired via ``_vb_gen_control_one_model``.)*
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` (38 passed).
+
+**Files read:** ``spm-main/toolbox/DEM/spm_MDP_VB_XXX.m`` (~1077–1106, ~2686–2766)
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Main-loop ``spm_action`` (~814–816) via ``_vb_gen_control_one_model`` (2026-05-05)
+
+**Scope:** Replaced ``NotImplementedError`` with ``_spm_action(md, bundle['A'][m], Q_slice, t_idx)`` where
+``Q_slice[f] = bundle['Q'][m][f][t_idx]`` (MATLAB ``Q(m,:,t)``). Padded ``u``/``s`` to ``len(GB) × T`` before the call.
+Test: ``test_vb_gen_control_main_loop_passes_Q_slice_and_t_idx``.
+
+**``pytest``:** ``test_spm_MDP_VB_XXX_spm_sample.py`` (39 passed).
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` (~806–827)
+
+**Files created:** none
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
 **Shared files touched:** no
 
 ---

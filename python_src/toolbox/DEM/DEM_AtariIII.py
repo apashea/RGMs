@@ -3,8 +3,10 @@ Driver-lane transliteration scaffold for DEM_AtariIII.m (non-visual path).
 
 This module is intentionally entry-aligned with `Atari_example.md`. It orchestrates
 already-translated `spm_*` functions and keeps per-entry checkpoint/capture hooks so
-later entries can be isolated against MATLAB boundary states. `entry_stop` is implemented for
-**1..11** (Entry 11: `spm_set_costs`, `spm_mdp2rdp`, `RDP.T = 64`); **12+** is not wired.
+later entries can be isolated against MATLAB boundary states. `entry_stop` returns for
+**1..12** (Entry 11: costs / nested ``RDP``; Entry 12: ``PDP = spm_MDP_VB_XXX(RDP)`` in partial
+MATLAB-faithful mode until the global VB stub is removed). MATLAB capture artifacts live in
+``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from python_src.toolbox.DEM.spm_MDP_pong import spm_MDP_pong
 from python_src.toolbox.DEM.spm_RDP_basin import spm_RDP_basin
 from python_src.toolbox.DEM.spm_mdp2rdp import spm_mdp2rdp
 from python_src.toolbox.DEM.spm_RDP_sort import spm_RDP_sort
+from python_src.toolbox.DEM.spm_MDP_VB_XXX import spm_MDP_VB_XXX
 from python_src.toolbox.DEM.spm_set_costs import spm_set_costs
 from python_src.toolbox.DEM.spm_set_goals import spm_set_goals
 
@@ -255,12 +258,15 @@ def dem_atariiii_paths_to_hits_P(
 
 def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     """
-    Run DEM_AtariIII driver entries up to `entry_stop` (implemented through Entry 11).
+    Run DEM_AtariIII driver entries up to `entry_stop` (implemented through Entry 12).
+
+    Entry 12 calls ``spm_MDP_VB_XXX(RDP)`` with ``_rgms_partial_ok`` until the full MATLAB time loop
+    is ported. MATLAB-only artifact capture: ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``.
     """
     if entry_stop < 1:
         raise ValueError("entry_stop must be >= 1")
-    if entry_stop > 11:
-        raise NotImplementedError("Entries 12+ are not translated in DEM_AtariIII.py yet")
+    if entry_stop > 12:
+        raise NotImplementedError("entry_stop > 12 is not implemented in DEM_AtariIII.py")
 
     ctx: dict[str, Any] = {}
 
@@ -461,6 +467,17 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     if entry_stop == 11:
         return ctx
 
+    # %%% ENTRY 12 (variational Bayes on nested RDP → PDP)
+    if _use_checkpoint(12):
+        ctx = _load_context(12, "pre")
+    elif _capture_enabled(12, "pre"):
+        _save_context(12, "pre", ctx)
+
+    ctx["PDP"] = spm_MDP_VB_XXX(ctx["RDP"])
+    ctx["_entry12_use_partial_vb"] = False
+
+    if _capture_enabled(12, "post"):
+        _save_context(12, "post", ctx)
     return ctx
 
 __all__ = [
