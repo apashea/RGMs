@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
+import time
 
 import numpy as np
+import pytest
 
-from python_src.toolbox.DEM.DEM_AtariIII import run_dem_atariiii
+from python_src.toolbox.DEM.DEM_AtariIII import get_dem_atariiii_run_last_label, run_dem_atariiii
 
 
 def test_DEM_AtariIII_entry11_driver_smoke():
@@ -55,3 +57,25 @@ def test_DEM_AtariIII_entries_1_to_11_python_smoke():
     assert "RDP" in ctx
     assert "P" in ctx
     assert np.asarray(ctx["P"], dtype=np.float64).shape[0] == 32
+
+
+def test_DEM_AtariIII_entry11_run_deadline_message():
+    """Expired ``RGMS_ATARI_RUN_DEADLINE_MONO`` aborts with the documented timeout string and last-operation label."""
+    deadline_keys = ("RGMS_ATARI_RUN_DEADLINE_MONO", "RGMS_ATARI_RUN_DEADLINE_MINUTES")
+    old = {k: os.environ.get(k) for k in deadline_keys}
+    try:
+        if "RGMS_ATARI_RUN_DEADLINE_MINUTES" in os.environ:
+            del os.environ["RGMS_ATARI_RUN_DEADLINE_MINUTES"]
+        os.environ["RGMS_ATARI_RUN_DEADLINE_MONO"] = str(time.perf_counter() - 1.0)
+        with pytest.raises(RuntimeError) as excinfo:
+            run_dem_atariiii(entry_stop=1)
+        msg = str(excinfo.value)
+        assert "TIME LIMIT OF ? MINUTES EXCEEDED" in msg
+        assert "Last call =" in msg
+        assert get_dem_atariiii_run_last_label() in msg
+    finally:
+        for k in deadline_keys:
+            if old[k] is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = str(old[k])

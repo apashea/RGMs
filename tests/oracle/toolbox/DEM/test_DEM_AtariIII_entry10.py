@@ -42,9 +42,10 @@ def _pull_nested_rdp_from_matlab(eng, expr: str) -> dict[str, Any]:
     for cell_name in ("A", "B", "C", "a", "b"):
         if _mat_int(eng, f"isfield({expr},'{cell_name}')"):
             nc = _mat_int(eng, f"numel({expr}.{cell_name})")
-            cells: list[list[np.ndarray]] = []
+            cells: list[np.ndarray] = []
             for k in range(1, nc + 1):
-                cells.append([_mat_full_numeric(eng, f"{expr}.{cell_name}{{{k}}}")])
+                # One ndarray per MATLAB cell (not ``[array]``): Python ``spm_MDP_checkX`` / VB expect ``A[g].shape``.
+                cells.append(_mat_full_numeric(eng, f"{expr}.{cell_name}{{{k}}}"))
             out[cell_name] = cells
 
     for vec_name in ("sA", "sB", "sC"):
@@ -53,7 +54,9 @@ def _pull_nested_rdp_from_matlab(eng, expr: str) -> dict[str, Any]:
             out[vec_name] = [int(x) for x in arr.tolist()]
 
     if _mat_int(eng, f"isfield({expr},'U')"):
-        out["U"] = np.asarray(eng.eval(f"double({expr}.U)"), dtype=np.float64)
+        u = np.asarray(eng.eval(f"double({expr}.U)"), dtype=np.float64)
+        # MATLAB ``U`` is 1×Nf row; Engine pulls can arrive as 0-D/1-D — VB uses ``MDP.U(:,f)`` (2-D).
+        out["U"] = np.atleast_2d(u)
 
     if _mat_int(eng, f"isfield({expr},'G')"):
         out["G"] = _mat_groups(eng, f"{expr}.G")
@@ -84,10 +87,12 @@ def _pull_nested_rdp_from_matlab(eng, expr: str) -> dict[str, Any]:
     return out
 
 
-def _matlab_build_entry10_training_end_boundary(dem_eng, training_t: int, n_outer: int) -> None:
+def _matlab_build_entry10_training_end_boundary(
+    dem_eng, training_t: int, n_outer: int, rng_seed: int = 0
+) -> None:
     """Reproducible MATLAB pipeline through end of Entry 9 (`rgms_mdp9`), Entry-10-owned string."""
     dem_eng.eval(
-        "rng(0,'twister'); "
+        f"rng({int(rng_seed)},'twister'); "
         "Nr = 12; Nc = 9; Sc = 9; Nd = 4; C = 32; "
         "[GDP,~,~,~,RGB] = spm_MDP_pong(Nr,Nc,Nd,true,0); "
         "S = ones(4,3); S(1,:) = [Nr,Nc,1]; "

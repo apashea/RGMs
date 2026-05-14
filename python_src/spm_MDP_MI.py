@@ -9,6 +9,17 @@ from python_src.spm_log import spm_log
 
 
 def spm_MDP_MI(a, c=None, h=None):
+    """Expected information gain (mutual information); Pass 1 translation of ``spm_MDP_MI.m``.
+
+    **Warnings vs MATLAB:** NumPy may emit ``RuntimeWarning`` for ``log(0)``, ``log(NaN)``, or
+    ``0/0`` in intermediate arrays **before** ``spm_log`` applies ``np.fmax(np.log(...), -32)``
+    (MATLAB ``spm_log.m`` applies ``max(log(...), -32)`` with ``log`` evaluated inside ``max``).
+    Those diagnostics do not by themselves imply a different formula from MATLAB: IEEE values
+    are clamped afterward like MATLAB's two-argument ``max`` with ``-32``. MATLAB's Command
+    Window is usually quiet for the same float events. The non-cell tensor path uses
+    ``np.errstate(divide='ignore', invalid='ignore')`` so only those expected NumPy float
+    diagnostics are suppressed here (not elsewhere in the codebase).
+    """
     # deal cells of (multimodal) tensors (omitting gradients)
     if _iscell(a):
         E = 0
@@ -23,52 +34,53 @@ def spm_MDP_MI(a, c=None, h=None):
             E = E + (e[0] if isinstance(e, tuple) else e)
         return E
 
-    # deal with tensors
-    a = _matrix_view(a)
+    # deal with tensors (expected log/0/0 warnings: see docstring; scoped errstate)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        a = _matrix_view(a)
 
-    # expected information gain (and negative cost)
-    s = np.sum(a)
-    A = a / s
-    E = _spm_MI(A)
+        # expected information gain (and negative cost)
+        s = np.sum(a)
+        A = a / s
+        E = _spm_MI(A)
 
-    # expected (negative) cost : outcomes
-    if c is not None:
-        if _numel(c):
-            c = _column(c) / np.sum(c)
-            C = spm_log(c)
-            E = E + C.T @ _sum_dim(A, 2)
-        else:
-            C = 0
+        # expected (negative) cost : outcomes
+        if c is not None:
+            if _numel(c):
+                c = _column(c) / np.sum(c)
+                C = spm_log(c)
+                E = E + C.T @ _sum_dim(A, 2)
+            else:
+                C = 0
 
-    # expected (negative) cost : latent states
-    if h is not None:
-        h = _spm_cat_colon(h)
-        if _numel(h):
-            h = _column(h) / np.sum(h)
-            H = spm_log(h)
-            E = E + _sum_dim(A, 1) @ H
-        else:
-            H = 0
+        # expected (negative) cost : latent states
+        if h is not None:
+            h = _spm_cat_colon(h)
+            if _numel(h):
+                h = _column(h) / np.sum(h)
+                H = spm_log(h)
+                E = E + _sum_dim(A, 1) @ H
+            else:
+                H = 0
 
-    # dEdA
-    dEdA = spm_log(A / (_sum_dim(A, 2) @ _sum_dim(A, 1))) - 1
+        # dEdA
+        dEdA = spm_log(A / (_sum_dim(A, 2) @ _sum_dim(A, 1))) - 1
 
-    # expected (negative) cost
-    if c is not None:
-        if np.isscalar(C):
-            dEdA = dEdA + (C - C * _sum_dim(A, 2))
-        else:
-            dEdA = dEdA + (C - C.T @ _sum_dim(A, 2))
-    if h is not None:
-        if np.isscalar(H):
-            dEdA = dEdA + (H - _sum_dim(A, 1) * H)
-        else:
-            dEdA = dEdA + (H.T - _sum_dim(A, 1) @ H)
+        # expected (negative) cost
+        if c is not None:
+            if np.isscalar(C):
+                dEdA = dEdA + (C - C * _sum_dim(A, 2))
+            else:
+                dEdA = dEdA + (C - C.T @ _sum_dim(A, 2))
+        if h is not None:
+            if np.isscalar(H):
+                dEdA = dEdA + (H - _sum_dim(A, 1) * H)
+            else:
+                dEdA = dEdA + (H.T - _sum_dim(A, 1) @ H)
 
-    # dEda = dEdA.*dAda, dAda = (1/s - a/(s^2))
-    dEda = dEdA * (1 - A) / s
+        # dEda = dEdA.*dAda, dAda = (1/s - a/(s^2))
+        dEda = dEdA * (1 - A) / s
 
-    return matlab_scalar(E), dEda, dEdA
+        return matlab_scalar(E), dEda, dEdA
 
 
 def _spm_MI(A):

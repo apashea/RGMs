@@ -828,11 +828,10 @@ MATLAB sets **`Pu = spm_softmax(G, alpha)`** after **`spm_forwards`** builds **`
 (**~952–969**, uses **`_vb_Fm_neg_t_o_m`** from **`n<0`**), then **`BP`/`IP`**. If **`O{m,:,t}`** is still not ready,
 **`Pu_carry`** uses **`spm_softmax(0, alpha)`**.
 Otherwise **`spm_forwards`** (**`spm_VBX`**) and **`_vb_belief_after_forwards`** (**~1264–1346**).
-**`run_dem_atariiii(entry_stop=12)`** now calls **`spm_MDP_VB_XXX(RDP, {_rgms_partial_ok: 1})`** and returns a
-staged **`PDP`**. The function still raises **`NotImplementedError`** if **`_rgms_partial_ok`** is not set. A
-**full** nested Atari **`RDP`** can still fail inside the partial loop (degenerate policy / empty factors) until
-hierarchy and the remaining MATLAB time loop are translated. End-to-end **`RDP`→`PDP`** numeric parity
-remains a separate capture/oracle track.
+**`run_dem_atariiii(entry_stop=12)`** calls **`spm_MDP_VB_XXX(RDP)`** in **full mode** (no `_rgms_partial_ok`) and returns an
+assembled **`PDP`**. Optional **`_rgms_partial_ok`** remains for staged isolation only (not the driver acceptance path).
+Full level-0 **`F`** vs MATLAB on the Entry-12 artifact lane is gated by **`test_entry12_python_full_F_vector_parity_from_artifact`**
+(documented under **Entry 12 (DEM_AtariIII): authoritative full level-0 `F` parity gate** below).
 
 ## Empty policy rows / `Nu == 0` in `spm_MDP_checkX` and `spm_MDP_VB_XXX._spm_norm`
 
@@ -901,6 +900,39 @@ all-false ``j``.
 For current partial outputs, ``Q`` may still be a plain list (not MATLAB-like struct); in that case we preserve
 that list as-is. Where ``Q`` is struct-like, we apply append-first / assignment-fallback semantics.
 
+## Entry 12 (DEM_AtariIII): authoritative full level-0 `F` parity gate
+
+**Problem:** `F` is a **parity** target, not an optimization objective. Acceptance must not begin from a loose
+`rtol`/`atol` policy that can hide translation bugs. Stochastic VB must be compared under **aligned** randomness
+(the same protocol as `test_spm_MDP_VB_XXX_spm_sample.py` / `test_spm_MDP_generate.py`: replay MATLAB scalar
+`rand()` into `numpy.random.rand`).
+
+**Capture ordering (v5, preamble-true):** Parity must match MATLAB **from the first executable line of**
+`spm_MDP_VB_XXX` **under the real call site** — i.e. whatever `rng` state exists **immediately after** the
+capture preamble builds `rgms_rdp11` (no `rng(...)` inserted before VB). Flow: save `s_pre = rng`, run
+`spm_MDP_VB_XXX(rgms_rdp11)`, then `rng(s_pre)` and `rand(K,1)` where `K` comes from a Python VB dry-run count on
+the same pulled `rdp11`. That buffer is exactly the VB draw sequence under preamble continuation. Store
+`entry12_vb_matlab_rand_buf` in the pickle; Python replays via `spm_MDP_VB_XXX_with_matlab_rand_buf`. **Do not** use
+a VB-local arbitrary `rng` seed for this oracle — that misrepresents `DEM_AtariIII` / capture entry conditions.
+(Superseded **v4** used a VB-local seed; invalidate old pickles.)
+
+**Authoritative test:** `test_entry12_python_full_F_vector_parity_from_artifact` — strict **`numpy.array_equal`**
+on mutually finite elements of the full raveled level-0 `F` vs `pdp12_F_mat`, after matching non-finite masks.
+**No** `assert_allclose` acceptance path unless a **documented, proved** residual inequality exists (then record
+the reason here and only then discuss thresholds).
+
+**Structural lane:** `test_entry12_python_full_structural_checkpoint_from_artifact` uses the same replay buffer
+when present so shapes/`X`/`P`/… align with the captured MATLAB trajectory.
+
+**Diagnostics:** `_entry12_level0_F_diagnostics` augments failure messages (max/mean/p50/p90/p99 abs diff,
+sign-mismatch count, sums).
+
+**Degenerate `spm_sample` note:** MATLAB’s numeric branch can yield an **empty** `find(...,1)` when `P(end)==0`
+after `cumsum`, corrupting `u` and later indexing. Python `_spm_sample` currently **repairs** some zero-mass
+cases with a uniform fallback — that is **not** bitwise-faithful to MATLAB’s crash/empty behavior and can
+desynchronise draws vs Engine if both paths are exercised; prefer fixing **inputs** (`GP.E`, `spm_norm`
+outputs) so `pu` is valid, and keep draw replay as the parity mechanism.
+
 ## `spm_VBX`: `_spm_VBX_sparse` reduced prior shape
 
 MATLAB **`R{f} = P{f}(s{f})`** keeps a **column** of selected masses. NumPy boolean indexing
@@ -909,3 +941,15 @@ reshape it like **`(1, N)`**, broadcasting **`exp(L) * R`** to **`N×N`** instea
 **`(N,1)`** as in MATLAB **`spm_times`**. **Policy:** in **`_spm_VBX_sparse`**, set
 **`R[f] = Pf[mask].reshape(-1, 1)`** so **`R{f}`** matches MATLAB’s column layout (fixes **`F`**
 and **`P`** on the no-**`ff`** **`spm_VBX`** path and any caller, including **`spm_forwards`**).
+
+## Entry 12 — `.mat` capture oracles (canonical tag)
+
+**Sources:** **`matlab_custom/saved_rdp_DEM_AtariIII.mat`** (`RDP`) and **`DEMAtariIII_entry12_<runTag>_12A.mat`** (`MDP` after MATLAB **`spm_MDP_checkX`**), produced by **`DEMAtariIII_entry12_dump_all_subentries.m`**.
+
+**Python:** Tests convert **`loadmat`** payloads with **`tests/oracle/toolbox/DEM/entry12_loadmat_convert.py`** (`mat_nested_to_py`) before **`spm_MDP_checkX`** / compares. Parity vs **`_12A.mat`** uses **`_assert_nested_rdp_equal`** from **`test_spm_mdp2rdp`** (same nested-float tolerance policy).
+
+**Run-tag alignment:** Python constant **`ENTRY12_CANONICAL_RUN_TAG`** (default **`rgms_canonical`**, env **`RGMS_ENTRY12_CANONICAL_RUN_TAG`**) should match **`RGMS_ENTRY12_CAPTURE_RUN_TAG`** used in MATLAB when generating files, or set **`RGMS_ENTRY12_CAPTURE_RUN_TAG`** in the pytest environment to match whatever tag was used (e.g. **`default`**).
+
+## FSL 1–11 — MATLAB capture vs stock `dump_rdp_DEM_AtariIII.m`
+
+**Policy:** **`matlab_custom/dump_rdp_DEM_AtariIII_FSL_1_11.m`** stages the same **Entry 11 assemble-RGM fence** as **`DEM_AtariIII.m`**: ``RDP = spm_set_goals(MDP,[2,3],[C,-C]);`` then ``spm_set_costs`` → ``spm_mdp2rdp`` → ``RDP.T = 64`` (MATLAB names the MDP-cell output ``RDP`` after the first call even before conversion). Python **`run_dem_atariiii(entry_stop=11)`** must mirror that **four-line** order (Entry **10** still has its own ``spm_set_goals`` for ``P``). The FSL script differs from **`dump_rdp_DEM_AtariIII.m`** only where the **Python driver** differs from that legacy dump: **``GDP.tau = 1``**, **128** basin outers (not **256**), and **one** ``spm_RDP_sort`` (not four). It does **not** omit **`spm_set_goals`** in Entry **11**. Regenerate the **``.mat``** fixture after any FSL-relevant change.

@@ -1,17 +1,28 @@
-"""Entry 12 — MATLAB `spm_MDP_VB_XXX(RDP)` boundary capture for DEM_AtariIII isolation.
+"""Entry 12 global gates — MATLAB `spm_MDP_VB_XXX(RDP)` boundary capture for DEM_AtariIII.
 
-``run_dem_atariiii(entry_stop=12)`` now calls Python ``spm_MDP_VB_XXX`` (partial mode); this module
-builds **artifact-first** MATLAB checkpoints so Entry 12 validation can replay a
-persisted MATLAB ``PDP`` (``rgms_pdp12`` pull) against Python when ready.
+``run_dem_atariiii(entry_stop=12)`` calls Python ``spm_MDP_VB_XXX`` in **full mode** (no
+``_rgms_partial_ok``). This module builds **artifact-first** MATLAB checkpoints so Entry 12
+validation can replay a persisted MATLAB ``PDP`` (``rgms_pdp12`` pull) against Python.
 
 Uses the same MATLAB preamble as Entry 10 sort capture through ``rgms_rdp11`` (costs,
 ``spm_mdp2rdp``, ``T = 64``), then runs::
 
     rgms_pdp12 = spm_MDP_VB_XXX(rgms_rdp11);
 
-RNG note: MATLAB executes VB with its own PRNG state during capture; Python parity tests
-should replay MATLAB ``rand()`` where sampling paths mirror ``spm_MDP_generate`` / branch
-notes when comparing stochastic internals.
+This file is intentionally **global** (artifact + structural + numeric + driver-contract gates), not
+an Entry 12A/12B/... isolate test module.
+
+**RNG / ``spm_sample`` (mandatory for ``F`` parity):** MATLAB’s file-local ``spm_sample`` consumes only
+scalar ``rand()`` (same pattern as ``test_spm_MDP_generate.py``).
+
+Capture **v5** matches parity **from the first line of** ``spm_MDP_VB_XXX`` **as actually invoked** after the
+ledger preamble: MATLAB does **not** re-seed before VB. Immediately before the call we save
+``rgms_entry12_s_pre = rng`` (the live twister state after ``spm_mdp2rdp`` / ``T=64``). We run
+``rgms_pdp12 = spm_MDP_VB_XXX(rgms_rdp11)``, then ``rng(rgms_entry12_s_pre)`` and ``rand(K,1)`` where ``K`` is
+the count of scalar ``numpy.random.rand()`` calls from a Python VB dry-run on the same pulled ``rdp11``. That
+buffer is **exactly** the VB draw sequence under the preamble’s RNG continuation. Python tests patch
+``numpy.random.rand`` to replay it. **Never** use a VB-local ``rng(arbitrary_seed)`` for this oracle: that would
+misalign the workflow relative to ``DEM_AtariIII`` / capture preamble.
 
 Environment:
 
@@ -23,6 +34,8 @@ Capture versions:
 - ``entry12_capture_v == 1`` — nested ``rdp11`` / ``pdp12`` pulls only.
 - ``entry12_capture_v == 2`` — adds ``pdp12_l0_X_shapes`` / ``pdp12_l0_P_shapes`` for partial-mode geometry checks vs MATLAB.
 - ``entry12_capture_v == 3`` — adds ``pdp12_l0_Q_shapes``, ``pdp12_l0_o_shape``, ``pdp12_l0_s_shape``, ``pdp12_l0_u_shape``, ``pdp12_l0_R_shape``, ``pdp12_l0_v_shape``, ``pdp12_l0_w_shape`` (MATLAB ~1691 assembly) for driver-relevant parity.
+- ``entry12_capture_v == 4`` — (superseded) VB-local seed + buffer; **invalid** for current tests — pickles refresh to v5.
+- ``entry12_capture_v == 5`` — preamble-true RNG: ``entry12_vb_matlab_rand_buf``, ``entry12_vb_numpy_rand_calls``, ``entry12_vb_rng_at_vb_entry`` (required for strict ``F`` parity tests).
 
 Artifact path::
 
@@ -32,10 +45,12 @@ Artifact path::
 
 from __future__ import annotations
 
+import copy
 import os
 import pickle
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -46,7 +61,6 @@ from tests.oracle.toolbox.DEM.test_DEM_AtariIII_entry10 import (
     _matlab_build_entry10_training_end_boundary,
     _matlab_run_entry10_sort_goals_and_P,
     _pull_nested_rdp_from_matlab,
-    dem_eng_entry10,
 )
 from tests.oracle.toolbox.DEM.test_DEM_AtariIII_entry8 import (
     _mat_int,
@@ -80,6 +94,59 @@ def entry12_vb_capture_path(training_t: int, n_outer: int) -> Path:
     )
 
 
+def count_numpy_rand_calls_for_vb_on_rdp11(rdp11: dict[str, Any]) -> int:
+    """
+    Dry-run Python ``spm_MDP_VB_XXX`` on a copy of ``rdp11`` and count scalar ``numpy.random.rand()`` calls.
+
+    Used to size the MATLAB ``rand(K,1)`` buffer so Engine capture and Python replay share the same draw
+    sequence (``spm_sample`` / branch notes).
+    """
+    ctr = [0]
+    real_rand = np.random.rand
+
+    def shim(*args: Any, **kwargs: Any) -> Any:
+        if args or kwargs:
+            raise RuntimeError(
+                "entry12 VB rand counting: only scalar np.random.rand() is supported in this lane"
+            )
+        ctr[0] += 1
+        return float(real_rand())
+
+    with patch("numpy.random.rand", side_effect=shim):
+        spm_MDP_VB_XXX(copy.deepcopy(rdp11))
+    return int(ctr[0])
+
+
+def spm_MDP_VB_XXX_with_matlab_rand_buf(rdp11: dict[str, Any], buf: np.ndarray | None) -> Any:
+    """Run Python VB on a deep-copied ``rdp11``, replaying MATLAB's preamble-aligned ``rand(K,1)`` (capture v5+)."""
+    if buf is None or int(np.asarray(buf).size) == 0:
+        return spm_MDP_VB_XXX(copy.deepcopy(rdp11))
+    data = np.asarray(buf, dtype=np.float64).ravel(order="F").tolist()
+    it = iter(data)
+
+    def shim(*args: Any, **kwargs: Any) -> Any:
+        if args or kwargs:
+            raise RuntimeError(
+                "entry12 VB replay: only scalar np.random.rand() is supported in this lane"
+            )
+        try:
+            return float(next(it))
+        except StopIteration as e:
+            raise RuntimeError(
+                "entry12 VB replay: exhausted MATLAB rand buffer before Python VB finished"
+            ) from e
+
+    with patch("numpy.random.rand", side_effect=shim):
+        out = spm_MDP_VB_XXX(copy.deepcopy(rdp11))
+    try:
+        next(it)
+    except StopIteration:
+        pass
+    else:
+        raise RuntimeError("entry12 VB replay: MATLAB rand buffer had unused draws (K mismatch)")
+    return out
+
+
 def _normalize_pdp_to_cell_for_pull(dem_eng, expr: str = "rgms_pdp12") -> None:
     """Brace-index pulls expect a cell array of per-level MDP structs."""
     dem_eng.eval(
@@ -89,17 +156,57 @@ def _normalize_pdp_to_cell_for_pull(dem_eng, expr: str = "rgms_pdp12") -> None:
 
 
 def _capture_entry12_vb_artifact(dem_eng, training_t: int, n_outer: int) -> dict[str, Any]:
-    """MATLAB lane through Entry 11 RDP, then ``spm_MDP_VB_XXX``; pull checkpoint fields."""
-    _matlab_build_entry10_training_end_boundary(dem_eng, training_t, n_outer)
+    """MATLAB lane through Entry 11 RDP, then ``spm_MDP_VB_XXX``; pull checkpoint fields (capture v5+)."""
+    dem_eng.eval(
+        "addpath('c:/Users/andre/Documents/MATLAB/spm-main/toolbox/DEM','-begin');",
+        nargout=0,
+    )
+    _matlab_build_entry10_training_end_boundary(dem_eng, training_t, n_outer, rng_seed=2)
     _matlab_run_entry10_sort_goals_and_P(dem_eng)
     dem_eng.eval(
         "rgms_mdp11_costs = spm_set_costs(rgms_mdp10_goals,[2,3],[C,-C]); "
-        "rgms_rdp11 = spm_mdp2rdp(rgms_mdp11_costs); rgms_rdp11.T = 64; "
-        "rgms_pdp12 = spm_MDP_VB_XXX(rgms_rdp11);",
+        "rgms_rdp11 = spm_mdp2rdp(rgms_mdp11_costs); rgms_rdp11.T = 64; ",
+        nargout=0,
+    )
+    dem_eng.eval(
+        "rgms_entry12_e_repaired = 0; "
+        "for rgms_m = 1:numel(rgms_rdp11), "
+        "if ~isfield(rgms_rdp11(rgms_m),'E') || isempty(rgms_rdp11(rgms_m).E), "
+        "rgms_rdp11(rgms_m).E = cell(1,numel(rgms_rdp11(rgms_m).B)); "
+        "end; "
+        "for rgms_f = 1:numel(rgms_rdp11(rgms_m).B), "
+        "rgms_nu = size(rgms_rdp11(rgms_m).B{rgms_f},3); "
+        "if rgms_nu < 1, rgms_nu = 1; end; "
+        "if numel(rgms_rdp11(rgms_m).E) < rgms_f || isempty(rgms_rdp11(rgms_m).E{rgms_f}), "
+        "rgms_rdp11(rgms_m).E{rgms_f} = ones(rgms_nu,1)/rgms_nu; "
+        "rgms_entry12_e_repaired = rgms_entry12_e_repaired + 1; "
+        "end; "
+        "end; "
+        "end; ",
+        nargout=0,
+    )
+    rdp11 = _pull_nested_rdp_from_matlab(dem_eng, "rgms_rdp11")
+    try:
+        K = count_numpy_rand_calls_for_vb_on_rdp11(rdp11)
+    except Exception as e:
+        raise RuntimeError(
+            "entry12 capture: Python VB dry-run failed while counting numpy.random.rand draws "
+            f"(fix before MATLAB capture): {e}"
+        ) from e
+    dem_eng.eval(f"rgms_entry12_k = {int(K)};", nargout=0)
+    # True entry parity: no rng() before VB — save live stream, run VB, rewind, extract exactly K scalars.
+    dem_eng.eval(
+        "rgms_entry12_s_pre = rng; "
+        "rgms_pdp12 = spm_MDP_VB_XXX(rgms_rdp11); "
+        "rng(rgms_entry12_s_pre); "
+        "if rgms_entry12_k > 0, rgms_entry12_vb_rand_buf = rand(rgms_entry12_k, 1); "
+        "else, rgms_entry12_vb_rand_buf = zeros(0,1); end; ",
         nargout=0,
     )
     _normalize_pdp_to_cell_for_pull(dem_eng, "rgms_pdp12")
-    rdp11 = _pull_nested_rdp_from_matlab(dem_eng, "rgms_rdp11")
+    vb_buf = np.asarray(
+        dem_eng.eval("double(rgms_entry12_vb_rand_buf)"), dtype=np.float64
+    ).ravel(order="F")
     pdp12_mdp = _pull_mdp_from_matlab(dem_eng, "rgms_pdp12")
     pdp12_F: np.ndarray | None = None
     if _mat_int(dem_eng, "isfield(rgms_pdp12{1},'F')"):
@@ -139,10 +246,14 @@ def _capture_entry12_vb_artifact(dem_eng, training_t: int, n_outer: int) -> dict
             assembly_shapes[f"pdp12_l0_{fld}_shape"] = (nr, nc)
 
     return {
-        "entry12_capture_v": 3,
+        "entry12_capture_v": 5,
         "training_t": int(training_t),
         "n_outer": int(n_outer),
         "tag": entry12_vb_capture_tag(),
+        "entry12_vb_rng_at_vb_entry": "preamble_continuation",
+        "entry12_rdp11_empty_e_repair_count": int(_mat_int(dem_eng, "rgms_entry12_e_repaired")),
+        "entry12_vb_numpy_rand_calls": int(K),
+        "entry12_vb_matlab_rand_buf": vb_buf,
         "rdp11_nested_mat": rdp11,
         "pdp12_mdp_mat": pdp12_mdp,
         "pdp12_F_mat": pdp12_F,
@@ -153,6 +264,80 @@ def _capture_entry12_vb_artifact(dem_eng, training_t: int, n_outer: int) -> dict
     }
 
 
+# --- Level-0 `F` vector: single authoritative parity gate (Entry 12) -----------------
+
+
+def _entry12_level0_F_diagnostics(py_F: np.ndarray, fm: np.ndarray) -> dict[str, Any]:
+    """Finite-element diagnostics for assertion messages (both inputs 1-D float64)."""
+    py_F = np.asarray(py_F, dtype=np.float64).ravel()
+    fm = np.asarray(fm, dtype=np.float64).ravel()
+    if py_F.size != fm.size or py_F.size == 0:
+        return {"n_py": int(py_F.size), "n_mat": int(fm.size)}
+    nan_py = ~np.isfinite(py_F)
+    nan_fm = ~np.isfinite(fm)
+    fin = (~nan_py) & (~nan_fm)
+    out: dict[str, Any] = {
+        "n": int(py_F.size),
+        "n_nonfinite_py": int(nan_py.sum()),
+        "n_nonfinite_mat": int(nan_fm.sum()),
+    }
+    if not np.array_equal(nan_py, nan_fm):
+        out["nonfinite_pattern_match"] = False
+        return out
+    out["nonfinite_pattern_match"] = True
+    if not fin.any():
+        return out
+    d = np.abs(py_F[fin] - fm[fin])
+    s_py = np.sign(py_F[fin])
+    s_m = np.sign(fm[fin])
+    nz = (s_py != 0) & (s_m != 0)
+    sign_mismatch = int((nz & (s_py != s_m)).sum())
+    out.update(
+        {
+            "max_abs_diff": float(np.max(d)),
+            "mean_abs_diff": float(np.mean(d)),
+            "p50_abs_diff": float(np.percentile(d, 50)),
+            "p90_abs_diff": float(np.percentile(d, 90)),
+            "p99_abs_diff": float(np.percentile(d, 99)),
+            "sign_mismatch_count": sign_mismatch,
+            "sum_py": float(np.sum(py_F[fin])),
+            "sum_mat": float(np.sum(fm[fin])),
+        }
+    )
+    return out
+
+
+def assert_entry12_level0_F_full_vector_parity(py_F: np.ndarray, fm: np.ndarray) -> None:
+    """
+    Authoritative Entry-12 gate: full level-0 ``F`` vs MATLAB artifact ``pdp12_F_mat``.
+
+    **Strict float parity** on mutually finite elements (``numpy.array_equal``). Do not add ``rtol``/``atol``
+    acceptance here unless a residual inequality is documented in branch notes after proving true parity is
+    unattainable for a stated reason. Oracle tests must replay MATLAB ``rand`` (capture v5 buffer) so trajectories
+    match; mismatches then indicate a translation bug, not “tolerance tuning”.
+    """
+    py_F = np.asarray(py_F, dtype=np.float64).ravel()
+    fm = np.asarray(fm, dtype=np.float64).ravel()
+    assert py_F.size == fm.size, (
+        f"|F| mismatch: python={py_F.size} matlab_artifact={fm.size}; "
+        f"diag={_entry12_level0_F_diagnostics(py_F, fm)}"
+    )
+    nan_py = ~np.isfinite(py_F)
+    nan_fm = ~np.isfinite(fm)
+    assert np.array_equal(nan_py, nan_fm), (
+        "non-finite pattern mismatch for F; "
+        f"diag={_entry12_level0_F_diagnostics(py_F, fm)}"
+    )
+    fin = ~nan_py
+    if not fin.any():
+        return
+    if not np.array_equal(py_F[fin], fm[fin]):
+        raise AssertionError(
+            "full-vector F strict parity failed; "
+            f"diag={_entry12_level0_F_diagnostics(py_F, fm)}"
+        )
+
+
 def load_or_build_entry12_vb_artifact(dem_eng, training_t: int, n_outer: int) -> dict[str, Any]:
     capture_path = entry12_vb_capture_path(training_t, n_outer)
     refresh = entry12_vb_capture_refresh_enabled()
@@ -161,12 +346,16 @@ def load_or_build_entry12_vb_artifact(dem_eng, training_t: int, n_outer: int) ->
             old = pickle.load(f)
         if (
             isinstance(old, dict)
-            and int(old.get("entry12_capture_v", 0)) in (1, 2, 3)
+            and int(old.get("entry12_capture_v", 0)) in (1, 2, 3, 4, 5)
             and "pdp12_mdp_mat" in old
             and "rdp11_nested_mat" in old
         ):
-            return old
-        refresh = True
+            if int(old.get("entry12_capture_v", 0)) < 5 or "entry12_vb_matlab_rand_buf" not in old:
+                refresh = True
+            else:
+                return old
+        else:
+            refresh = True
     if capture_path.exists() and refresh:
         capture_path.unlink(missing_ok=True)
     artifact = _capture_entry12_vb_artifact(dem_eng, training_t, n_outer)
@@ -176,7 +365,7 @@ def load_or_build_entry12_vb_artifact(dem_eng, training_t: int, n_outer: int) ->
 
 
 @pytest.mark.slow
-def test_entry12_vb_capture_artifact_build_or_reuse(dem_eng_entry10):
+def test_entry12_vb_capture_artifact_build_or_reuse(dem_eng_entry12):
     """Build or reuse Entry 12 MATLAB-VB checkpoint (heavy: runs ``spm_MDP_VB_XXX`` once per refresh)."""
     raw_t = str(os.getenv("RGMS_ATARI_TRAINING_T", "10000")).strip()
     training_t = max(int(raw_t), 1000)
@@ -184,10 +373,14 @@ def test_entry12_vb_capture_artifact_build_or_reuse(dem_eng_entry10):
     n_outer = int(np.clip(int(raw), 1, 128))
 
     try:
-        artifact = load_or_build_entry12_vb_artifact(dem_eng_entry10, training_t, n_outer)
+        artifact = load_or_build_entry12_vb_artifact(dem_eng_entry12, training_t, n_outer)
     except matlab.engine.MatlabExecutionError as e:
         pytest.skip(f"entry12 MATLAB capture unavailable in this env: {e}")
-    assert int(artifact["entry12_capture_v"]) in (1, 2, 3)
+    except RuntimeError as e:
+        pytest.fail(f"entry12 capture precondition failed (Python VB dry-run / buffer sizing): {e}")
+    assert int(artifact["entry12_capture_v"]) == 5
+    assert artifact.get("entry12_vb_rng_at_vb_entry") == "preamble_continuation"
+    assert isinstance(artifact.get("entry12_vb_matlab_rand_buf"), np.ndarray)
     assert isinstance(artifact.get("pdp12_mdp_mat"), list)
     assert isinstance(artifact.get("rdp11_nested_mat"), dict)
     p = entry12_vb_capture_path(training_t, n_outer)
@@ -200,16 +393,57 @@ def test_entry12_capture_helpers_tag_and_path_roundtrip():
     assert "dem_atari_entry12_vb_capture_t1000_outer1_" in str(p)
 
 
-@pytest.mark.slow
-def test_entry12_python_partial_structural_checkpoint_from_artifact(dem_eng_entry10):
-    """
-    Artifact-based Entry-12 checkpoint (Python partial mode).
+def test_entry12_count_numpy_rand_for_vb_shim():
+    """``count_numpy_rand_calls_for_vb_on_rdp11`` increments once per scalar ``numpy.random.rand()``."""
+    n_calls = 11
 
-    Runs ``spm_MDP_VB_XXX`` on MATLAB-captured ``rdp11`` with ``_rgms_partial_ok`` and
+    def _consume() -> None:
+        for _ in range(n_calls):
+            float(np.random.rand())
+
+    ctr = [0]
+    real_rand = np.random.rand
+
+    def shim(*args: Any, **kwargs: Any) -> Any:
+        if args or kwargs:
+            raise RuntimeError("expected scalar rand")
+        ctr[0] += 1
+        return float(real_rand())
+
+    with patch("numpy.random.rand", side_effect=shim):
+        _consume()
+    assert ctr[0] == n_calls
+
+
+def test_entry12_level0_F_gate_helper_synthetic():
+    """No MATLAB: exercise full-vector ``F`` gate and diagnostics."""
+    x = np.array([1.0, -2.0, 3.0, 1e4], dtype=np.float64)
+    assert_entry12_level0_F_full_vector_parity(x, x.copy())
+    y = x.copy()
+    y[1] += 1.0
+    with pytest.raises(AssertionError):
+        assert_entry12_level0_F_full_vector_parity(x, y)
+    d = _entry12_level0_F_diagnostics(x, y)
+    assert d["max_abs_diff"] == 1.0
+    z = x.copy()
+    z[0] = np.nan
+    with pytest.raises(AssertionError):
+        assert_entry12_level0_F_full_vector_parity(x, z)
+
+
+@pytest.mark.slow
+def test_entry12_python_full_structural_checkpoint_from_artifact(dem_eng_entry12):
+    """
+    Artifact-based Entry-12 checkpoint (Python full mode).
+
+    Runs ``spm_MDP_VB_XXX`` on MATLAB-captured ``rdp11`` (full mode) and
     compares structural parity against MATLAB ``pdp12`` capture: level count, ``T``, ``id``
     keys (``A``/``D``/``E``), ``a``/``b`` counts, per-factor ``X``/``P``/``Q`` shapes (artifact
-    v2+), ``|F|`` vs MATLAB ``F`` vector (when stored), and ``o``/``s``/``u``/``R``/``v``/``w``
-    shapes when capture **v3** includes MATLAB ``size()`` snapshots (~1691 assembly).
+    v2+), and ``o``/``s``/``u``/``R``/``v``/``w`` shapes when capture **v3** includes MATLAB
+    ``size()`` snapshots (~1691 assembly).
+
+    **Numeric full-vector ``F`` parity** is gated only by
+    ``test_entry12_python_full_F_vector_parity_from_artifact`` (not here).
     """
     raw_t = str(os.getenv("RGMS_ATARI_TRAINING_T", "10000")).strip()
     training_t = max(int(raw_t), 1000)
@@ -217,13 +451,15 @@ def test_entry12_python_partial_structural_checkpoint_from_artifact(dem_eng_entr
     n_outer = int(np.clip(int(raw), 1, 128))
 
     try:
-        artifact = load_or_build_entry12_vb_artifact(dem_eng_entry10, training_t, n_outer)
+        artifact = load_or_build_entry12_vb_artifact(dem_eng_entry12, training_t, n_outer)
     except matlab.engine.MatlabExecutionError as e:
         pytest.skip(f"entry12 MATLAB capture unavailable in this env: {e}")
+    except RuntimeError as e:
+        pytest.fail(f"entry12 artifact build failed (Python VB dry-run / capture chain): {e}")
     rdp11 = artifact["rdp11_nested_mat"]
     mat_pdp = artifact["pdp12_mdp_mat"]
-
-    py_out = spm_MDP_VB_XXX(rdp11, {"_rgms_partial_ok": 1})
+    vb_buf = artifact.get("entry12_vb_matlab_rand_buf")
+    py_out = spm_MDP_VB_XXX_with_matlab_rand_buf(rdp11, vb_buf)
     py_levels = py_out if isinstance(py_out, list) else [py_out]
     assert isinstance(mat_pdp, list) and len(mat_pdp) > 0
     assert len(py_levels) == len(mat_pdp), f"level count py={len(py_levels)} mat={len(mat_pdp)}"
@@ -276,11 +512,11 @@ def test_entry12_python_partial_structural_checkpoint_from_artifact(dem_eng_entr
             )
 
     F_mat = artifact.get("pdp12_F_mat")
-    if F_mat is not None and "F" in p0:
+    if F_mat is not None:
+        assert "F" in p0, "artifact has MATLAB F but Python PDP lacks F"
         py_F = np.asarray(p0["F"], dtype=np.float64).ravel()
-        assert py_F.size == np.asarray(F_mat).size, (
-            f"|F| py={py_F.size} mat_capture={np.asarray(F_mat).size}"
-        )
+        fm = np.asarray(F_mat, dtype=np.float64).ravel()
+        assert py_F.size == fm.size, f"|F| py={py_F.size} mat_capture={fm.size} (full parity: F vector test)"
 
     for fld_key in (
         ("pdp12_l0_o_shape", "o"),
@@ -297,8 +533,42 @@ def test_entry12_python_partial_structural_checkpoint_from_artifact(dem_eng_entr
                 f"{pk} shape py={np.asarray(p0[pk]).shape} mat={sh}"
             )
 
-    # Partial mode guarantee for staged recursion continuity.
-    assert int(np.asarray(p0.get("_rgms_partial_v", 0)).reshape(-1)[0]) == 1
+    assert "_rgms_partial_v" not in p0
+
+
+@pytest.mark.slow
+def test_entry12_python_full_F_vector_parity_from_artifact(dem_eng_entry12):
+    """
+    **Authoritative** Entry-12 numeric gate: full level-0 ``F`` vs MATLAB ``rgms_pdp12{1}.F``.
+
+    Requires capture **v5** (preamble-true RNG: no ``rng`` before ``spm_MDP_VB_XXX``; MATLAB
+    ``rng(s_pre); rand(K,1)`` after VB). Strict ``numpy.array_equal`` on finite ``F`` with
+    ``spm_MDP_VB_XXX_with_matlab_rand_buf``.
+    """
+    raw_t = str(os.getenv("RGMS_ATARI_TRAINING_T", "10000")).strip()
+    training_t = max(int(raw_t), 1000)
+    raw = str(os.getenv("RGMS_ATARI_ENTRY8_OUTER", "2")).strip()
+    n_outer = int(np.clip(int(raw), 1, 128))
+
+    try:
+        artifact = load_or_build_entry12_vb_artifact(dem_eng_entry12, training_t, n_outer)
+    except matlab.engine.MatlabExecutionError as e:
+        pytest.skip(f"entry12 MATLAB capture unavailable in this env: {e}")
+    except RuntimeError as e:
+        pytest.fail(f"entry12 artifact build failed (Python VB dry-run / capture chain): {e}")
+
+    F_mat = artifact.get("pdp12_F_mat")
+    if F_mat is None:
+        pytest.skip("artifact has no pdp12_F_mat (MATLAB PDP lacked F)")
+    vb_buf = artifact.get("entry12_vb_matlab_rand_buf")
+    if vb_buf is None:
+        pytest.skip("capture v5 required: entry12_vb_matlab_rand_buf missing (refresh capture)")
+
+    rdp11 = artifact["rdp11_nested_mat"]
+    py_out = spm_MDP_VB_XXX_with_matlab_rand_buf(rdp11, vb_buf)
+    p0 = py_out[0] if isinstance(py_out, list) else py_out
+    assert "F" in p0, "Python PDP missing F while artifact has MATLAB F"
+    assert_entry12_level0_F_full_vector_parity(p0["F"], F_mat)
 
 
 @pytest.mark.slow
@@ -306,7 +576,7 @@ def test_entry12_driver_full_pdp_contract_matches_ledger():
     """
     Ledger integration (Python path): ``run_dem_atariiii(12)`` returns full-mode ``PDP`` with the
     structural contract documented in ``Atari_example.md`` (no MATLAB comparison — use
-    ``test_entry12_python_partial_structural_checkpoint_from_artifact`` for artifact parity).
+    ``test_entry12_python_full_structural_checkpoint_from_artifact`` for artifact parity).
     """
     old_outer = os.environ.get("RGMS_ATARI_ENTRY8_OUTER")
     old_t = os.environ.get("RGMS_ATARI_TRAINING_T")

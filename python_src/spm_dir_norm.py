@@ -4,6 +4,14 @@ from matlab_compat import as_matlab_array
 
 
 def spm_dir_norm(A):
+    """Dirichlet-to-conditional normalization; Pass 1 translation of ``spm_dir_norm.m``.
+
+    **NumPy float warnings:** ``A0 = sum(A,0)`` can be zero for some columns; MATLAB ``rdivide(A,A0)``
+    then assigns ``A(:,~i) = 1/n`` for those columns. ``np.divide`` on zero columns raises
+    ``RuntimeWarning`` (invalid divide) before that fix runs. The tensor path uses
+    ``np.errstate(divide='ignore', invalid='ignore')`` around that block so behavior matches
+    MATLAB without noisy diagnostics (same final array as post-assignment MATLAB).
+    """
     # deal with cells
     if _iscell(A):
         A = _copy_cell(A)
@@ -18,11 +26,12 @@ def spm_dir_norm(A):
         A = np.reshape(A, (1, 1), order="F")
     siz = np.shape(A)
     A = np.reshape(A, (siz[0], int(np.prod(siz[1:]))), order="F")
-    A0 = np.sum(A, axis=0, keepdims=True)
-    i = np.asarray(A0, dtype=bool).ravel(order="F")
-    A = np.divide(A, A0)
-    if siz[0] > 0:
-        A[:, ~i] = 1 / siz[0]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        A0 = np.sum(A, axis=0, keepdims=True)
+        i = np.asarray(A0, dtype=bool).ravel(order="F")
+        A = np.divide(A, A0)
+        if siz[0] > 0:
+            A[:, ~i] = 1 / siz[0]
     A = np.reshape(A, siz, order="F")
 
     return A

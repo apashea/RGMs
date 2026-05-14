@@ -1,0 +1,1204 @@
+FSL 1–11 **Validation (or Parity)** script: compare nested ``RDP`` from a saved run vs MATLAB ``.mat``.
+
+The **FSL** 1–11 pytest writes ``ctx`` (including ``ctx["RDP"]``) to a PKL automatically after a **successful**
+structural run (unless you override the output path with ``RGMS_ATARI_FSL_1_11_CONTEXT_PKL_PATH``).
+
+This CLI loads that PKL plus the FSL MATLAB fixture (default ``fixtures/DEMAtariIII_fsl_1_11_rdp.mat``,
+or ``RGMS_ATARI_FSL_1_11_MAT_PATH`` / ``--mat``). **Every run** applies, in order: **(1)** coarse
+``spm_MDP_checkX``-style / ``T`` schema on **``ctx["RDP"]``**; **(2)** the same schema on the nested
+**``RDP``** from ``loadmat``; **(3)** a **full nested type walk** (Python vs MATLAB structure / types; every mismatch
+line, uncapped), each followed by two **``[mismatch detail]``** lines (PKL vs MATLAB at that path), then an **appended**
+**focused probe** block for **``G``**, **``C``** (per modality), **``sB``**, and **``U``** (shape / scalar checks and
+numeric squeeze-compare where applicable; **G** and **C** include further appended unnesting lines for dict/list cells),
+then **append-only ``VALUE-DUMP``** sections: **``RDP.G``** full concatenated PKL vs MATLAB float64 ravels plus aligned
+elementwise diff; **``RDP.MDP.G``** recursive per-index PKL vs MATLAB full ravels, diffs, and scalar unwrap lines;
+**``C[g]``** full squeeze-ravel PKL/MAT vectors and elementwise diff per modality,
+same stderr / report stream); **(4)** nested
+parity via ``_assert_nested_rdp_equal``, unless
+**``--check-rdp-checkx-schema-only``** or **``--report-type-mismatches-only``** stops after **(3)** (no assert).
+It does **not** run ``run_dem_atariiii``. See
+``Atari_example.md`` § **ENTRY 1-11** (subsection **C**). Each **validation** run writes a UTF-8 report under
+``matlab_custom/fsl_1_11_compare_ctx_pkl_to_mat_output.txt`` (module docstring, then mirrored **stdout**
+and **stderr** including tracebacks). **``-h`` / ``--help``** prints to the terminal only and **does not**
+open or overwrite that file (so a help invocation cannot replace a prior diagnostic run).
+
+--------------------------------------------------------------------
+RDP as the object passed into Entry 12 VB (MATLAB names / audit paths)
+--------------------------------------------------------------------
+
+At the ledger boundary, ``RDP`` is the **generative-model bundle** that ``spm_MDP_VB_XXX`` treats as
+``MDP`` on input. **MATLAB:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` immediately calls
+``MDP = spm_MDP_checkX(MDP);`` (~line 207). **Checker reference:**
+``matlab_src/toolbox/DEM/spm_MDP_checkX.m`` — documents and enforces the **MDP** shape (likelihood /
+transition / priors / indices), including fields such as:
+
+- **``A{g}``, ``B{f}``, ``C{g}``, ``D{f}``, ``E{f}``, ``H{f}``**, **``U``**, **``T``** (and optional
+  concentration mirrors **``a,b,c,d,e,h``** when used).
+- **``id``** subtree (e.g. **``id.g``**, **``id.A{g}``**, **``id.C{g}``**, …) for domain / co-domain
+  bookkeeping.
+- Normalization paths in ``checkX`` (e.g. forcing numeric **``A``/``B``** cells toward **``full``**
+  ``double`` tensors and **``spm_dir_norm``** where applicable).
+
+The **VB** header block in ``spm_MDP_VB_XXX.m`` (leading comments ~lines 5–50) lists additional
+**``OPTIONS``**-gated behavior and optional fields (**``V``**, **``s,u,o,O``**, precisions, **``id.hid``** /
+**``id.cid````, **``n``**, **``m``**, …). For **FSL 1–11 parity** we compare the **nested ``RDP``**
+already produced by ``run_dem_atariiii(entry_stop=11)`` / MATLAB dump — **not** a post-``checkX`` VB
+trajectory.
+
+--------------------------------------------------------------------
+``spm_MDP_checkX``-style schema (integrated — not optional)
+--------------------------------------------------------------------
+
+The **``_validate_rdp_checkx_schema``** pass is **always** applied to **both** trees (Python **``ctx["RDP"]``**
+first, then MATLAB nested **``RDP``** after ``loadmat``). Before each schema pass, stderr lists **every**
+top-level field as **``key=concise_type``** (e.g. ``ndarray(shape)``, ``list(len=…,elem=…)``, sparse
+``typename(shape)``, ``dict(len=…)``). After both passes, one **non-fatal** line reports **only-in-PKL**
+vs **only-in-MATLAB** top-level keys (with the same concise types for asymmetric keys); it never changes
+the exit code by itself. **Then** the **nested type walk** always runs (full mismatch list plus **``[mismatch detail]``**
+lines after each mismatch), then the **focused probe** append (**``G``**, **``C``**, **``sB``**, **``U``**). The schema pass mirrors the **inputs / coarse types** implied by
+``matlab_src/toolbox/DEM/spm_MDP_checkX.m`` (likelihood **``A{g}``** / **``a``**, transitions **``B{f}``** /
+**``b``**, **``U``**, **``C``**, **``D``**, **``E``**, **``id``**, header **``H``**) plus **``T``** (VB entry in
+``spm_MDP_VB_XXX``). **PKL** schema **ERROR** aborts before MATLAB load, key diff, type walk, focused probe, or parity.
+**MATLAB** schema **ERROR** still runs key diff, nested type walk, focused probe, then exits **1** before the
+assert. **Default (non-strict):** only
+**``B``/``b``** absence is **WARN**; missing **``U``**, **``C``**, … is reported only with
+**``--check-rdp-checkx-strict``** (**ERROR** on **each** tree). Does **not** run ``spm_dir_norm``.
+
+**``--check-rdp-checkx-schema-only``**
+    After **(1)**–**(2)**, key diff, and **(3)** type walk: **exit** **0** if no schema **ERROR** on either
+    side (**WARN** alone still **0**); **no** ``_assert_nested_rdp_equal``. Still requires the **``.mat``**.
+
+**``--report-type-mismatches-only``**
+    After the same **(1)**–**(3)** output as a full run, **exit** **0** without ``_assert_nested_rdp_equal``
+    (parity verdict skipped).
+
+After **each** type-walk mismatch line, **two** **``[mismatch detail]``** lines always follow, resolving the same path
+on **PKL** vs **MATLAB** ``RDP`` (shape, dtype, short numeric preview where applicable, dict key heads, list/scalar
+summaries). For paths under **``RDP.A``** / **``RDP.B``** / **``RDP.H``** / **``RDP.MDP.A``** / **``RDP.MDP.B``** /
+**``RDP.MDP.H``**, when the mismatch involves tensor shapes that **jointly** include **524** and **485**, the first
+detail line may be prefixed with
+**``[accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy]``** (ledger drift accepted for validation).
+
+**``--report-type-mismatches``**
+    Accepted for backward compatibility; the type walk is **always** emitted (flag has no effect).
+
+**``--check-rdp-checkx-strict``**
+    Stricter schema on **both** PKL and MATLAB **``RDP``**: require **``B``/``b``**, **``U``**, **``C``**,
+    **``D``**, **``E``**, **``id``**, **``H``**. **``T``** and **``A``/``a``** are always required.
+
+--------------------------------------------------------------------
+Optional CLI flags (**default: off** — compare aids only)
+--------------------------------------------------------------------
+
+**``--coerce-sparse-to-dense-for-compare``**
+    Build **deep copies** of the Python ``RDP`` (from PKL) and the MATLAB-nested ``RDP`` (from
+    ``loadmat`` → ``mat_nested_to_py``), then replace every **SciPy sparse** leaf that exposes
+    ``.toarray()`` with ``numpy.asarray(..., dtype=float64)``. **Scalars and existing ``ndarray``**
+    leaves are untouched. The **on-disk PKL is never modified**; only in-memory copies used for
+    ``_assert_nested_rdp_equal``. Use when MATLAB’s ``loadmat`` path yields **sparse** tensors (e.g.
+    ``csc_array``) while Python kept **dense** ``ndarray`` — same stored values, different container.
+    This does **not** fix differing tensor **shapes** or **numeric** divergence; those surface as the next assertion errors if present.
+
+--- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\fsl_1_11_compare_ctx_pkl_to_mat_output.txt ---
+[checkX schema PKL field] A=list(len=20,elem=ndarray(41, 524))
+[checkX schema PKL field] B=list(len=1,elem=ndarray(524, 524, 6))
+[checkX schema PKL field] C=list(len=20,elem=ndarray(41, 1))
+[checkX schema PKL field] G=dict(len=1)
+[checkX schema PKL field] H=list(len=1,elem=ndarray(524, 1))
+[checkX schema PKL field] L=int
+[checkX schema PKL field] MDP=dict(len=12)
+[checkX schema PKL field] T=float
+[checkX schema PKL field] U=ndarray(1, 1)
+[checkX schema PKL field] id=dict(len=3)
+[checkX schema PKL field] sA=list(len=20,elem=int)
+[checkX schema PKL field] sB=list(len=1,elem=int)
+[checkX schema PKL field] sC=list(len=20,elem=int)
+[checkX schema PKL field] ss=dict(len=4)
+[FSL 1-11 validation] checkX schema (PKL): 0 issue(s) (strict=False)
+[checkX schema MATLAB field] A=list(len=20,elem=csc_array(41, 485))
+[checkX schema MATLAB field] B=ndarray(485, 485, 6)
+[checkX schema MATLAB field] C=list(len=20,elem=ndarray(41,))
+[checkX schema MATLAB field] G=ndarray(14,)
+[checkX schema MATLAB field] H=csc_array(485, 1)
+[checkX schema MATLAB field] L=int
+[checkX schema MATLAB field] MDP=dict(len=12)
+[checkX schema MATLAB field] T=int
+[checkX schema MATLAB field] U=int
+[checkX schema MATLAB field] id=dict(len=3)
+[checkX schema MATLAB field] sA=ndarray(20,)
+[checkX schema MATLAB field] sB=int
+[checkX schema MATLAB field] sC=ndarray(20,)
+[checkX schema MATLAB field] ss=dict(len=4)
+[FSL 1-11 validation] checkX schema (MATLAB): 0 issue(s) (strict=False)
+[FSL 1-11 validation] RDP top-level key diff: only_in_PKL=(none); only_in_MATLAB=(none)
+[FSL 1-11 validation] type walk: 236 mismatch line(s)
+RDP.A[0]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(41, 524) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(41, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.A[1]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(14, 524) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 1. 0. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(14, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 1. 1. 1. 1. 1. 1.]
+RDP.A[2]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 1. 1. 0. 1. 1. 0.]
+RDP.A[3]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 0. 0. 1. 0. 0. 1. 0.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 0.]
+RDP.A[4]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 0. 1. 1. 1. 1.]
+RDP.A[5]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 1. 1. 0. 1. 1. 0. 1.]
+RDP.A[6]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 0. 1. 0. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.A[7]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.A[8]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 0. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 0. 1. 1. 0. 1. 1.]
+RDP.A[9]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[0. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 0. 0. 1. 1.]
+RDP.A[10]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 0. 1.]
+RDP.A[11]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+RDP.A[12]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(5, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+RDP.A[13]: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(5, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.G: type py=dict mat=ndarray
+  [mismatch detail] PKL dict(len=1) keys_head=[1] key_types_head=['1:list']
+  [mismatch detail] MAT ndarray shape=(14,) dtype=uint8 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
+RDP.H: type py=ndarray mat=csc_array
+  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(524, 1) dtype=float64 preview_ravel[:8]=[4.8708e-16 4.8708e-16 4.8708e-16 4.8708e-16 3.8462e-02 3.8462e-02 3.8462e-02 4.8708e-16]
+  [mismatch detail] MAT csc_array shape=(485, 1) nnz=485 preview_dense_ravel[:8]=[5.0657e-16 5.0657e-16 4.0000e-02 5.0657e-16 5.0657e-16 5.0657e-16 5.0657e-16 4.0000e-02]
+RDP.MDP.A[0]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[1]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[2]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+RDP.MDP.A[3]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[4]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[5]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[6]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.MDP.A[7]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[8]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+RDP.MDP.A[9]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[10]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.MDP.A[11]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[12]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[13]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+RDP.MDP.A[14]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[15]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[1. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[16]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[17]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+RDP.MDP.A[18]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[19]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[20]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[21]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+RDP.MDP.A[22]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[23]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+RDP.MDP.A[24]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[25]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[26]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[27]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[28]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+RDP.MDP.A[29]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[30]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.MDP.A[31]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[32]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+RDP.MDP.A[33]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[34]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[35]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[36]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[37]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+RDP.MDP.A[38]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[39]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[40]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[41]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.MDP.A[42]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[43]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+RDP.MDP.A[44]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[45]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+RDP.MDP.A[46]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[47]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[48]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[49]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[50]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+RDP.MDP.A[51]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[52]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[53]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[54]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+RDP.MDP.A[55]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[56]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[57]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[58]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[59]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[60]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[61]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+RDP.MDP.A[62]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[63]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[1. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+RDP.MDP.A[64]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[65]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.MDP.A[66]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[67]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+RDP.MDP.A[68]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[69]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[70]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[71]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+RDP.MDP.A[72]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[73]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[74]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+RDP.MDP.A[75]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[76]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+RDP.MDP.A[77]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[78]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+RDP.MDP.A[79]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[80]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+RDP.MDP.A[81]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[82]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+RDP.MDP.A[83]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[84]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[85]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[86]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[87]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+RDP.MDP.A[88]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[89]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+RDP.MDP.A[90]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[91]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[92]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[93]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[94]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[95]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[96]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[97]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[98]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+RDP.MDP.A[99]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[100]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+RDP.MDP.A[101]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[102]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.A[103]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[104]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+RDP.MDP.A[105]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[106]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+RDP.MDP.A[107]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
+RDP.MDP.A[108]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(2, 2) dtype=float64 preview_ravel[:8]=[1. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(2, 2) nnz=2 preview_dense_ravel[:8]=[1. 0. 0. 1.]
+RDP.MDP.A[109]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(2, 2) dtype=float64 preview_ravel[:8]=[1. 0. 0. 1.]
+  [mismatch detail] MAT csc_array shape=(2, 2) nnz=2 preview_dense_ravel[:8]=[1. 0. 0. 1.]
+RDP.MDP.A[110]: type py=ndarray mat=csc_array
+  [mismatch detail] PKL ndarray shape=(9, 9) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] MAT csc_array shape=(9, 9) nnz=9 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+RDP.MDP.B[7]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[8]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[9]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[10]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[11]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[12]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[13]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[14]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[15]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[16]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[17]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[18]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[19]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[20]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[21]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[22]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[23]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[24]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[25]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[26]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[27]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[28]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[29]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[30]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[31]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[32]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[33]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[34]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[35]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[36]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[37]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[38]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[39]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[40]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[41]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[42]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[43]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[44]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[45]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[46]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[47]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[48]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[49]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[50]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[51]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[52]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[53]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[54]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[55]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.B[56]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.G: type py=dict mat=list
+  [mismatch detail] PKL dict(len=4) keys_head=[1, 2, 3, 4] key_types_head=['1:list', '2:list', '3:list', '4:list']
+  [mismatch detail] MAT list(len=4) elem0_unwrap_type=list
+RDP.MDP.T: type py=float mat=int
+  [mismatch detail] PKL scalar repr=2.0
+  [mismatch detail] MAT scalar repr=2
+RDP.MDP.id.D[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.MDP.id.D[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[3.]
+  [mismatch detail] MAT scalar repr=3
+RDP.MDP.id.D[2]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[5.]
+  [mismatch detail] MAT scalar repr=5
+RDP.MDP.id.D[3]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[7.]
+  [mismatch detail] MAT scalar repr=7
+RDP.MDP.id.D[4]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[9.]
+  [mismatch detail] MAT scalar repr=9
+RDP.MDP.id.D[5]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[11.]
+  [mismatch detail] MAT scalar repr=11
+RDP.MDP.id.D[6]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[13.]
+  [mismatch detail] MAT scalar repr=13
+RDP.MDP.id.D[57]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[15.]
+  [mismatch detail] MAT scalar repr=15
+RDP.MDP.id.D[58]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[17.]
+  [mismatch detail] MAT scalar repr=17
+RDP.MDP.id.D[59]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[19.]
+  [mismatch detail] MAT scalar repr=19
+RDP.MDP.id.E[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[2.]
+  [mismatch detail] MAT scalar repr=2
+RDP.MDP.id.E[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[4.]
+  [mismatch detail] MAT scalar repr=4
+RDP.MDP.id.E[2]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[6.]
+  [mismatch detail] MAT scalar repr=6
+RDP.MDP.id.E[3]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[8.]
+  [mismatch detail] MAT scalar repr=8
+RDP.MDP.id.E[4]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[10.]
+  [mismatch detail] MAT scalar repr=10
+RDP.MDP.id.E[5]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[12.]
+  [mismatch detail] MAT scalar repr=12
+RDP.MDP.id.E[6]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[14.]
+  [mismatch detail] MAT scalar repr=14
+RDP.MDP.id.E[57]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[16.]
+  [mismatch detail] MAT scalar repr=16
+RDP.MDP.id.E[58]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[18.]
+  [mismatch detail] MAT scalar repr=18
+RDP.MDP.id.E[59]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[20.]
+  [mismatch detail] MAT scalar repr=20
+RDP.MDP.sA: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=111) elem0_unwrap_type=int
+  [mismatch detail] MAT ndarray shape=(111,) dtype=uint8 preview_ravel[:8]=[1 1 1 1 1 1 1 1]
+RDP.MDP.sB: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=60) elem0_unwrap_type=int
+  [mismatch detail] MAT ndarray shape=(60,) dtype=uint8 preview_ravel[:8]=[1 1 1 1 1 1 1 1]
+RDP.MDP.sC: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=111) elem0_unwrap_type=int
+  [mismatch detail] MAT ndarray shape=(111,) dtype=uint8 preview_ravel[:8]=[1 1 1 1 1 1 1 1]
+RDP.MDP.ss.D: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.MDP.ss.E: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.MDP.ss.ID: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.MDP.ss.IE: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.T: type py=float mat=int
+  [mismatch detail] PKL scalar repr=64.0
+  [mismatch detail] MAT scalar repr=64
+RDP.U: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=bool preview_ravel[:8]=[ True]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[2]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[3]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[4]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[5]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[6]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[7]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[8]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[9]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[10]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[11]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[12]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[13]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[14]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[15]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[16]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[17]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[18]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.A[19]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [mismatch detail] MAT scalar repr=1
+RDP.id.cid: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=0) elem0_unwrap_type=n/a
+  [mismatch detail] MAT ndarray shape=(0,) dtype=uint8 preview_ravel[:8]=[]
+RDP.id.hid: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=26) elem0_unwrap_type=int
+  [mismatch detail] MAT ndarray shape=(25,) dtype=uint16 preview_ravel[:8]=[ 3  8 13 14 16 19 23 24]
+RDP.sA: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=20) elem0_unwrap_type=int
+  [mismatch detail] MAT ndarray shape=(20,) dtype=uint8 preview_ravel[:8]=[1 1 1 1 1 1 1 1]
+RDP.sC: type py=list mat=ndarray
+  [mismatch detail] PKL list(len=20) elem0_unwrap_type=int
+  [mismatch detail] MAT ndarray shape=(20,) dtype=uint8 preview_ravel[:8]=[1 1 1 1 1 1 1 1]
+RDP.ss.D: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.ss.E: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.ss.ID: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+RDP.ss.IE: list len py=4 mat=16
+  [mismatch detail] PKL list(len=4) elem0_unwrap_type=list
+  [mismatch detail] MAT list(len=16) elem0_unwrap_type=ndarray
+[FSL 1-11 validation] focused probe (append): G, C, sB, U
+  [focused probe G] PKL v dict(len=1) keys_head=[1] key_types_head=['1:list']
+  [focused probe G] MAT v ndarray shape=(14,) dtype=uint8 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
+  [focused probe G] PKL dict len=1 vs MAT ndarray ravel len=14
+  [focused probe G] RDP.G PKL dict: per-key drill (1 of 1 key(s))
+  [focused probe G]   key=1: list len=1; elem0 ndarray shape=(14, 1) dtype=int64 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
+  [focused probe G] MAT ndarray ravel: dtype=uint8 size=14 min=1 max=14
+  [focused probe G] RDP.G VALUE-DUMP (append-only): begin
+  [focused probe G] RDP.G VALUE-DUMP PKL dict concat→float64_ravel n=14 full=[ 1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14.]
+  [focused probe G] RDP.G VALUE-DUMP MAT float64_ravel n=14 full=[ 1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14.]
+  [focused probe G] RDP.G VALUE-DUMP aligned elementwise_diff n=14 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs=0.0
+  [focused probe G] RDP.G VALUE-DUMP (append-only): end
+  [focused probe G] RDP.MDP.G PKL v dict(len=4) keys_head=[1, 2, 3, 4] key_types_head=['1:list', '2:list', '3:list', '4:list']
+  [focused probe G] RDP.MDP.G MAT v list(len=4) elem0_unwrap_type=list
+  [focused probe G] RDP.MDP.G nested: PKL dict vs MAT list — 4 aligned slot(s) (PKL keys order)
+  [focused probe G] RDP.MDP.G nested slot=0 PKL_key=1: list len=57; elem0 PKL ndarray shape=(9, 1) dtype=int64 preview_ravel[:8]=[37 49 61 73 25 85 13 97] || list len=57; elem0 MAT ndarray shape=(9,) dtype=uint8 preview_ravel[:8]=[61 49 73 37 85 25 97 13]
+  [focused probe G] RDP.MDP.G nested slot=1 PKL_key=2: list len=1; elem0 PKL ndarray shape=(1, 1) dtype=int64 preview_ravel[:8]=[109] || MAT scalar repr=109
+  [focused probe G] RDP.MDP.G nested slot=2 PKL_key=3: list len=1; elem0 PKL ndarray shape=(1, 1) dtype=int64 preview_ravel[:8]=[110] || MAT scalar repr=110
+  [focused probe G] RDP.MDP.G nested slot=3 PKL_key=4: list len=1; elem0 PKL ndarray shape=(1, 1) dtype=int64 preview_ravel[:8]=[111] || MAT scalar repr=111
+  [focused probe G] RDP.MDP.G VALUE-DUMP (append-only): begin
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1: both list PKL len=57 MAT len=57; drilling 57 index pair(s)
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: PKL float64_ravel(len=9) full=[37. 49. 61. 73. 25. 85. 13. 97.  1.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: MAT float64_ravel(len=9) full=[61. 49. 73. 37. 85. 25. 97. 13.  1.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: elementwise_diff full=[-24.   0. -12.  36. -60.  60. -84.  84.   0.] max_abs_diff=84.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: PKL float64_ravel(len=9) full=[64. 42. 81. 51. 94. 16. 20. 38. 70.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: MAT float64_ravel(len=9) full=[64. 42. 81. 92. 94. 20. 22. 38. 51.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: elementwise_diff full=[  0.   0.   0. -41.   0.  -4.  -2.   0.  19.] max_abs_diff=41.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: PKL float64_ravel(len=9) full=[77. 29. 53. 90. 22. 35. 55. 75. 86.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: MAT float64_ravel(len=9) full=[55. 59. 68. 70. 90. 75. 77. 83. 86.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: elementwise_diff full=[ 22. -30. -15.  20. -68. -40. -22.  -8.   0.] max_abs_diff=68.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: PKL float64_ravel(len=9) full=[68. 31. 59. 92. 44. 40. 14. 18. 27.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: MAT float64_ravel(len=9) full=[16. 29. 35. 31. 53. 18. 44. 14. 88.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: elementwise_diff full=[ 52.   2.  24.  61.  -9.  22. -30.   4. -61.] max_abs_diff=61.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: PKL float64_ravel(len=9) full=[79. 46. 66. 83. 57. 33. 88. 62.  3.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: MAT float64_ravel(len=9) full=[ 79.  46.  57.  66.  62.  33.  40.  27. 107.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: elementwise_diff full=[   0.    0.    9.   17.   -5.    0.   48.   35. -104.] max_abs_diff=104.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: PKL float64_ravel(len=9) full=[  9. 103. 107.  48.  96. 105.   7.  11.  99.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: MAT float64_ravel(len=9) full=[103.  48.   3.   9.  96.  11.  72.  99.  24.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: elementwise_diff full=[-94.  55. 104.  39.   0.  94. -65. -88.  75.] max_abs_diff=104.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: PKL float64_ravel(len=4) full=[  5.  24.  72. 101.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: MAT float64_ravel(len=4) full=[  5.   7. 101. 105.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: elementwise_diff full=[  0.  17. -29.  -4.] max_abs_diff=29.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[7]: PKL float64_ravel(len=1) full=[2.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[7]: MAT float64_ravel(len=1) full=[2.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[7]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[8]: PKL float64_ravel(len=1) full=[4.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[8]: MAT float64_ravel(len=1) full=[4.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[8]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[9]: PKL float64_ravel(len=1) full=[6.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[9]: MAT float64_ravel(len=1) full=[6.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[9]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[10]: PKL float64_ravel(len=1) full=[8.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[10]: MAT float64_ravel(len=1) full=[8.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[10]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[11]: PKL float64_ravel(len=1) full=[10.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[11]: MAT float64_ravel(len=1) full=[10.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[11]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[12]: PKL float64_ravel(len=1) full=[12.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[12]: MAT float64_ravel(len=1) full=[12.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[12]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[13]: PKL float64_ravel(len=1) full=[15.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[13]: MAT float64_ravel(len=1) full=[15.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[13]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[14]: PKL float64_ravel(len=1) full=[17.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[14]: MAT float64_ravel(len=1) full=[17.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[14]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[15]: PKL float64_ravel(len=1) full=[19.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[15]: MAT float64_ravel(len=1) full=[19.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[15]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[16]: PKL float64_ravel(len=1) full=[21.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[16]: MAT float64_ravel(len=1) full=[21.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[16]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[17]: PKL float64_ravel(len=1) full=[23.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[17]: MAT float64_ravel(len=1) full=[23.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[17]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[18]: PKL float64_ravel(len=1) full=[26.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[18]: MAT float64_ravel(len=1) full=[26.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[18]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[19]: PKL float64_ravel(len=1) full=[28.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[19]: MAT float64_ravel(len=1) full=[28.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[19]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[20]: PKL float64_ravel(len=1) full=[30.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[20]: MAT float64_ravel(len=1) full=[30.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[20]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[21]: PKL float64_ravel(len=1) full=[32.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[21]: MAT float64_ravel(len=1) full=[32.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[21]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[22]: PKL float64_ravel(len=1) full=[34.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[22]: MAT float64_ravel(len=1) full=[34.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[22]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[23]: PKL float64_ravel(len=1) full=[36.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[23]: MAT float64_ravel(len=1) full=[36.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[23]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[24]: PKL float64_ravel(len=1) full=[39.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[24]: MAT float64_ravel(len=1) full=[39.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[24]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[25]: PKL float64_ravel(len=1) full=[41.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[25]: MAT float64_ravel(len=1) full=[41.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[25]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[26]: PKL float64_ravel(len=1) full=[43.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[26]: MAT float64_ravel(len=1) full=[43.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[26]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[27]: PKL float64_ravel(len=1) full=[45.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[27]: MAT float64_ravel(len=1) full=[45.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[27]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[28]: PKL float64_ravel(len=1) full=[47.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[28]: MAT float64_ravel(len=1) full=[47.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[28]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[29]: PKL float64_ravel(len=1) full=[50.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[29]: MAT float64_ravel(len=1) full=[50.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[29]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[30]: PKL float64_ravel(len=1) full=[52.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[30]: MAT float64_ravel(len=1) full=[52.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[30]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[31]: PKL float64_ravel(len=1) full=[54.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[31]: MAT float64_ravel(len=1) full=[54.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[31]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[32]: PKL float64_ravel(len=1) full=[56.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[32]: MAT float64_ravel(len=1) full=[56.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[32]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[33]: PKL float64_ravel(len=1) full=[58.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[33]: MAT float64_ravel(len=1) full=[58.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[33]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[34]: PKL float64_ravel(len=1) full=[60.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[34]: MAT float64_ravel(len=1) full=[60.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[34]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[35]: PKL float64_ravel(len=1) full=[63.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[35]: MAT float64_ravel(len=1) full=[63.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[35]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[36]: PKL float64_ravel(len=1) full=[65.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[36]: MAT float64_ravel(len=1) full=[65.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[36]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[37]: PKL float64_ravel(len=1) full=[67.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[37]: MAT float64_ravel(len=1) full=[67.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[37]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[38]: PKL float64_ravel(len=1) full=[69.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[38]: MAT float64_ravel(len=1) full=[69.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[38]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[39]: PKL float64_ravel(len=1) full=[71.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[39]: MAT float64_ravel(len=1) full=[71.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[39]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[40]: PKL float64_ravel(len=1) full=[74.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[40]: MAT float64_ravel(len=1) full=[74.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[40]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[41]: PKL float64_ravel(len=1) full=[76.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[41]: MAT float64_ravel(len=1) full=[76.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[41]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[42]: PKL float64_ravel(len=1) full=[78.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[42]: MAT float64_ravel(len=1) full=[78.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[42]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[43]: PKL float64_ravel(len=1) full=[80.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[43]: MAT float64_ravel(len=1) full=[80.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[43]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[44]: PKL float64_ravel(len=1) full=[82.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[44]: MAT float64_ravel(len=1) full=[82.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[44]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[45]: PKL float64_ravel(len=1) full=[84.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[45]: MAT float64_ravel(len=1) full=[84.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[45]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[46]: PKL float64_ravel(len=1) full=[87.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[46]: MAT float64_ravel(len=1) full=[87.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[46]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[47]: PKL float64_ravel(len=1) full=[89.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[47]: MAT float64_ravel(len=1) full=[89.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[47]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[48]: PKL float64_ravel(len=1) full=[91.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[48]: MAT float64_ravel(len=1) full=[91.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[48]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[49]: PKL float64_ravel(len=1) full=[93.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[49]: MAT float64_ravel(len=1) full=[93.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[49]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[50]: PKL float64_ravel(len=1) full=[95.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[50]: MAT float64_ravel(len=1) full=[95.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[50]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[51]: PKL float64_ravel(len=1) full=[98.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[51]: MAT float64_ravel(len=1) full=[98.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[51]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[52]: PKL float64_ravel(len=1) full=[100.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[52]: MAT float64_ravel(len=1) full=[100.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[52]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[53]: PKL float64_ravel(len=1) full=[102.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[53]: MAT float64_ravel(len=1) full=[102.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[53]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[54]: PKL float64_ravel(len=1) full=[104.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[54]: MAT float64_ravel(len=1) full=[104.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[54]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[55]: PKL float64_ravel(len=1) full=[106.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[55]: MAT float64_ravel(len=1) full=[106.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[55]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[56]: PKL float64_ravel(len=1) full=[108.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[56]: MAT float64_ravel(len=1) full=[108.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[56]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=1_PKL_key=2: PKL float64_ravel(len=1) full=[109.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=1_PKL_key=2: MAT float64_ravel(len=1) full=[109.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=1_PKL_key=2: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=2_PKL_key=3: PKL float64_ravel(len=1) full=[110.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=2_PKL_key=3: MAT float64_ravel(len=1) full=[110.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=2_PKL_key=3: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=3_PKL_key=4: PKL float64_ravel(len=1) full=[111.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=3_PKL_key=4: MAT float64_ravel(len=1) full=[111.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=3_PKL_key=4: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] RDP.MDP.G VALUE-DUMP (append-only): end
+  [focused probe C] list lens PKL=20 MAT=20; comparing first 20 elements
+  [focused probe C[0]] PKL shape=(41, 1) MAT shape=(41,); squeeze-ravel same len=41; max_abs_diff=0.0
+  [focused probe C[0]] note: raw shapes PKL (41, 1) vs MAT (41,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[0]] VALUE-DUMP (append-only): begin
+  [focused probe C[0]] VALUE-DUMP PKL squeeze-ravel float64 len=41 full=[0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439]
+  [focused probe C[0]] VALUE-DUMP MAT squeeze-ravel float64 len=41 full=[0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439]
+  [focused probe C[0]] VALUE-DUMP elementwise_diff float64 len=41 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[0]] VALUE-DUMP (append-only): end
+  [focused probe C[1]] PKL shape=(14, 1) MAT shape=(14,); squeeze-ravel same len=14; max_abs_diff=0.0
+  [focused probe C[1]] note: raw shapes PKL (14, 1) vs MAT (14,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[1]] VALUE-DUMP (append-only): begin
+  [focused probe C[1]] VALUE-DUMP PKL squeeze-ravel float64 len=14 full=[0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714]
+  [focused probe C[1]] VALUE-DUMP MAT squeeze-ravel float64 len=14 full=[0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714]
+  [focused probe C[1]] VALUE-DUMP elementwise_diff float64 len=14 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[1]] VALUE-DUMP (append-only): end
+  [focused probe C[2]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[2]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[2]] VALUE-DUMP (append-only): begin
+  [focused probe C[2]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[2]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[2]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[2]] VALUE-DUMP (append-only): end
+  [focused probe C[3]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[3]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[3]] VALUE-DUMP (append-only): begin
+  [focused probe C[3]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[3]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[3]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[3]] VALUE-DUMP (append-only): end
+  [focused probe C[4]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[4]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[4]] VALUE-DUMP (append-only): begin
+  [focused probe C[4]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[4]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[4]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[4]] VALUE-DUMP (append-only): end
+  [focused probe C[5]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[5]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[5]] VALUE-DUMP (append-only): begin
+  [focused probe C[5]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[5]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[5]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[5]] VALUE-DUMP (append-only): end
+  [focused probe C[6]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[6]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[6]] VALUE-DUMP (append-only): begin
+  [focused probe C[6]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[6]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[6]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[6]] VALUE-DUMP (append-only): end
+  [focused probe C[7]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[7]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[7]] VALUE-DUMP (append-only): begin
+  [focused probe C[7]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[7]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[7]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[7]] VALUE-DUMP (append-only): end
+  [focused probe C[8]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[8]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[8]] VALUE-DUMP (append-only): begin
+  [focused probe C[8]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[8]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[8]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[8]] VALUE-DUMP (append-only): end
+  [focused probe C[9]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[9]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[9]] VALUE-DUMP (append-only): begin
+  [focused probe C[9]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[9]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[9]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[9]] VALUE-DUMP (append-only): end
+  [focused probe C[10]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[10]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[10]] VALUE-DUMP (append-only): begin
+  [focused probe C[10]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[10]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[10]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[10]] VALUE-DUMP (append-only): end
+  [focused probe C[11]] PKL shape=(10, 1) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[11]] note: raw shapes PKL (10, 1) vs MAT (10,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[11]] VALUE-DUMP (append-only): begin
+  [focused probe C[11]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[11]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[11]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[11]] VALUE-DUMP (append-only): end
+  [focused probe C[12]] PKL shape=(5, 1) MAT shape=(5,); squeeze-ravel same len=5; max_abs_diff=0.0
+  [focused probe C[12]] note: raw shapes PKL (5, 1) vs MAT (5,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[12]] VALUE-DUMP (append-only): begin
+  [focused probe C[12]] VALUE-DUMP PKL squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[12]] VALUE-DUMP MAT squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[12]] VALUE-DUMP elementwise_diff float64 len=5 full=[0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[12]] VALUE-DUMP (append-only): end
+  [focused probe C[13]] PKL shape=(5, 1) MAT shape=(5,); squeeze-ravel same len=5; max_abs_diff=0.0
+  [focused probe C[13]] note: raw shapes PKL (5, 1) vs MAT (5,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[13]] VALUE-DUMP (append-only): begin
+  [focused probe C[13]] VALUE-DUMP PKL squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[13]] VALUE-DUMP MAT squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[13]] VALUE-DUMP elementwise_diff float64 len=5 full=[0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[13]] VALUE-DUMP (append-only): end
+  [focused probe C[14]] PKL shape=(2, 1) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[14]] note: raw shapes PKL (2, 1) vs MAT (2,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[14]] VALUE-DUMP (append-only): begin
+  [focused probe C[14]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[1.2664165549094015e-14 9.9999999999998734e-01]
+  [focused probe C[14]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[1.2664165549094015e-14 9.9999999999998734e-01]
+  [focused probe C[14]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[14]] VALUE-DUMP (append-only): end
+  [focused probe C[15]] PKL shape=(2, 1) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[15]] note: raw shapes PKL (2, 1) vs MAT (2,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[15]] VALUE-DUMP (append-only): begin
+  [focused probe C[15]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[15]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[15]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[15]] VALUE-DUMP (append-only): end
+  [focused probe C[16]] PKL shape=(2, 1) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[16]] note: raw shapes PKL (2, 1) vs MAT (2,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[16]] VALUE-DUMP (append-only): begin
+  [focused probe C[16]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[9.9999999999998734e-01 1.2664165549094015e-14]
+  [focused probe C[16]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[9.9999999999998734e-01 1.2664165549094015e-14]
+  [focused probe C[16]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[16]] VALUE-DUMP (append-only): end
+  [focused probe C[17]] PKL shape=(2, 1) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[17]] note: raw shapes PKL (2, 1) vs MAT (2,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[17]] VALUE-DUMP (append-only): begin
+  [focused probe C[17]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[17]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[17]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[17]] VALUE-DUMP (append-only): end
+  [focused probe C[18]] PKL shape=(9, 1) MAT shape=(9,); squeeze-ravel same len=9; max_abs_diff=0.0
+  [focused probe C[18]] note: raw shapes PKL (9, 1) vs MAT (9,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[18]] VALUE-DUMP (append-only): begin
+  [focused probe C[18]] VALUE-DUMP PKL squeeze-ravel float64 len=9 full=[0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111]
+  [focused probe C[18]] VALUE-DUMP MAT squeeze-ravel float64 len=9 full=[0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111]
+  [focused probe C[18]] VALUE-DUMP elementwise_diff float64 len=9 full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[18]] VALUE-DUMP (append-only): end
+  [focused probe C[19]] PKL shape=(3, 1) MAT shape=(3,); squeeze-ravel same len=3; max_abs_diff=0.0
+  [focused probe C[19]] note: raw shapes PKL (3, 1) vs MAT (3,) differ; max_abs_diff=0 applies after squeeze-ravel only
+  [focused probe C[19]] VALUE-DUMP (append-only): begin
+  [focused probe C[19]] VALUE-DUMP PKL squeeze-ravel float64 len=3 full=[0.3333333333333333 0.3333333333333333 0.3333333333333333]
+  [focused probe C[19]] VALUE-DUMP MAT squeeze-ravel float64 len=3 full=[0.3333333333333333 0.3333333333333333 0.3333333333333333]
+  [focused probe C[19]] VALUE-DUMP elementwise_diff float64 len=3 full=[0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[19]] VALUE-DUMP (append-only): end
+  [focused probe sB] PKL v list(len=1) elem0_unwrap_type=int
+  [focused probe sB] MAT v scalar repr=1
+  [focused probe sB] scalar compare: int(PKL unwrap)=1 int(MAT)=1 equal=True
+  [focused probe U] PKL v ndarray shape=(1, 1) dtype=bool preview_ravel[:8]=[ True]
+  [focused probe U] MAT v scalar repr=1
+  [focused probe U] scalar compare: PKL unwrap=1 MAT=1 equal=True
+Traceback (most recent call last):
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1285, in main
+    return _execute_fsl_1_11_validation(args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1365, in _execute_fsl_1_11_validation
+    _assert_nested_rdp_equal(py_rdp, mat_rdp, "RDP")
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 83, in _assert_nested_rdp_equal
+    _assert_nested_rdp_equal(py[k], mat[k], f"{path}.{k}")
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 89, in _assert_nested_rdp_equal
+    _assert_nested_rdp_equal(a, b, f"{path}[{i}]")
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 76, in _assert_nested_rdp_equal
+    raise AssertionError(f"{path}: type py={type(py)} mat={type(mat)}")
+AssertionError: RDP.A[0]: type py=<class 'numpy.ndarray'> mat=<class 'scipy.sparse._csc.csc_array'>

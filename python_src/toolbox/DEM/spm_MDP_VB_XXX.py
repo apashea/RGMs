@@ -14,6 +14,7 @@ as private Python functions in this module.
 from __future__ import annotations
 
 import copy
+import warnings
 from typing import Any
 
 import numpy as np
@@ -26,15 +27,19 @@ from python_src.spm_combinations import spm_combinations
 from python_src.spm_cross import spm_cross
 from python_src.spm_dot import spm_dot
 from python_src.spm_Gcdf import spm_Gcdf
+from python_src.spm_kron import spm_kron
 from python_src.spm_zeros import spm_zeros
 from python_src.spm_KL_dir import spm_KL_dir
 from python_src.spm_MDP_MI import spm_MDP_MI
+from python_src.spm_psi import spm_psi
 from python_src.spm_softmax import spm_softmax
-from python_src.toolbox.DEM.spm_backwards import spm_backwards
+from python_src.spm_vec import spm_vec
+from python_src.toolbox.DEM.spm_MDP_BMR import spm_MDP_BMR
 from python_src.toolbox.DEM.spm_MDP_checkX import spm_MDP_checkX
-from python_src.toolbox.DEM.spm_forwards import spm_children, spm_forwards
+from python_src.toolbox.DEM.spm_index import spm_index
 from python_src.toolbox.DEM.spm_MDP_size import spm_MDP_size
 from python_src.toolbox.DEM.spm_parents import spm_parents
+from python_src.toolbox.DEM.spm_VBX import spm_VBX
 
 
 def _spm_sample(p: Any) -> int:
@@ -76,6 +81,744 @@ def _spm_sample(p: Any) -> int:
     else:
         idx = int(hit[0])
     return idx + 1
+
+
+def spm_children(id_dict: dict[str, Any]) -> np.ndarray:
+    """Local ``spm_children`` from ``spm_MDP_VB_XXX.m`` (~2584)."""
+    if "g" in id_dict:
+        gcell = id_dict["g"]
+        if "i" in id_dict:
+            ii = int(np.asarray(id_dict["i"], dtype=np.int64).ravel()[0])
+            gi = gcell[ii - 1]
+            arr = np.atleast_1d(np.asarray(gi, dtype=np.int64).ravel())
+            return arr.astype(np.int64).reshape(1, -1)
+        flat: list[int] = []
+        for gi in gcell:
+            flat.extend(np.asarray(gi, dtype=np.int64).ravel().tolist())
+        if len(flat) == 0:
+            return np.zeros((1, 0), dtype=np.int64)
+        u = np.unique(np.asarray(flat, dtype=np.int64))
+        return u.astype(np.int64).reshape(1, -1)
+    na = len(id_dict.get("A", []))
+    return np.arange(1, na + 1, dtype=np.int64).reshape(1, -1)
+
+
+def _numel(x: Any) -> int:
+    if x is None:
+        return 0
+    if isinstance(x, (list, tuple)):
+        return len(x)
+    return int(np.asarray(x, dtype=object).size)
+
+
+def _cell_get_Qj(Q: list[Any], j: Any) -> list[Any]:
+    jv = np.atleast_1d(np.asarray(j, dtype=np.int64).ravel())
+    return [Q[int(jj) - 1] for jj in jv.tolist()]
+
+
+def _spm_induction_vb(
+    B: list[list[np.ndarray]],
+    H: list[Any],
+    Q: list[Any],
+    N: int,
+    id_dict: dict[str, Any],
+) -> tuple[Any, np.ndarray]:
+    """Local ``spm_induction(B,H,Q,N,id)`` from ``spm_MDP_VB_XXX.m``."""
+    if "hid" in id_dict and id_dict["hid"] is not None:
+        hid_m = id_dict["hid"]
+        if callable(hid_m):
+            raise NotImplementedError("spm_induction: id.hid function_handle not translated")
+        hid_full = np.asarray(hid_m, dtype=np.float64)
+        if hid_full.ndim < 2:
+            hid_full = np.reshape(hid_full, (-1, 1), order="F")
+        hif = (np.flatnonzero(np.any(hid_full != 0, axis=1)) + 1).astype(np.int64).reshape(1, -1)
+        hid = hid_full
+    else:
+        hid_list: list[float] = []
+        hif_list: list[int] = []
+        for f in range(len(H)):
+            Hf = H[f]
+            if _numel(Hf) > 0:
+                hf = np.asarray(mfull(Hf), dtype=np.float64).reshape(-1, order="F")
+                s = int(np.argmax(hf) + 1)
+                hid_list.append(float(s))
+                hif_list.append(int(f + 1))
+        if not hid_list:
+            hid = np.zeros((0, 0), dtype=np.float64)
+        else:
+            hid = np.asarray(hid_list, dtype=np.float64).reshape(-1, 1)
+        hif = np.asarray(hif_list, dtype=np.int64).reshape(1, -1)
+
+    if "cid" in id_dict and id_dict["cid"] is not None:
+        cid_raw = id_dict["cid"]
+        if callable(cid_raw):
+            raise NotImplementedError("spm_induction: id.cid function_handle not translated")
+        cid_arr = np.asarray(cid_raw, dtype=np.float64)
+        if cid_arr.size == 0:
+            d_tensor: Any = True
+            d_flat = None
+        else:
+            cid = cid_arr
+            nid = cid.copy()
+            hif = (np.flatnonzero(np.all(cid != 0, axis=1)) + 1).astype(np.int64).reshape(1, -1)
+            for f in hif.ravel().tolist():
+                nid[int(f) - 1, :] = 0
+            ns_list = [int(B[int(f) - 1][0].shape[0]) for f in hif.ravel().tolist()] + [1]
+            ns_tuple = tuple(ns_list)
+            d_tensor = np.ones(ns_tuple, dtype=bool)
+            for i in range(cid.shape[1]):
+                qv = 1.0
+                for f0 in range(cid.shape[0]):
+                    if nid[f0, i] != 0:
+                        f1 = f0 + 1
+                        cidx = int(nid[f0, i])
+                        qcol = np.asarray(Q[f1 - 1], dtype=np.float64).reshape(-1, order="F")
+                        qv *= float(qcol[cidx - 1])
+                if qv > (1.0 - 1.0 / 8.0):
+                    inds = [int(cid[int(f) - 1, i]) for f in hif.ravel().tolist()]
+                    lin = int(np.ravel_multi_index(tuple(x - 1 for x in inds), tuple(ns_list[:-1]), order="F"))
+                    d_tensor[np.unravel_index(lin, d_tensor.shape, order="F")] = False
+            d_flat = d_tensor.reshape(-1, order="F")
+    else:
+        d_tensor = True
+        d_flat = None
+
+    hif_list = [int(x) for x in np.asarray(hif, dtype=np.int64).ravel().tolist()]
+    hid = np.asarray(hid, dtype=np.float64)
+    if hid.ndim == 2 and hid.shape[0] > len(hif_list) and len(hif_list) > 0:
+        hid = hid[np.asarray(hif_list, dtype=int) - 1, :]
+
+    if len(hif_list) == 0:
+        return np.array([]), np.array([], dtype=np.int64)
+    if hid.size == 0 or np.all(hid == 0):
+        if d_tensor is True:
+            return np.array([]), np.asarray(hif_list, dtype=np.int64)
+        r32 = (32.0 * np.asarray(d_flat, dtype=np.float32).ravel(order="F")).astype(np.float32)
+        return r32, np.asarray(hif_list, dtype=np.int64)
+
+    N = int(min(int(N), 64))
+    if "D" in id_dict and N < 4:
+        N = 64
+    if N <= 0:
+        return np.array([]), np.asarray(hif_list, dtype=np.int64)
+
+    u_thr = 1.0 / 32.0
+    if not B or len(B) == 0:
+        return np.array([]), np.array([], dtype=np.int64)
+    nk = len(B[0])
+    if nk == 0:
+        return np.array([]), np.array([], dtype=np.int64)
+    b_map: dict[int, np.ndarray] = {}
+    for f in hif_list:
+        if f < 1 or f > len(B) or len(B[f - 1]) == 0:
+            continue
+        acc = None
+        nk_f = len(B[f - 1])
+        for k in range(min(nk, nk_f)):
+            try:
+                bfk = np.asarray(B[f - 1][k], dtype=np.float64)
+            except Exception:
+                bfk = np.asarray(B[f - 1][0], dtype=np.float64)
+            thr = bfk > u_thr
+            acc = thr if acc is None else (acc | thr)
+        if acc is None:
+            continue
+        b_map[f] = np.asarray(acc, dtype=bool)
+    if not b_map:
+        return np.array([]), np.array([], dtype=np.int64)
+    hif_kept = [f for f in hif_list if f in b_map]
+
+    hid = np.asarray(hid, dtype=np.float64)
+    if hid.ndim == 2 and len(hif_kept) > 0:
+        idx_kept = [hif_list.index(f) for f in hif_kept]
+        hid = hid[np.asarray(idx_kept, dtype=int), :]
+
+    Bf = sparse.csr_matrix([[1.0]], dtype=np.float64)
+    Qf = sparse.csr_matrix([[1.0]], dtype=np.float64)
+    ns_by_pos: list[int] = []
+    for f in hif_kept:
+        ns_by_pos.append(int(B[f - 1][0].shape[0]))
+        Bf = spm_kron(b_map[f], Bf)
+        Qcol = np.asarray(Q[f - 1], dtype=np.float64).reshape(-1, 1, order="F")
+        Qf = spm_kron(sparse.csr_matrix(Qcol), Qf)
+
+    if d_flat is None:
+        d_mul = np.ones(int(Bf.shape[0] * Bf.shape[1]), dtype=np.float64)
+    else:
+        d_mul = np.asarray(d_flat, dtype=np.float64).ravel(order="F")
+        if d_mul.size != int(Bf.shape[0] * Bf.shape[1]):
+            raise ValueError("spm_induction: D size mismatch with Bf")
+    bf_dense = Bf.toarray(order="F")
+    bf_dense = bf_dense * d_mul.reshape(bf_dense.shape, order="F")
+    Bf = sparse.csr_matrix(bf_dense)
+
+    hid_arr = np.asarray(hid, dtype=np.float64)
+    if hid_arr.ndim == 1:
+        hid_arr = hid_arr.reshape(-1, 1)
+    nh = int(hid_arr.shape[1])
+    pf_cols: list[np.ndarray] = []
+    for i in range(nh):
+        I = np.array([[True]], dtype=bool)
+        for pos, f in enumerate(hif_kept):
+            nsf = ns_by_pos[pos]
+            hvec = np.zeros((nsf, 1), dtype=bool)
+            hidx = int(hid_arr[pos, i])
+            if hidx > 0:
+                hvec[hidx - 1, 0] = True
+            I = spm_kron(hvec, I).toarray().astype(bool)
+        pf_cols.append(I.ravel(order="F"))
+
+    l_dim = int(pf_cols[0].size)
+    Pf = np.zeros((l_dim, nh), dtype=bool)
+    for i in range(nh):
+        Pf[:, i] = pf_cols[i]
+
+    G = np.zeros((N, nh), dtype=np.float64)
+    p_store: list[np.ndarray] = []
+    qf_dense = Qf.toarray(order="F").ravel(order="F").reshape(-1, 1, order="F")
+
+    for i in range(nh):
+        I = np.asarray(Pf[:, i], dtype=bool).reshape(-1, 1)
+        ncols = N + 1
+        I_big = np.zeros((I.shape[0], ncols), dtype=bool)
+        I_big[:, 0] = I.ravel()
+        for n in range(N):
+            prev = I_big[:, n]
+            if not np.any(prev):
+                break
+            rows = np.flatnonzero(prev)
+            sub = Bf[rows, :]
+            nxt = np.asarray(sub.sum(axis=0) > 0).ravel()
+            I_big[:, n + 1] = nxt
+        vec = (I_big.astype(np.float64).T @ qf_dense).ravel(order="F")
+        nvec = int(vec.size)
+        take = int(min(N, nvec))
+        G[:take, i] = vec[:take]
+        p_store.append(I_big.copy())
+
+    G[0, :] = 0.0
+    dmx = np.max(G, axis=0)
+    nmx = np.argmax(G, axis=0)
+    mask = dmx > u_thr
+    if not np.any(mask):
+        return np.array([]), np.asarray(hif_kept, dtype=np.int64)
+
+    p_sel = [p_store[j] for j in range(nh) if mask[j]]
+    n_sel = nmx[mask]
+    j0 = int(np.argmin(n_sel))
+    p_use = p_sel[j0]
+    n_use = int(n_sel[j0])
+    col_idx = max(n_use - 1, 1) - 1
+    p_vec = p_use[:, col_idx].astype(np.float64)
+    ns_shape = tuple(ns_by_pos)
+    r_body = p_vec.reshape(ns_shape, order="F").astype(np.float32)
+    if d_tensor is True:
+        d_reshape = np.ones(r_body.shape, dtype=bool)
+    else:
+        d_reshape = np.asarray(d_tensor, dtype=bool).reshape(ns_shape, order="F")
+    R = 32.0 * np.logical_and(r_body.astype(bool), d_reshape.astype(bool)).astype(np.float32)
+    return R, np.asarray(hif_kept, dtype=np.int64)
+
+
+def spm_forwards(
+    O: list[Any],
+    P: list[Any],
+    A: list[Any],
+    B: list[Any],
+    C: list[Any],
+    H: list[Any],
+    K: list[Any],
+    W: list[Any],
+    I: list[Any],
+    t: int,
+    T: int,
+    N: int,
+    m: int,
+    id_list: list[Any],
+    pA: list[Any],
+    qa: Any | None = None,
+) -> tuple[np.ndarray, Any, float, list[Any], dict[int, Any]]:
+    """Local ``spm_forwards`` from ``spm_MDP_VB_XXX.m`` (~1749)."""
+    mi = int(m) - 1
+    idm = id_list[mi]
+    Ni = len(idm["g"])
+    nk = len(B[mi][0])
+    nf = len(B[mi])
+    G = np.zeros((nk, Ni), dtype=np.float64)
+    Pa: dict[int, Any] = {}
+
+    O_row = [O[mi][g][t - 1] for g in range(len(O[mi]))]
+    P_row = [P[mi][f][t - 1] for f in range(len(P[mi]))]
+    A_row = A[mi]
+    Q_upd, F = spm_VBX(O_row, P_row, A_row, idm)
+    for f in range(len(Q_upd)):
+        P[mi][f][t - 1] = Q_upd[f]
+
+    if t > T or (nk * Ni == 1):
+        return G, P, float(F), id_list, Pa
+
+    B_slice = B[mi]
+    H_slice = H[mi]
+    P_now = [P[mi][f][t - 1] for f in range(nf)]
+    R, r = _spm_induction_vb(B_slice, H_slice, P_now, int(T - t), idm)
+    if np.asarray(R).size and np.asarray(R).ndim >= 1:
+        Rv = np.asarray(R, dtype=np.float64)
+        if Rv.ndim == 1 or (Rv.ndim == 2 and min(Rv.shape) == 1):
+            Rv = Rv.reshape(1, -1)
+        R = Rv
+
+    Qp: list[Any] = [None] * nf
+    id_fp = np.asarray(idm.get("fp", np.zeros(0, dtype=np.int64)), dtype=np.int64).ravel()
+    for f in id_fp.tolist():
+        Bf1 = np.asarray(B_slice[int(f) - 1][0], dtype=np.float64)
+        Pf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(-1, 1, order="F")
+        Qp[int(f) - 1] = Bf1 @ Pf
+
+    id_fu = np.asarray(idm.get("fu", np.zeros(0, dtype=np.int64)), dtype=np.int64).ravel()
+    id_iH = np.asarray(idm.get("iH", np.zeros(0, dtype=np.int64)), dtype=np.int64).ravel()
+    id_iI = np.asarray(idm.get("iI", np.zeros(0, dtype=np.int64)), dtype=np.int64).ravel()
+
+    for k in range(nk):
+        for f in id_fu.tolist():
+            Bfk = np.asarray(B_slice[int(f) - 1][k], dtype=np.float64)
+            Pf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(-1, 1, order="F")
+            Qp[int(f) - 1] = Bfk @ Pf
+
+        for f in id_iH.tolist():
+            Qf = np.asarray(Qp[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
+            Hf = np.asarray(H_slice[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
+            G[k, :] -= float((Qf.T @ (_spm_log(Qf) - _spm_log(Hf))).reshape(-1)[0])
+
+        for f in id_iI.tolist():
+            Pmf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(1, -1, order="F")
+            Iblk = np.asarray(I[mi][int(f) - 1][k], dtype=np.float64)
+            Qf = np.asarray(Qp[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
+            G[k, :] += float(Pmf @ Iblk @ Qf)
+
+        if _numel(R) > 0:
+            q_cells = _cell_get_Qj(Qp, r)
+            g_risk = np.asarray(spm_dot(R, q_cells), dtype=np.float64).reshape(-1)
+            if g_risk.size == 1:
+                G[k, :] += float(g_risk[0])
+            elif g_risk.size == Ni:
+                G[k, :] += g_risk
+            else:
+                G[k, :] += float(g_risk[0])
+
+        No = np.zeros((1, Ni), dtype=np.float64)
+        for i_cov in range(Ni):
+            gi = idm["g"][i_cov]
+            if "ge" in idm:
+                ge = np.asarray(idm["ge"], dtype=np.int64).ravel()
+                gi = np.array([x for x in np.atleast_1d(np.asarray(gi).ravel()) if x in set(ge.tolist())], dtype=np.int64)
+            for ig in np.atleast_1d(np.asarray(gi, dtype=np.int64).ravel()):
+                j, gg = spm_parents(idm, int(ig), Qp)
+                for g in np.atleast_1d(np.asarray(gg, dtype=np.int64).ravel()):
+                    Amg = A[mi][int(g) - 1]
+                    qj = _cell_get_Qj(Qp, j)
+                    if callable(Amg):
+                        raise NotImplementedError("spm_forwards: A{m,g} function_handle not translated")
+                    qo = np.asarray(spm_dot(Amg, qj), dtype=np.float64).reshape(-1, 1, order="F")
+                    No[0, i_cov] += float(
+                        np.asarray(_spm_log(np.array([[float(np.size(qo))]], dtype=np.float64)), dtype=np.float64).reshape(-1)[0]
+                    )
+                    G[k, i_cov] -= float((qo.T @ _spm_log(qo)).reshape(-1)[0])
+                    Cmg = C[mi][int(g) - 1]
+                    if _numel(Cmg) > 0:
+                        c_cells = idm.get("C", [])
+                        cg = None
+                        if isinstance(c_cells, (list, tuple)) and len(c_cells) >= int(g):
+                            cg = c_cells[int(g) - 1]
+                        if cg is not None and _numel(cg) > 0:
+                            fC = int(np.asarray(cg, dtype=np.int64).ravel()[0])
+                            U = np.asarray(
+                                spm_dot(_spm_log(np.asarray(Cmg, dtype=np.float64)), Qp[int(fC) - 1]),
+                                dtype=np.float64,
+                            ).reshape(-1, 1, order="F")
+                        else:
+                            U = np.asarray(_spm_log(np.asarray(Cmg, dtype=np.float64)), dtype=np.float64).reshape(-1, 1, order="F")
+                        G[k, i_cov] += float((qo.T @ U).reshape(-1)[0])
+                    Kmg = K[mi][int(g) - 1]
+                    if _numel(Kmg) > 0:
+                        G[k, i_cov] += float(np.asarray(spm_dot(Kmg, qj), dtype=np.float64).reshape(-1)[0])
+                    Wmg = W[mi][int(g) - 1]
+                    if _numel(Wmg) > 0:
+                        G[k, i_cov] += float((qo.T @ np.asarray(spm_dot(Wmg, qj), dtype=np.float64).reshape(-1, 1)).reshape(-1)[0])
+                    pAg = pA[mi][int(g) - 1]
+                    if _numel(pAg) > 0:
+                        if qa is None:
+                            raise ValueError("spm_forwards: qa required when pA is non-empty")
+                        da = spm_cross(qo, qj)
+                        Pa[int(g)] = spm_MDP_BMR(np.asarray(qa[mi][int(g) - 1], dtype=np.float64), pAg)
+                        Pg = spm_MDP_BMR(np.asarray(qa[mi][int(g) - 1], dtype=np.float64) + np.asarray(da, dtype=np.float64), pAg)
+                        pal = np.asarray(Pa[int(g)], dtype=np.float64).reshape(-1, 1, order="F")
+                        pgl = np.asarray(Pg, dtype=np.float64).reshape(-1, 1, order="F")
+                        G[k, i_cov] += float((pgl.T @ (_spm_log(pgl) - _spm_log(pal))).reshape(-1)[0])
+                    else:
+                        Pa[int(g)] = {}
+
+    G = G + No
+    if "i" in idm:
+        col_max = np.max(G, axis=0)
+        i_sel = int(np.argmax(col_max) + 1)
+        G = G[:, i_sel - 1 : i_sel]
+        idm["i"] = i_sel
+    else:
+        G = np.sum(G, axis=1, keepdims=True)
+        i_sel = 1
+
+    if t < N:
+        ng = len(pA[mi])
+        pA[mi] = [None] * ng
+        ig = idm["g"][i_sel - 1]
+        ig = np.atleast_1d(np.asarray(ig, dtype=np.int64).ravel())
+        u = np.asarray(spm_softmax(G), dtype=np.float64)
+        mxu = float(np.max(u)) / 16.0
+        k_plausible = u > mxu
+        G = np.asarray(G, dtype=np.float64)
+        G = np.where(k_plausible, G, float(np.max(G) - 512.0))
+
+        for k in range(nk):
+            if not bool(np.asarray(k_plausible, dtype=bool).reshape(-1)[k]):
+                continue
+            for f in id_fu.tolist():
+                Bfk = np.asarray(B_slice[int(f) - 1][k], dtype=np.float64)
+                Pf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(-1, 1, order="F")
+                Qp[int(f) - 1] = Bfk @ Pf
+
+            j_acc: list[int] = []
+            for g in ig.tolist():
+                j1, _ = spm_parents(idm, int(g), Qp)
+                j1a = np.unique(np.atleast_1d(np.asarray(j1, dtype=np.int64).ravel())).tolist()
+                j_acc = sorted(set(j_acc + [int(x) for x in j1a]))
+            jv = np.asarray(j_acc, dtype=np.int64)
+
+            s_list: list[np.ndarray] = []
+            S_list: list[np.ndarray] = []
+            n_list: list[int] = []
+            for jf in jv.tolist():
+                Qjf = np.asarray(Qp[int(jf) - 1], dtype=np.float64).reshape(-1, order="F")
+                s_idx = np.flatnonzero(Qjf > np.exp(-8.0)) + 1
+                s_list.append(s_idx.astype(np.int64))
+                S_list.append(Qjf[s_idx - 1].reshape(-1, 1, order="F"))
+                n_list.append(int(s_idx.size))
+
+            q = spm_cross(S_list)
+            q = np.asarray(q, dtype=np.float64).reshape(tuple(n_list) + (1,), order="F")
+            flat = q.ravel(order="F").copy()
+            order_idx = np.argsort(-flat)
+            if flat.size > 4:
+                flat[order_idx[4:]] = 0.0
+            zs = float(np.sum(flat))
+            if zs > 0:
+                flat = flat / zs
+            q = flat.reshape(q.shape, order="F")
+            EFE = np.zeros_like(q, dtype=np.float64)
+            for ii_lin in range(int(q.size)):
+                if float(flat[ii_lin]) == 0.0:
+                    continue
+                ind = spm_index(np.asarray(q.shape, dtype=float).reshape(-1), float(ii_lin + 1))
+                ind_arr = np.asarray(ind, dtype=np.int64).ravel()
+                fi = np.zeros(nf, dtype=np.int64)
+                for pos, jf in enumerate(jv.tolist()):
+                    fi[int(jf) - 1] = int(s_list[pos][int(ind_arr[pos]) - 1])
+                for g in ig.tolist():
+                    fac, gg = spm_parents(idm, int(g), Qp)
+                    ind_cell = [int(fi[int(ff) - 1]) for ff in np.atleast_1d(np.asarray(fac, dtype=np.int64).ravel())]
+                    Amg = A[mi][int(g) - 1]
+                    for o in np.atleast_1d(np.asarray(gg, dtype=np.int64).ravel()):
+                        if callable(Amg):
+                            raise NotImplementedError("spm_forwards: function_handle A in recursion")
+                        sl = tuple(slice(int(x - 1), int(x)) for x in ind_cell)
+                        if Amg.ndim == len(ind_cell) + 1:
+                            col = np.asarray(Amg[(slice(None),) + sl], dtype=np.float64).reshape(-1, 1, order="F")
+                        else:
+                            col = np.asarray(Amg[sl], dtype=np.float64).reshape(-1, 1, order="F")
+                        O[mi][int(o) - 1][t] = col
+                for f in range(nf):
+                    P[mi][f][t] = Qp[f]
+                E = spm_forwards(O, P, A, B, C, H, K, W, I, t + 1, T, N, m, id_list, pA, qa)[0]
+                Es = np.asarray(spm_softmax(E), dtype=np.float64).reshape(-1, 1, order="F")
+                Ea = np.asarray(E, dtype=np.float64).reshape(-1, 1, order="F")
+                EFE.ravel(order="F")[ii_lin] = float((Es.T @ Ea).reshape(-1)[0])
+
+            G[k, 0] += float(np.sum(EFE * q))
+
+    return G, P, float(F), id_list, Pa
+
+
+def _pagetranspose_bw(a: Any) -> np.ndarray:
+    a = np.asarray(mfull(a), dtype=np.float64)
+    if a.ndim <= 2:
+        return np.ascontiguousarray(a.T)
+    return np.swapaxes(a, 0, 1)
+
+
+def _unique_stable_bw(j: np.ndarray) -> np.ndarray:
+    jv = np.asarray(j, dtype=np.int64).ravel()
+    seen: set[int] = set()
+    out: list[int] = []
+    for v in jv.tolist():
+        if int(v) not in seen:
+            seen.add(int(v))
+            out.append(int(v))
+    return np.array(out, dtype=np.int64).reshape(1, -1)
+
+
+def _numel_qb_row_bw(qb: list[Any], mi: int) -> int:
+    row = qb[mi]
+    if isinstance(row, list):
+        return len(row)
+    return int(np.asarray(row, dtype=object).size)
+
+
+def _Q_row_m_t_bw(Q: list[Any], mi: int, t_m: int) -> list[Any]:
+    ti = t_m - 1
+    return [Q[mi][f][ti] for f in range(len(Q[mi]))]
+
+
+def _sdot_mtimes_q_bw(s_dot_p: Any, q_next: np.ndarray) -> np.ndarray:
+    a = np.asarray(mfull(s_dot_p), dtype=np.float64)
+    b = np.asarray(q_next, dtype=np.float64).reshape(-1, 1, order="F")
+    if a.ndim == 2 and a.shape[1] == b.shape[0]:
+        return np.asarray((a @ b).reshape(-1, 1), dtype=np.float64, order="F")
+    if a.size == b.size:
+        return (a.reshape(-1, 1) * b.reshape(-1, 1)).astype(np.float64)
+    return (np.asarray(a).reshape(-1, 1) * b.reshape(-1, 1)).astype(np.float64)
+
+
+def _cell_get_Qjt_bw(Q: list[Any], mi: int, jv: np.ndarray, ti: int) -> Any:
+    jv = np.asarray(jv, dtype=np.int64).ravel()
+    if jv.size == 1:
+        return Q[mi][int(jv[0]) - 1][ti]
+    return [Q[mi][int(j) - 1][ti] for j in jv.tolist()]
+
+
+def _Q_factors_subset_bw(Q: list[Any], mi: int, r: np.ndarray, ti: int) -> list[Any]:
+    out: list[Any] = []
+    for idx in r.tolist():
+        fi = int(idx)
+        out.append(Q[mi][fi][ti])
+    return out
+
+
+def spm_backwards(
+    O: list[Any],
+    P: list[Any],
+    Q: list[Any],
+    D: list[Any],
+    E: list[Any],
+    pa: list[Any],
+    pb: list[Any],
+    U: list[Any],
+    m: int,
+    id_list: list[Any],
+) -> tuple[list[Any], list[Any], list[Any], list[Any], np.ndarray]:
+    """Local ``spm_backwards`` from ``spm_MDP_VB_XXX.m`` (~2081–2332)."""
+    mi = int(m) - 1
+    idm = id_list[mi]
+    tr = _pagetranspose_bw
+
+    Nf = len(Q[mi])
+    T = len(Q[mi][0])
+    Z = -np.inf
+    F_out = np.zeros(T, dtype=np.float64)
+
+    for _v in range(16):
+        F = np.zeros(T, dtype=np.float64)
+        qa = copy.deepcopy(pa)
+        qb = copy.deepcopy(pb)
+
+        for t_m in range(1, T + 1):
+            ti = t_m - 1
+            Qrow = _Q_row_m_t_bw(Q, mi, t_m)
+            for g in np.ravel(spm_children(idm)).tolist():
+                g = int(g)
+                j, i_ch = spm_parents(idm, g, Qrow)
+                for o in np.atleast_1d(np.asarray(i_ch)).ravel():
+                    o = int(o)
+                    Omot = O[mi][o - 1][ti]
+                    jv = np.atleast_1d(np.asarray(j)).ravel()
+                    acc = spm_cross(Omot, _cell_get_Qjt_bw(Q, mi, jv, ti))
+                    qa[mi][g - 1] = np.asarray(qa[mi][g - 1], dtype=np.float64) + np.asarray(acc, dtype=np.float64)
+                    pa_mg = np.asarray(pa[mi][g - 1], dtype=np.float64)
+                    qa[mi][g - 1] = qa[mi][g - 1] * (pa_mg > 0)
+
+            if t_m < T:
+                nqb = _numel_qb_row_bw(qb, mi)
+                for f_1 in range(1, nqb + 1):
+                    fi = f_1 - 1
+                    acc = spm_cross(spm_cross(Q[mi][fi][ti + 1], Q[mi][fi][ti]), P[mi][fi][ti])
+                    qb[mi][fi] = np.asarray(qb[mi][fi], dtype=np.float64) + np.asarray(acc, dtype=np.float64)
+                    pb_mf = np.asarray(pb[mi][fi], dtype=np.float64)
+                    qb[mi][fi] = qb[mi][fi] * (pb_mf > 0)
+
+        for t_m in range(1, T + 1):
+            ti = t_m - 1
+            Qrow = _Q_row_m_t_bw(Q, mi, t_m)
+
+            if isinstance(idm, dict) and "independent" in idm:
+                Lcell: list[Any] = [0.0] * Nf
+                for g in np.ravel(spm_children(idm)).tolist():
+                    g = int(g)
+                    j, k = spm_parents(idm, g, Qrow)
+                    j = _unique_stable_bw(np.asarray(j, dtype=np.int64))
+                    LL = None
+                    for o in np.atleast_1d(np.asarray(k)).ravel():
+                        o = int(o)
+                        Omot = O[mi][o - 1][ti]
+                        qa_mg = _spm_norm(qa[mi][g - 1])
+                        dot_v = spm_dot(qa_mg, Omot)
+                        logv = np.asarray(_spm_log(dot_v), dtype=np.float64)
+                        LL = logv if LL is None else (LL + logv)
+                    for jj in np.atleast_1d(j).ravel():
+                        idx = int(jj) - 1
+                        if isinstance(Lcell[idx], float):
+                            Lcell[idx] = np.asarray(LL, dtype=np.float64)
+                        else:
+                            Lcell[idx] = np.asarray(Lcell[idx], dtype=np.float64) + np.asarray(LL, dtype=np.float64)
+
+                nqb = _numel_qb_row_bw(qb, mi)
+                f_last = nqb
+                for _ii in range(1, Nf + 1):
+                    Lf0 = np.asarray(Lcell[f_last - 1], dtype=np.float64)
+                    Lf = Lf0.reshape(-1, 1, order="F")
+                    dD = D[mi][f_last - 1]
+                    n_s = int(np.asarray(dD, dtype=np.float64).shape[0])
+                    LPv = np.zeros((n_s, 1), dtype=np.float64)
+                    if t_m == 1:
+                        LPv = LPv + np.asarray(_spm_log(D[mi][f_last - 1]), dtype=np.float64).reshape(-1, 1, order="F")
+                    if t_m < T:
+                        qbf = np.asarray(qb[mi][f_last - 1], dtype=np.float64)
+                        Pmft = P[mi][f_last - 1][ti]
+                        Qn = Q[mi][f_last - 1][ti + 1]
+                        tdot = spm_dot(spm_psi(tr(qbf)), Pmft)
+                        LPv = LPv + _sdot_mtimes_q_bw(tdot, np.asarray(Qn, dtype=np.float64))
+                    if t_m > 1:
+                        qbf = np.asarray(qb[mi][f_last - 1], dtype=np.float64)
+                        Pprev = P[mi][f_last - 1][ti - 1]
+                        Qp = Q[mi][f_last - 1][ti - 1]
+                        tdot = spm_dot(spm_psi(qbf), Pprev)
+                        LPv = LPv + _sdot_mtimes_q_bw(tdot, np.asarray(Qp, dtype=np.float64))
+                    sm_in = Lf + LPv
+                    Q[mi][f_last - 1][ti] = spm_softmax(np.asarray(sm_in, dtype=np.float64))
+                    q_post = np.asarray(Q[mi][f_last - 1][ti], dtype=np.float64).reshape(-1, 1)
+                    logq = _spm_log(q_post)
+                    F[ti] = F[ti] + float(np.sum(q_post * (sm_in - logq)))
+
+            else:
+                L = np.asarray(0.0, dtype=np.float64)
+                for g in np.ravel(spm_children(idm)).tolist():
+                    g = int(g)
+                    j, k = spm_parents(idm, g, Qrow)
+                    j = _unique_stable_bw(np.asarray(j, dtype=np.int64))
+                    LL = None
+                    for o in np.atleast_1d(np.asarray(k)).ravel():
+                        o = int(o)
+                        Omot = O[mi][o - 1][ti]
+                        qa_mg = _spm_norm(qa[mi][g - 1])
+                        dot_v = spm_dot(qa_mg, Omot)
+                        logv = np.asarray(_spm_log(dot_v), dtype=np.float64)
+                        LL = logv if LL is None else (LL + logv)
+                    jv = np.asarray(j, dtype=np.int64).ravel()
+                    if jv.size > 1:
+                        order = np.argsort(jv, kind="mergesort")
+                        jv = jv[order]
+                        perm_axes = (order + 1).tolist()
+                        LL = np.transpose(np.asarray(LL, dtype=np.float64), np.asarray(perm_axes) - 1)
+                    sz_ll = matlab_size(LL)
+                    kdims = np.ones(Nf + 1, dtype=np.int64)
+                    for ix, fac in enumerate(jv.tolist()):
+                        if ix < len(sz_ll):
+                            kdims[int(fac) - 1] = int(sz_ll[ix])
+                    LLt = np.asarray(LL, dtype=np.float64).reshape(tuple(int(x) for x in kdims.tolist()), order="F")
+                    if isinstance(L, (int, float)) and float(L) == 0.0:
+                        L = LLt.astype(np.float64)
+                    else:
+                        L = np.asarray(L, dtype=np.float64) + LLt
+
+                sz_L = np.array(L.shape, dtype=np.int64)
+                r = np.flatnonzero(sz_L > 1).astype(np.int64)
+                if r.size == 0:
+                    F[ti] = float(np.asarray(L, dtype=np.float64).reshape(-1)[0])
+                else:
+                    new_shape = tuple(int(sz_L[int(i)]) for i in r.tolist()) + (1, 1)
+                    L = np.asarray(L, dtype=np.float64).reshape(new_shape, order="F")
+                    Q_rt = _Q_factors_subset_bw(Q, mi, r, ti)
+                    for dim_i in range(r.size):
+                        loop_i = dim_i + 1
+                        f_dim = int(r[dim_i]) + 1
+                        LLln = spm_vec(spm_dot(L, Q_rt, loop_i))
+                        ll_col = np.asarray(LLln, dtype=np.float64).reshape(-1, 1, order="F")
+                        LPv = np.zeros_like(ll_col, dtype=np.float64)
+                        if t_m == 1:
+                            LPv = LPv + np.asarray(_spm_log(D[mi][f_dim - 1]), dtype=np.float64).reshape(-1, 1, order="F")
+                        if t_m < T:
+                            qbf = np.asarray(qb[mi][f_dim - 1], dtype=np.float64)
+                            Pmft = P[mi][f_dim - 1][ti]
+                            Qn = Q[mi][f_dim - 1][ti + 1]
+                            tdot = spm_dot(spm_psi(tr(qbf)), Pmft)
+                            LPv = LPv + _sdot_mtimes_q_bw(tdot, np.asarray(Qn, dtype=np.float64))
+                        if t_m > 1:
+                            qbf = np.asarray(qb[mi][f_dim - 1], dtype=np.float64)
+                            Pprev = P[mi][f_dim - 1][ti - 1]
+                            Qp = Q[mi][f_dim - 1][ti - 1]
+                            tdot = spm_dot(spm_psi(qbf), Pprev)
+                            LPv = LPv + _sdot_mtimes_q_bw(tdot, np.asarray(Qp, dtype=np.float64))
+
+                        sm_arg = ll_col + LPv
+                        Q[mi][f_dim - 1][ti] = spm_softmax(sm_arg)
+                        q_post = np.asarray(Q[mi][f_dim - 1][ti], dtype=np.float64).reshape(-1, 1)
+                        logq = _spm_log(q_post)
+                        F[ti] = F[ti] + float(np.sum(q_post * (ll_col + LPv - logq)))
+
+        nqb_path = _numel_qb_row_bw(qb, mi)
+        for f_1 in range(1, nqb_path + 1):
+            fi = f_1 - 1
+            qbf_cell = np.asarray(qb[mi][fi], dtype=np.float64)
+            Urow = np.asarray(U[mi], dtype=np.float64).ravel()
+            if int(Urow[f_1 - 1]) != 0:
+                for t_m in range(2, T + 1):
+                    ti = t_m - 1
+                    LLp = spm_vec(spm_dot(spm_dot(spm_psi(qbf_cell), Q[mi][fi][ti]), Q[mi][fi][ti - 1]))
+                    LPp = _spm_log(P[mi][fi][ti - 1])
+                    ll_p = np.asarray(LLp, dtype=np.float64).reshape(-1, 1, order="F")
+                    lp_p = np.asarray(LPp, dtype=np.float64).reshape(-1, 1, order="F")
+                    P[mi][fi][ti - 1] = spm_softmax(ll_p + lp_p)
+                    p_post = np.asarray(P[mi][fi][ti - 1], dtype=np.float64).reshape(-1, 1)
+                    logp = _spm_log(p_post)
+                    F[ti] = F[ti] + float(np.sum(p_post * (ll_p + lp_p - logp)))
+            else:
+                LLacc = np.zeros((1, 1), dtype=np.float64)
+                for t_m in range(2, T + 1):
+                    ti = t_m - 1
+                    term = spm_vec(spm_dot(spm_dot(spm_psi(qbf_cell), Q[mi][fi][ti]), Q[mi][fi][ti - 1]))
+                    tcol = np.asarray(term, dtype=np.float64).reshape(-1, 1, order="F")
+                    if LLacc.size == 1 and LLacc.reshape(-1)[0] == 0.0:
+                        LLacc = tcol.copy()
+                    else:
+                        LLacc = LLacc + tcol
+                LPp = _spm_log(E[mi][fi])
+                lp_e = np.asarray(LPp, dtype=np.float64).reshape(-1, 1, order="F")
+                PP = spm_softmax(LLacc + lp_e)
+                for t_m in range(1, T + 1):
+                    ti = t_m - 1
+                    P[mi][fi][ti] = PP
+                p_post = np.asarray(PP, dtype=np.float64).reshape(-1, 1)
+                logp = _spm_log(p_post)
+                for t_m in range(1, T + 1):
+                    ti = t_m - 1
+                    F[ti] = F[ti] + float(np.sum(p_post * (LLacc + lp_e - logp)))
+
+        F_out = F.copy()
+        dF = float(np.sum(F)) - float(Z)
+        if float(np.sum(F)) > 0:
+            warnings.warn("positive ELBO in spm_backwards", UserWarning, stacklevel=1)
+        if dF < 1.0 / 128.0:
+            break
+        Z = float(np.sum(F))
+
+    return Q, P, qa, qb, F_out
 
 
 def _spm_log(a: Any) -> np.ndarray | Any:

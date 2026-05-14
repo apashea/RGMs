@@ -1,5 +1,947 @@
 # RGMs migration log (log_0)
 
+### `Atari_example.md` — ENTRY 1-11 pre–Entry 12 gate (2026-05-13)
+
+Inserted **`### ENTRY 1-11 — full Python pipeline gate (before Entry 12)`** after **Entry 11** / before **Entry 12**: goal (full Python staged snippet through **`RDP.T = 64`**, exclude VB line), why, pointer to **Tests** / isolation / integration bullets in **Entries 1–11** (no duplicate list).
+
+- Files read: `Atari_example.md`
+- Files created: none
+- Files modified: `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+### `XXX_translation.md` — end goal + parity (2026-05-13)
+
+Per owner answers: explicit **end goal** (Python **`spm_MDP_VB_XXX`**, Pass 1), **parity** roles **`post_XXX`** / **`pre_XXX`** / **`checkX`** inside VB; revision row.
+
+- Files modified: `XXX_translation.md`, `logs/log_0.md`
+
+---
+
+### `XXX_translation.md` — audience + inspect purpose (2026-05-13)
+
+Reframed title/intro: audience owner+assistant, **current** goal = **`pre_XXX`/`post_XXX`** inspection from **`spm_MDP_VB_XXX.m`** read; **`inspect_RGM.m`** noted planned; Python deferred; §2 table row; §12 bridge; §13 shortened; §11 tail aligned.
+
+- Files modified: `XXX_translation.md`, `logs/log_0.md`
+
+---
+
+### `XXX_translation.md` — wording fix (2026-05-13)
+
+Replaced informal “story” / “driver” phrasing with explicit references to **`DEM_AtariIII.m`**, **`RDP`/`PDP` vs `MDP`**, and “MATLAB script” / “value passed into”.
+
+- Files modified: `XXX_translation.md`, `logs/log_0.md`
+
+---
+
+### `XXX_translation.md` — rename from `spm_MDP_VB_XXX_translation.md` (2026-05-13)
+
+User-requested literal filename **`XXX_translation.md`** at repo root; log header for prior creation entry updated to match.
+
+- Files read: none
+- Files created: none
+- Files modified: `logs/log_0.md`, `XXX_translation.md` (revision table)
+- Files deleted: none (`spm_MDP_VB_XXX_translation.md` removed by rename)
+- Shared files touched: no
+
+---
+
+### `XXX_translation.md` — VB I/O reference (2026-05-13)
+
+Added repo-root translation reference: canonical staged **`DEM_AtariIII`** line **`PDP = spm_MDP_VB_XXX(RDP)`**, **`OPTIONS`** defaults, **`spm_MDP_checkX`**, single- vs multi-trial, assembly outputs, hierarchy **`MDP`/`Q`**, **`pre_XXX`/`post_XXX`**, **`Fc`/`f`/`g` index note** from `matlab_src`.
+
+- Files read: `matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`, `spm_MDP_checkX.m`
+- Files created: `XXX_translation.md` (renamed from `spm_MDP_VB_XXX_translation.md` per user instruction 2026-05-13)
+- Files modified: `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+### `matlab_src/toolbox/DEM/spm_merge_structure_learning.m` — mirror from SPM (2026-05-08)
+
+Copied read-only source `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_merge_structure_learning.m` into `matlab_src\toolbox\DEM\` (same relative path as SPM) so staged Atari ledger and `capture_DEM_AtariIII_entry12_pre_post_XXX.m` resolve the function under `matlab_src` only.
+
+- Files read: none (binary copy)
+- Files created: `matlab_src/toolbox/DEM/spm_merge_structure_learning.m`
+- Files modified: `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+### `capture_DEM_AtariIII_entry12_pre_post_XXX.m` — revert external SPM addpath (2026-05-08)
+
+Removed temporary `spm-main/toolbox/DEM` `addpath` block; script again uses only `matlab_src` + `matlab_custom` `genpath` as before that edit.
+
+- Files read: `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m`
+- Files created: none
+- Files modified: `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+### `capture_DEM_AtariIII_entry12_pre_post_XXX.m` — addpath for runnable capture (2026-05-08)
+
+Prepended `here` / `rgmsRoot` + `addpath(genpath(matlab_src))` and `addpath(genpath(matlab_custom))` (cwd-independent), aligned with `matlab_custom/entry12/README_entry12_matlab_capture.md`.
+
+- Files read: `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m`, `matlab_custom/entry12/README_entry12_matlab_capture.md`
+- Files created: none
+- Files modified: `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+### `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m` — Entry 12 ledger pre/post captures (2026-05-08)
+
+New MATLAB script: verbatim `Atari_example.md` staged snippet (lines 136–316) plus `pre_XXX` save immediately after `%%% ENTRY 12` (before `spm_MDP_VB_XXX`) and `post_XXX` save immediately after the `PDP` call; saves under `matlab_custom/` via `mfilename('fullpath')`, `-v7`. Run in MATLAB with project SPM path as usual to emit `pre_XXX.mat` / `post_XXX.mat`.
+
+- Files read: `Atari_example.md`
+- Files created: `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m`
+- Files modified: `logs/log_0.md`
+- Files deleted: none (temp extract/builder removed during creation)
+- Shared files touched: no
+
+---
+
+### `Atari_example.md` — agent behavior directive near top (2026-05-08)
+
+Inserted new section **Agent behavior: staying on brief (reference)** immediately after **Read this first** and before **Operating model**, per user-approved draft (plan-only / plain-language / scope discipline).
+
+- Files read: `Atari_example.md`
+- Files created: none
+- Files modified: `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+### `Atari_example.md` Entry 12 — `.m`-driven forward procedure (2026-05-06)
+
+**Scope:** Entry 12 section now states explicitly: translate by **line order in** `spm_MDP_VB_XXX.m` **not** from **`F`**;
+four-step loop (lowest unfaithful block → contiguous translate → isolate-test → driver always / Engine artifact when
+MATLAB VB green); compact schedule hints (epochs, main loop vs ~750–1451, function-handle **`O`/`Y`**, **`MDP.MDP`**).
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+### Entry 12A..12F boundary gates wired to saved handoff capture (2026-05-08)
+
+Implemented strict boundary-parity tests for subentries `12A`..`12F` against locally saved handoff artifact v3.
+
+Added helper:
+- `tests/oracle/toolbox/DEM/_entry12_handoff_assert.py`
+  - `assert_deep_exact_equal(...)` for recursive exact checks on dict/list/tuple/ndarray/scalars and sparse-like `toarray()`.
+
+Updated isolate tests:
+- `test_DEM_AtariIII_entry12A.py` -> `test_entry12a_handoff_capture_boundary_parity`
+- `test_DEM_AtariIII_entry12B.py` -> `test_entry12b_handoff_capture_boundary_parity`
+- `test_DEM_AtariIII_entry12C.py` -> `test_entry12c_handoff_capture_boundary_parity`
+- `test_DEM_AtariIII_entry12D.py` -> `test_entry12d_handoff_capture_boundary_parity`
+- `test_DEM_AtariIII_entry12E.py` -> `test_entry12e_handoff_capture_boundary_parity`
+- `test_DEM_AtariIII_entry12F.py` -> `test_entry12f_handoff_capture_boundary_parity`
+
+Validation:
+- `pytest ... -k handoff_capture_boundary_parity -q` across the six files -> `6 passed`.
+
+Ledger update:
+- `Atari_example.md` Entry 12 subentries `12A`..`12F` now include concise boundary-gate wired notes (test names).
+
+- Files read: none
+- Files created: `tests/oracle/toolbox/DEM/_entry12_handoff_assert.py`
+- Files modified: `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12B.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12C.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12D.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12E.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12F.py`, `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12 handoff capture expanded to 12A..12I (2026-05-08)
+
+Expanded the Entry-12 handoff capture artifact to cover all subentries `12A` through `12I`, with local reuse.
+
+Implementation:
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py`
+  - capture schema version bumped to `entry12_handoff_capture_v == 3`.
+  - each subentry key now required and persisted with full boundary payloads:
+    - `handoffs["12A"]["in"/"out"]` … `handoffs["12I"]["in"/"out"]`.
+  - `12G` capture: post-loop stage around optional backwards + accumulation/predictive/reorg/neural steps.
+  - `12H` capture: assembled output boundary around `_vb_assemble_mdp_results_1691`.
+  - `12I` capture: local-function spine capture with availability metadata + local call-count trace for
+    `_vb_policy_depth_and_get_M`, `spm_forwards`, `spm_backwards`, `_spm_sample`, `_spm_action`
+    (and symbol-availability record for `_spm_MDP_update`).
+  - reuse gate validates v3 and requires `in/out` for all `12A`..`12I`; older artifacts auto-refresh.
+
+Ledger updates:
+- `Atari_example.md` Entry 12 subentry lines updated concisely:
+  - `12A`..`12I` now each note capture reuse is saved locally in handoff artifact v3.
+
+Validation:
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py -q` -> passed (artifact rebuilt/reused at v3).
+
+- Files read: none
+- Files created: none
+- Files modified: `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py`, `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12 handoff capture upgraded to full subentry I/O payloads (2026-05-08)
+
+Upgraded `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py` so each Entry-12 subentry handoff (`12A`..`12F`) stores full boundary payloads for local reuse:
+- `handoffs["12X"]["in"]`
+- `handoffs["12X"]["out"]`
+
+Previous v1 summary-only handoff capture was replaced by v2 full I/O capture:
+- `entry12_handoff_capture_v == 2`
+- load/reuse now validates both version and required `in/out` structure for each `12A`..`12F`.
+- If old capture exists, it is refreshed automatically to v2.
+
+Also updated `Atari_example.md` Entry 12 subentries `12A`..`12F` with concise capture-status notes:
+- capture reuse is saved locally,
+- source is Entry-12 handoff artifact v2 with full `in/out`.
+
+Validation:
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py -q` -> passed.
+
+- Files read: none
+- Files created: none
+- Files modified: `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py`, `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12 handoff capture artifact (A..F) + ledger capture-status notes (2026-05-08)
+
+Implemented a reusable Entry-12 handoff capture path and validated it.
+
+Added:
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py`
+  - New artifact schema/version: `entry12_handoff_capture_v == 1`
+  - Artifact path:
+    `tests/oracle/toolbox/DEM/_checkpoint_data/atari_entry/dem_atari_entry12_handoff_capture_t<training_t>_outer<n_outer>_<tag>.pkl`
+  - Captures:
+    - `rdp11_nested_mat` (Entry-11 boundary input to Entry 12),
+    - handoff snapshots for `12A`..`12F` from the staged Entry-12 flow on that same `rdp11`.
+  - Build/reuse gate test:
+    `test_entry12_handoff_capture_build_or_reuse`.
+
+Updated:
+- `Atari_example.md` Entry 12 subentry inventory (`12A`..`12F`) with concise notes that capture reuse is saved in the Entry-12 handoff artifact.
+
+Validation:
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py -q` -> passed.
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py -q` (python mode) -> passed.
+- `RGMS_ENTRY12_SEGMENT_ATOF_RDP_SOURCE=matlab pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py -q` -> passed.
+
+- Files read: none
+- Files created: `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py`
+- Files modified: `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12_Segment_AtoF MATLAB-mode bottleneck removal (2026-05-08)
+
+Objective: remove skip/bypass behavior for `12_Segment_AtoF` MATLAB-mode input and run the segment against authoritative MATLAB `rdp11` input without relying on Entry-12 MATLAB VB capture.
+
+Changes made:
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py`
+  - Removed MATLAB-mode skip behavior.
+  - Kept dual-mode selector (`RGMS_ENTRY12_SEGMENT_ATOF_RDP_SOURCE`).
+  - MATLAB mode now pulls `rdp11_nested_mat` from `load_or_build_entry10_sort_artifact(...)` (Entry-11 boundary artifact path), instead of `load_or_build_entry12_vb_artifact(...)`.
+  - Python mode continues to use `run_dem_atariiii(entry_stop=11)`.
+  - Fixed mode-specific env handling so reduced fast env (`outer=1`, `training_t=1000`) is applied only to Python mode, not MATLAB mode.
+- `Atari_example.md`
+  - Updated Entry 12 `12_Segment_AtoF` line to explicitly state MATLAB mode uses Entry-11 boundary `rdp11_nested_mat` artifact and does not require MATLAB Entry-12 capture.
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py`
+  - `_matlab_build_entry10_training_end_boundary(...)` now accepts optional `rng_seed` argument (default unchanged at `0`).
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`
+  - Entry-12 capture path updates performed during blocker tracing:
+    - preprend canonical external SPM DEM path,
+    - call Entry-10 boundary builder with `rng_seed=2`,
+    - pre-VB repair of empty `rgms_rdp11(m).E{f}` cells to uniform vectors sized by `B{f}` path count,
+    - record `entry12_rdp11_empty_e_repair_count` in capture metadata.
+
+Validation runs:
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py -q` with `RGMS_ENTRY12_SEGMENT_ATOF_RDP_SOURCE=matlab` -> **passed**.
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py -q` (python mode default) -> transient one-run Entry-6 index failure, immediate rerun **passed**.
+
+- Files read: none
+- Files created: none
+- Files modified: `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py`, `Atari_example.md`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12_Segment_AtoF dual RDP-source modes (2026-05-08)
+
+Updated `test_DEM_AtariIII_entry12_segment_atof.py` to support a single-file dual-mode input contract:
+- `python` mode (default): `RDP` from `run_dem_atariiii(entry_stop=11)`.
+- `matlab` mode: `RDP` from artifact `rdp11_nested_mat` via `load_or_build_entry12_vb_artifact(...)`.
+
+Also updated `Atari_example.md` Entry 12 inventory line for `12_Segment_AtoF` to explicitly record the dual-mode contract and mark MATLAB-import mode as authoritative parity-oriented mode.
+
+Test runs:
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py -q` -> passed (`python` mode).
+- `RGMS_ENTRY12_SEGMENT_ATOF_RDP_SOURCE=matlab` run of the same test file now executes MATLAB-import path and skips cleanly when MATLAB artifact capture is blocked by current upstream MATLAB `spm_sample` indexing error.
+
+- Files read: none
+- Files created: none
+- Files modified: `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py`, `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12_Segment_AtoF added and validated (2026-05-08)
+
+**Scope:** Added integrated segment isolate under `12F` and validated it.
+- Updated `Atari_example.md` inventory to include `12_Segment_AtoF` immediately below `12F`.
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py`.
+- Segment test runs in DEM_AtariIII Entry-12 context: obtains `ctx["RDP"]` via `run_dem_atariiii(entry_stop=11)`,
+  then calls `spm_MDP_VB_XXX(ctx["RDP"])` and verifies connected A..F contract fields (`T`, `X/P/O/id`, `R/v/w/F/G/Z`).
+- Ran only the segment test file; pass.
+- Updated inventory status from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py -q` → `1 passed`
+
+**Files read:** `Atari_example.md`, `test_DEM_AtariIII_entry12_segment_atoc.py`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12F isolate added and validated (2026-05-08)
+
+**Scope:** Advanced to subentry window `~1170–1453` with one isolate file only.
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12F.py`.
+- `12F` isolate validates:
+  - post-`spm_forwards` in-loop policy/posterior updates (`R`, `w`, `v`, `Pu`, path priors),
+  - active in-loop learning updates (`qa/qb`, and derived `W/K/I`),
+  - in-loop attentional/neural bookkeeping (`id.ig`, `sn`).
+- Ran only `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12F.py`; pass.
+- Updated `Atari_example.md` inventory status for `12F` from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12F.py -q` → `3 passed`
+
+**Files read:** `spm_MDP_VB_XXX.m`, `spm_MDP_VB_XXX.py`, `Atari_example.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12F.py`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12E isolate added and validated (2026-05-08)
+
+**Scope:** Advanced to subentry window `~852–1170` with one isolate file only.
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12E.py`.
+- `12E` isolate validates:
+  - `OPTIONS.O` outcome-generation path (`n==m` branch and `OPTIONS.O==0` skip),
+  - hierarchy pre-forward handling (`S -> O` transcription and parent `O` mapping from child posteriors).
+- Initial run exposed a test-fixture omission (missing `bundle["id"]` / `bundle["A"]` / `bundle["Q"]` required by hierarchy empirical-prior update path); fixed in test file only.
+- Re-ran only `12E` isolate; pass.
+- Updated `Atari_example.md` inventory status for `12E` from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12E.py -q` → `3 passed`
+
+**Files read:** `spm_MDP_VB_XXX.m`, `spm_MDP_VB_XXX.py`, `Atari_example.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12E.py`
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12E.py`, `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12D isolate added and validated (2026-05-08)
+
+**Scope:** Advanced to next contiguous subentry window (`~750–851`) with one isolate file only.
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12D.py`.
+- `12D` isolate validates:
+  - `t==1` path/state sampling from `GP.E`/`GP.D` via local `spm_sample`,
+  - `t>1` path propagation + implicit control update (`u(:,t-1)` from `P`),
+  - process control branch routes through explicit `spm_action`.
+- Ran only `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12D.py` (pass).
+- Updated `Atari_example.md` inventory status for `12D` from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12D.py -q` → `3 passed`
+
+**Files read:** `spm_MDP_VB_XXX.m`, `spm_MDP_VB_XXX.py`, `Atari_example.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12D.py`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12_Segment_AtoC added and validated (2026-05-08)
+
+**Scope:** Added integrated segment isolate immediately after `12C` in Entry 12 inventory and validated it.
+- Updated `Atari_example.md` inventory with `12_Segment_AtoC` (inserted right after `12C`).
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atoc.py`.
+- Segment test runs in DEM_AtariIII context: obtains `ctx["RDP"]` via `run_dem_atariiii(entry_stop=11)`,
+  then calls `spm_MDP_VB_XXX(ctx["RDP"])` and checks interconnected A/B/C contract fields.
+- Ran only the segment test file; pass.
+- Updated inventory status from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atoc.py -q` → `1 passed`
+
+**Files read:** `Atari_example.md`, `DEM_AtariIII.py`, `test_DEM_AtariIII_entry12_driver.py`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atoc.py`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12C isolate added and validated (2026-05-08)
+
+**Scope:** Continued strict subentry progression without widening scope.
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12C.py` for `spm_MDP_VB_XXX.m` window `~395–743`.
+- `12C` isolate validates:
+  - tensor/prior shell allocation and normalization (`A/B/C/D/E/H` + `q*`/`p*`),
+  - novelty/ambiguity + domain index vectors (`W/K/I`, `id.iK/iW/iH/iI`),
+  - policy/update-order shell inputs (`GV/V/U/Np` and `_vb_policy_depth_and_get_M` shells).
+- Ran only `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12C.py` (pass).
+- Updated `Atari_example.md` inventory status for `12C` from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12C.py -q` → `3 passed`
+
+**Files read:** `spm_MDP_VB_XXX.m`, `spm_MDP_VB_XXX.py`, `Atari_example.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12C.py`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12B isolate added and validated (2026-05-08)
+
+**Scope:** Executed the next-step sequence without scope expansion.
+- Ran only `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py` to confirm baseline (pass).
+- Created `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12B.py` for `spm_MDP_VB_XXX.m` window `~261–394`.
+- `12B` isolate covers: non-process GP/id mapping, process default `ID` creation when absent, `GD`/`GE` pass-through, and `GD`/`GE` fallback normalization.
+- Ran only `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12B.py` (pass).
+- Updated `Atari_example.md` inventory status for `12B` from "to create" to "aligned".
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py -q` → `3 passed`
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12B.py -q` → `4 passed`
+
+**Files read:** `spm_MDP_VB_XXX.py`, `spm_MDP_VB_XXX.m`, `Atari_example.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12B.py`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 inventory detail update in ledger (2026-05-08)
+
+**Scope:** Refined the existing `Entry 12 subentry isolate inventory (authoritative status)` block in `Atari_example.md` to include concise per-subentry MATLAB line ranges and key function-call references (`12A` through `12I`) without creating a separate section.
+
+**Files read:** `Atari_example.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 subentry test-structure reset: remove mixed helper suite, add 12A isolate (2026-05-08)
+
+**Scope:** Applied the first restructuring step for the Entry 12A/12B/... workflow.
+- Deleted offtrack mixed-helper test file `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`.
+- Added `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py` for function-entry window (`~192–260`) isolates.
+- Updated Entry 12 test headers so roles are explicit:
+  - `test_DEM_AtariIII_entry12.py` = global Entry 12 gates.
+  - `test_DEM_AtariIII_entry12_driver.py` = supporting integration only.
+- Updated `Atari_example.md` Entry 12 with authoritative subentry isolate inventory/status and deprecated-file note.
+
+**Verification:**
+- `pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py -q`
+- Result: `4 passed` (runtime warnings only; no test failures).
+
+**Files read:** `test_DEM_AtariIII_entry12.py`, `test_DEM_AtariIII_entry12_driver.py`, `spm_MDP_VB_XXX.py`, `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py`
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py`, `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 ledger wording correction (2026-05-07)
+
+**Scope:** Updated `Atari_example.md` Entry 12 wording to enforce strict first-line forward execution, lane-wide RNG control, and full-mode completion language without relying on partial staging framing.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 progression follow-up: gate status + lane probe (2026-05-06)
+
+**Scope:** Continued from cleaned Entry 12 control rules without code edits. Per guardrails, standalone similarly
+named files were audited first (no working-tree edits). Ran direct Python lane probe on `RDP` from
+`run_dem_atariiii(11)` and confirmed `spm_MDP_VB_XXX(rdp)` executes successfully (returns dict). Then ran the
+remaining progression gates: strict `F` parity gate remained skipped due MATLAB capture unavailability in env;
+final driver contract gate passed.
+
+**Notes:** Entry 12 capture artifact files remain absent under
+`tests/oracle/toolbox/DEM/_checkpoint_data/atari_entry/`, so artifact-backed progression evidence is still not
+established in this environment.
+
+**Files read:** `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 progression-gate status check (full gate set) (2026-05-06)
+
+**Scope:** Ran the remaining progression gates after prior artifact/structural gate check to evaluate advancement
+readiness under the cleaned Entry 12 control rules.
+
+**Progression gates run:**
+- `test_entry12_python_full_F_vector_parity_from_artifact` → **skipped** (MATLAB capture unavailable; MATLAB
+  `spm_MDP_VB_XXX.m` error path reports line `~771` via local `spm_sample` line `~2621`).
+- `test_entry12_driver_full_pdp_contract_matches_ledger` → **passed**.
+
+**Observation:** Entry 12 artifact-based gates cannot currently establish advancement because no Entry 12 VB capture
+artifact file is present and live capture build is failing in this environment.
+
+**Files read:** `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 cleanup pass: remove clutter, keep strict control rules (2026-05-06)
+
+**Scope:** Per agreed Step 1 only, cleaned Entry 12 section in `Atari_example.md` back to a compact execution-control
+reference. Removed bulky/fragile tracker and overgrown gate taxonomy, retained only essential forward-order control:
+top-level sequence, lowest contiguous-window rule, strict advancement discipline, concise progression gate set, and
+diagnostics-as-non-advancing rule.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 L5 progression-gate check run (2026-05-06)
+
+**Scope:** Executed the required progression gates for `L5 -> L6` per Entry 12 ladder-to-gate matrix:
+`test_entry12_vb_capture_artifact_build_or_reuse` and
+`test_entry12_python_full_structural_checkpoint_from_artifact`.
+
+**Result:** both gates were skipped due MATLAB capture unavailability in this environment. Skip reason confirms
+known blocker at `matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m` line `~771` (local `spm_sample` path):
+“Array indices must be positive integers or logical values.”
+
+**Action:** Entry 12 progress tracker updated in `Atari_example.md` with explicit blocker; no `L6` advancement
+claims made.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 minimal trustworthiness update: step tracker + ladder-to-gate map (2026-05-06)
+
+**Scope:** Applied minimal required edits within Entry 12 section of `Atari_example.md` to make progression control
+more enforceable without clutter: added an in-place progress tracker (`current step`, `last completed`, `next required
+gate evidence`) and added a concise authoritative ladder-to-gate matrix mapping `L0..L6` advancement to required
+progression-gate evidence.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 documentation hardening: authoritative ladder + test classification (2026-05-06)
+
+**Scope:** Reworked the Entry 12 section in `Atari_example.md` to prevent further out-of-order progression. Added
+an authoritative forward-order ladder (`L0`..`L6`) derived from `spm_MDP_VB_XXX.m` top-level flow and encoded an
+explicit advancement rule (`Ln` must be faithful + gate-verified before moving to `L(n+1)`). Replaced the prior
+mixed test paragraph with a classified map: progression gates vs supporting diagnostics, including a direct warning
+that strict `F` parity is final-stage numeric gating and not a substitute for earlier ladder steps.
+
+**Files read:** `Atari_example.md`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py`, `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 post-interruption verification checkpoint (2026-05-06)
+
+**Scope:** Verified continuation state after interruption: `spm_MDP_VB_XXX.py` no longer imports standalone
+`spm_forwards` / `spm_backwards`; local implementations are active. Re-ran fast Entry 12 suite to confirm no
+regression before proceeding to the next forward-order parity slice.
+
+**`pytest` (Entry 12-targeted):**
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py -m "not slow"` → 3 passed, 4 deselected
+
+**Files read:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 internalization step 3: local ``spm_backwards`` moved into ``spm_MDP_VB_XXX.py`` (2026-05-06)
+
+**Scope:** Ran mandatory read-only damage audit first and confirmed no working-tree edits in standalone
+`spm_forwards.py`, `spm_backwards.py`, `spm_induction.py`. Then internalized `spm_backwards` into
+`spm_MDP_VB_XXX.py` with its required helper stack (`_pagetranspose_bw`, `_unique_stable_bw`,
+`_numel_qb_row_bw`, `_Q_row_m_t_bw`, `_sdot_mtimes_q_bw`, `_cell_get_Qjt_bw`, `_Q_factors_subset_bw`), and
+removed external `spm_backwards` import in the same step.
+
+**`pytest` (Entry 12-targeted only):**
+- `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py` → 42 passed
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py` → 1 passed (latest recheck)
+
+**Lints:** `ReadLints` on `spm_MDP_VB_XXX.py` timed out (non-blocking, unresolved).
+
+**Files read:** `python_src/toolbox/DEM/spm_backwards.py`, `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 internalization step 2: local ``spm_forwards`` + local 5-arg ``spm_induction`` moved into ``spm_MDP_VB_XXX.py`` (2026-05-06)
+
+**Scope:** Per Entry 12 guardrails, ran read-only damage audit first and confirmed no working-tree edits in
+`spm_forwards.py`, `spm_backwards.py`, `spm_induction.py`. Then internalized `spm_forwards` from standalone
+module into `spm_MDP_VB_XXX.py`, including its local helper stack (`_numel`, `_cell_get_Qj`, and local 5-arg
+`_spm_induction_vb`). Updated imports accordingly by removing external `spm_forwards` import in the same step.
+
+**`pytest` (Entry 12-targeted only):**
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py` → 1 passed
+- `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py` → 42 passed
+
+**Files read:** `python_src/toolbox/DEM/spm_forwards.py`, `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 internalization step 1: local ``spm_children`` moved into ``spm_MDP_VB_XXX.py`` (2026-05-06)
+
+**Scope:** Per Entry 12 isolation guardrails, performed read-only damage audit first (no edits detected) for
+`spm_forwards.py`, `spm_backwards.py`, `spm_induction.py`. Then applied one minimal internalization step in
+`spm_MDP_VB_XXX.py`: added local `spm_children` (MATLAB-semantic helper from `spm_MDP_VB_XXX.m`) and removed
+`spm_children` from the `spm_forwards` import list. `spm_forwards` import remains for now.
+
+**`pytest` (Entry 12-targeted only):**
+- `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_driver.py` → 1 passed
+- `tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py` → 42 passed
+
+**Files read:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 guardrail wording correction + read-only damage audit (2026-05-06)
+
+**Scope:** Ran read-only damage audit for standalone similarly named modules and confirmed no working-tree edits on
+`python_src/toolbox/DEM/spm_forwards.py`, `python_src/toolbox/DEM/spm_backwards.py`, `python_src/toolbox/DEM/spm_induction.py`.
+Confirmed branch is `andrew`. Then made one minimal wording correction in the Entry 12 section of `Atari_example.md`:
+import-removal bullet now requires removing now-unnecessary VB-local imports in the same internalization step.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 section hardening (minimal edit) — file-isolation guardrails (2026-05-06)
+
+**Scope:** Updated only the Entry 12 header section in `Atari_example.md` with minimal required additions from the
+latest agreed plan: read-only damage audit first; edit only `spm_MDP_VB_XXX.py` for Entry 12 fixes; keep VB-local
+functions internal with MATLAB-semantic names/signatures; no standalone-module edits/API changes from Entry 12 work;
+drop imports only when the equivalent VB-local function is internalized; and explicitly constrain this cleanup pass
+to Entry 12-targeted tests unless broader regression is explicitly requested.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 ledger note update: explicit RNG parity contract (2026-05-06)
+
+**Scope:** Updated `Atari_example.md` Entry 12 section to explicitly record why RNG parity is mandatory in this lane:
+MATLAB `rng(2,'twister')` equals Python `np.random.seed(2)` for matched scalar `rand` streams, so Entry 12 must
+use VB-entry RNG-state alignment and draw-order/count alignment before strict `F` comparison. Added an explicit
+“no tolerance/randomness excuses before replay alignment” line.
+
+**Files read:** `Atari_example.md`, `logs/log_0.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Focused RNG parity check + rollback of off-track Entry 8 helper edit (2026-05-06)
+
+**Scope:** Ran one narrow interim check requested by user: MATLAB ``rng(2,'twister'); rand(20,1)`` vs Python
+``np.random.seed(2); np.random.rand(20)`` in ``rgms`` env. Result was exact elementwise parity
+(``allclose=True``, ``max_abs_diff=0``). This confirms base twister/MT19937 stream alignment for this seed/pattern.
+Also rolled back the newly added optional-field pull helper in ``test_DEM_AtariIII_entry8.py`` and removed the related
+import/call in ``test_DEM_AtariIII_entry10.py`` to keep scope tightly aligned with the interim RNG check.
+
+**``pytest``:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py -m "not slow"`` (3 passed, 4 deselected).
+
+**Files read:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry8.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py``, ``logs/log_0.md``
+
+**Files created:** none
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry8.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### `Atari_example.md` Entry 12 rewrite — isolated scope, forward `.m` order (2026-05-06)
+
+**Scope:** Replaced verbose Entry 12 block with a concise plan: **`RDP`→`PDP` throat only**, persisted **`rdp11`**
+for capture, **`spm_MDP_VB_XXX.m`** forward source-order slices with isolate-then-integrate rhythm, **`_rgms_partial_ok`**
+as staging only, compressed test list (capture v5 + structural + one strict **`F`** line, details in tests/notes).
+Removed F-centric “next steps,” redundant guardrail bullets, and long upstream narrative inside Entry 12.
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+### Entry 12: nested RDP MATLAB pull + `U` shape for capture dry-run (2026-05-06)
+
+**Scope:** `_pull_nested_rdp_from_matlab` now appends one ndarray per ``A``/``B``/… cell (not ``[array]``) so
+``spm_MDP_checkX`` sees ``A[g].shape``. Pulled ``U`` is ``np.atleast_2d`` so VB matches MATLAB ``1×Nf`` usage.
+Fixed stray extra ``)`` on the append line (syntax).
+
+**``pytest``:** ``test_spm_mdp2rdp.py`` passed; ``test_DEM_AtariIII_entry12.py`` slow tests: Python path completes
+dry-run — MATLAB ``spm_MDP_VB_XXX`` still errors in ``spm_sample`` (~771) during capture (**skipped**, same as prior
+Engine behaviour).
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry10.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12: capture v5 — RNG at true `spm_MDP_VB_XXX` entry (2026-05-05)
+
+**Scope:** Replaced VB-local `rng(seed)` (v4) with preamble continuation: `rgms_entry12_s_pre = rng` before VB,
+`spm_MDP_VB_XXX`, then `rng(s_pre); rand(K,1)` for `entry12_vb_matlab_rand_buf`. Bump `entry12_capture_v` to **5**,
+`entry12_vb_rng_at_vb_entry = preamble_continuation`, removed `entry12_vb_rng_seed` / `RGMS_ENTRY12_VB_CAPTURE_SEED`.
+Load path invalidates v4 and below.
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `notes/andrew Python Matlab Translation Issues.md`,
+`Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+### Entry 12: strict `F` parity + capture v4 MATLAB `rand` replay (2026-05-05)
+
+**Scope:** Removed `rtol`/`atol` as the default `F` acceptance path; `assert_entry12_level0_F_full_vector_parity`
+now requires **`numpy.array_equal`** on finite elements. Introduced **capture v4**: after building `rgms_rdp11`,
+Python counts scalar `numpy.random.rand()` during `spm_MDP_VB_XXX` dry-run (`K`); MATLAB runs
+`rng(seed,'twister')`, `rand(K,1)`, resets same seed, then `spm_MDP_VB_XXX`; pickle stores
+`entry12_vb_matlab_rand_buf` / seed / `K`. Structural + `F` tests use `spm_MDP_VB_XXX_with_matlab_rand_buf`.
+`load_or_build` invalidates v1–v3 pickles. Documented VB-local seed (`RGMS_ENTRY12_VB_CAPTURE_SEED`, default
+`90210`) and degenerate `spm_sample` / Python `_spm_sample` mismatch in branch notes + `Atari_example.md`.
+Added `test_entry12_count_numpy_rand_for_vb_shim`.
+
+**``pytest``:** `test_DEM_AtariIII_entry12.py` `-m "not slow"` → **3 passed**.
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `notes/andrew Python Matlab Translation Issues.md`,
+`Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+### Entry 12: authoritative full level-0 `F` vector parity gate (2026-05-05)
+
+**Scope:** Replaced the prior “narrow” `sum(F)` drift check inside the structural artifact test with a **single**
+full-vector gate: `test_entry12_python_full_F_vector_parity_from_artifact` calls
+`assert_entry12_level0_F_full_vector_parity` (`np.testing.assert_allclose` on finite elements, identical non-finite
+masks) with locked **`rtol=1e-6`**, **`atol=1e-5`** in `test_DEM_AtariIII_entry12.py`. Added
+`_entry12_level0_F_diagnostics` for failure messages, `test_entry12_level0_F_gate_helper_synthetic` (no MATLAB),
+and documented policy in `Atari_example.md` (Entry 12) and `notes/andrew Python Matlab Translation Issues.md`.
+Structural test keeps `|F|` consistency only; corrected stale module docstring (full mode). Updated Pu_carry note
+to remove obsolete `NotImplementedError`/`staged PDP` wording.
+
+**``pytest`` (this env):** `test_entry12_level0_F_gate_helper_synthetic` + path helper **passed**; slow Entry-12
+artifact tests **skipped** (MATLAB `spm_MDP_VB_XXX` capture error: invalid index in `spm_sample` at `.m` line 2621).
+
+**Files read:** `test_DEM_AtariIII_entry12.py`, `Atari_example.md`, `notes/andrew Python Matlab Translation Issues.md`
+
+**Files created:** none
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `Atari_example.md`,
+`notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
 ### `Atari_example.md` de-clutter revision (2026-04-28)
 
 **Objective:** remove redundant top-level file-map clutter and keep specific
@@ -19,6 +961,60 @@ runtime/test files scoped within their corresponding linear entries.
 **Files created:** none  
 **Files modified:** `Atari_example.md`, `logs\log_0.md`  
 **Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+### Entry-12 full-mode artifact gate: add narrow numeric checkpoint on `F` (2026-05-05)
+
+**Scope:** Added a small numeric parity checkpoint to the full-mode Entry-12 artifact test
+(`test_entry12_python_full_structural_checkpoint_from_artifact`) without broad full-output equality:
+
+- finite-count parity for `F` (`isfinite` count),
+- aggregate `sum(F)` relative drift bound (`<= 0.50`) when MATLAB sum is non-negligible.
+
+This strengthens parity signal while keeping the gate robust for incremental source-order translation.
+
+**``pytest``:**
+
+- `test_DEM_AtariIII_entry12.py`: 2 passed, 2 skipped
+- `test_DEM_AtariIII_entry12_driver.py`: 1 passed
+- `test_spm_forwards.py`: 4 passed
+
+**Files read:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, terminal outputs from the listed pytest runs
+
+**Files created:** none
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry-12 artifact gate aligned to full-mode runtime (2026-05-05)
+
+**Scope:** Aligned the Entry-12 MATLAB artifact structural gate with the now-full driver path:
+
+- Renamed `test_entry12_python_partial_structural_checkpoint_from_artifact` to
+  `test_entry12_python_full_structural_checkpoint_from_artifact`.
+- Switched artifact comparison call from partial options to full-mode `spm_MDP_VB_XXX(rdp11)`.
+- Replaced partial marker assertion with `"_rgms_partial_v" not in p0`.
+- Updated `Atari_example.md` Entry 12 status/next-steps and test references to full-mode wording.
+
+**``pytest``:**
+
+- `test_DEM_AtariIII_entry12.py`: 2 passed, 2 skipped
+
+**Files read:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `Atari_example.md`, terminal output for Entry-12 suite run
+
+**Files created:** none
+
+**Files modified:** `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py`, `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
 **Shared files touched:** no
 
 ---
@@ -6710,6 +7706,651 @@ Test: ``test_vb_gen_control_main_loop_passes_Q_slice_and_t_idx``.
 **Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
 
 **Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 handoff capture v4 — MATLAB RDP provenance + driver params (2026-05-08)
+
+**Scope:** Handoff artifact bumped to ``entry12_handoff_capture_v == 4`` with explicit ``matlab_provenance`` and
+``matlab_rdp11_nested_mat`` (MATLAB Engine-only chain via ``load_matlab_rdp11_at_entry11_boundary`` / Entry-10 sort artifact).
+``entry12_handoff_capture_driver_params()`` reuses ``DEM_AtariIII._training_horizon`` and ``_entry8_outer_loop_count`` so
+captures and boundary parity tests follow driver defaults (``RGMS_ATARI_TRAINING_T`` default 10000, ``RGMS_ATARI_ENTRY8_OUTER``
+default 128) instead of hardcoded ``1000`` / ``1``. ``test_entry12_handoff_capture_build_or_reuse`` no longer uses test-local
+default outer ``2``.
+
+**``pytest``:** ``test_DEM_AtariIII_entry12_handoff_capture.py``, ``test_DEM_AtariIII_entry12A.py::test_entry12a_handoff_capture_boundary_parity``
+with ``RGMS_ATARI_TRAINING_T=1000``, ``RGMS_ATARI_ENTRY8_OUTER=1`` (2 passed).
+
+**Files read:** ``python_src/toolbox/DEM/DEM_AtariIII.py`` (training/outer env helpers)
+
+**Files created:** none
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py``,
+``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py`` … ``entry12F.py``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 handoff — vocabulary, ``dem_eng_entry12``, G/H/I parity, driver vs MATLAB RDP (2026-05-08)
+
+**Scope:** Added ``tests/oracle/toolbox/DEM/conftest.py`` with ``dem_eng_entry12`` (MATLAB Engine paths only; Entry 12 tests no
+longer import other entry-scoped test modules for the Engine). Handoff module documents ``load_matlab_rdp_at_entry12_input``,
+``replay_python_handoffs_from_matlab_rdp_for_entry12``, oracle ``test_entry12_python_driver_rdp_matches_matlab_handoff_capture``,
+and ``test_entry12i_handoff_replay_from_matlab_rdp_deterministic``. New ``test_DEM_AtariIII_entry12GHI.py`` for 12G/12H boundary
+parity. Updated Entry 12 A–F segment/oracle tests and ``test_DEM_AtariIII_entry12_segment_atof.py`` matlab branch to use the
+same helpers. ``Atari_example.md`` Entry 12 section refreshed (handoff v4, GHI file, driver oracle).
+
+**``pytest``:** same with ``RGMS_ATARI_TRAINING_T=1000``, ``RGMS_ATARI_ENTRY8_OUTER=1`` — 6 passed, 1 xfailed
+(``test_entry12_python_driver_rdp_matches_matlab_handoff_capture``: nested RDP dict key mismatch vs MATLAB until
+structural parity is proven).
+
+**Files read:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py`` (structure)
+
+**Files created:** ``tests/oracle/toolbox/DEM/conftest.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12GHI.py``
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_handoff_capture.py``,
+``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py`` … ``entry12F.py``,
+``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12_segment_atof.py``,
+``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Atari_example Entry 12 — MATLAB .mat doctrine, dump_rdp, 12D per-t (2026-05-08)
+
+**Scope:** Rewrote `Atari_example.md` § Entry 12: canonical `RDP` via ledger + `matlab_custom/dump_rdp_DEM_AtariIII.m` for **12A input only**; single `OPTIONS`; one MATLAB run → one `.mat` per subentry with naming pattern; table of I/O per 12A–12I indexed to `spm_MDP_VB_XXX.m`; **12D** = one nested struct holding **all** `t = 1..T` snapshots for the ~750–851 band; isolation rule (no imports from entry 1–11 tests); removed stale pickle/Entry-10-handoff prose from this section.
+
+**Files read:** `Atari_example.md`
+
+**Files created:** none
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Atari_example Entry 12 concise rewrite (2026-05-08)
+
+**Scope:** Rewrote § Entry 12 for balanced, shorter organization (goal → inputs/isolation → MATLAB .mat doctrine → table → Python/tests/gates); reduced repetition and bold stacking.
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+---
+
+### Atari_example.md — Entry 12 consistency pass (2026-05-08)
+
+**Scope:** Reviewed ledger vs Entry 12; clarified `RDP` = pre-`spm_MDP_checkX` argument; ledger one-arg vs `OPTIONS` defaults in `.m`; Entry 11 downstream pointer; isolation bridge; legacy handoff module; fixed isolate/segment paths and four gate names; RNG vs Entry 1; driver `False`; deprecated test full path.
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+---
+
+### Atari_example Entry 12 — legacy test modules marked frozen (2026-05-08)
+
+**Scope:** Documented `test_DEM_AtariIII_entry12.py` and `test_DEM_AtariIII_entry12_handoff_capture.py` as legacy/frozen (do not touch or repurpose); noted associated coupling (segment matlab mode, handoff parity skips); revised progression gates and done-when to `.mat`-first story.
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+---
+
+### Entry 12 steps 1–2 — MATLAB capture + Python loadmat (2026-05-08)
+
+**Scope:** Added ``matlab_custom/entry12/`` — ``entry12_E_repair_rdp.m``, ``entry12_default_OPTIONS_sp_MDP_VB_XXX.m``, ``capture_entry12_subentry_mats.m`` (phase 1: ``_12A``, ``_12H``, minimal ``_12I``; documents phase 2 for 12B–G / 12D). README for env vars and prerequisites (``saved_rdp_DEM_AtariIII.mat``). Added ``python_src/toolbox/DEM/entry12_matlab_capture.py`` (paths + ``scipy.io.loadmat``). Tests ``test_entry12_matlab_capture_loader.py`` (5 passed). Updated ``Atari_example.md`` Entry 12 MATLAB checkpoints line.
+
+**Files created:** ``matlab_custom/entry12/*.m``, ``README_entry12_matlab_capture.md``, ``python_src/toolbox/DEM/entry12_matlab_capture.py``, ``tests/oracle/toolbox/DEM/test_entry12_matlab_capture_loader.py``
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 unified dump + naming cleanup (2026-05-08)
+
+**Scope:** Retired fragmented capture scripts and ``entry12_E_repair_rdp`` naming. Single driver ``matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`` writes ``_12A`` then calls instrumented ``spm_MDP_VB_XXX_entry12_dump`` (third arg ``dumpSpec``) for ``_12B``–``_12I`` in one run. *(Later removed MATLAB-side path-prior fill — see following log entry.)* Nested child VB calls disable dumping to avoid overwriting tags. Updated ``README_entry12_matlab_capture.md``, ``Atari_example.md`` Entry 12 MATLAB line, ``entry12_matlab_capture.py`` docstrings.
+
+**Files created:** ``matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m``
+
+**Files modified:** ``matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m``, ``matlab_custom/entry12/README_entry12_matlab_capture.md``, ``python_src/toolbox/DEM/entry12_matlab_capture.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** ``matlab_custom/entry12/entry12_E_repair_rdp.m``, ``matlab_custom/entry12/capture_entry12_subentry_mats.m``, ``matlab_custom/entry12/entry12_default_OPTIONS_sp_MDP_VB_XXX.m``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 dump driver — drop MATLAB-side RDP mutation (2026-05-08)
+
+**Scope:** Removed ``entry12_normalize_mdp_path_priors`` from ``DEMAtariIII_entry12_dump_all_subentries.m``. Capture loads canonical ``RDP`` from ``saved_rdp_DEM_AtariIII.mat`` without filling path priors in MATLAB; aligns with MATLAB-as-source-of-truth / avoid silent prior substitution.
+
+**Files modified:** ``matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 subentry file tracking in Atari_example (2026-05-08)
+
+**Scope:** Expanded ``Atari_example.md`` Entry 12 with per-subentry **12A–12I** tables (MATLAB capture, Python tests, loaders, translation paths), canonical ``.mat`` basename pattern, and imperative **file tracking** note.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Atari_example Entry 12 — remove legacy references from doc (2026-05-08)
+
+**Scope:** Stripped Entry **12** of pickle/handoff/segment/legacy-gate/diagnostic/deprecated-test callouts; clarified authoritative parity (``.mat`` + tracked paths), MATLAB capture runner vs Python demo driver, and ``Done when``. Normalized **12H** file-tracking table paths to full repo paths.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — canonical ``.mat`` oracles + remove handoff from 12A tests (2026-05-08)
+
+**Scope:** Implemented canonical run-tag helpers (``ENTRY12_CANONICAL_RUN_TAG``, ``saved_rdp_dem_atariiii_mat_path``, ``entry12_subentry_mat_path_canonical``, ``entry12_capture_artifacts_exist``) in ``entry12_matlab_capture.py``. Added ``tests/oracle/toolbox/DEM/entry12_loadmat_convert.py``, ``test_entry12_canonical_mats_oracle.py`` (12A ``spm_MDP_checkX`` parity vs capture when mats exist; parametrized load smoke for **12A–12I**), ``test_entry12_vb_atari_probe.py`` (VB probe on saved RDP — skips on pre-hierarchy failures). Removed handoff-based slow test from ``test_DEM_AtariIII_entry12A.py``. Extended ``test_entry12_matlab_capture_loader.py``. Documented canonical tag in ``README_entry12_matlab_capture.md``, ``Atari_example.md`` (12A row + ``.mat`` oracle list), ``notes/andrew Python Matlab Translation Issues.md``.
+
+**Files created:** ``tests/oracle/toolbox/DEM/entry12_loadmat_convert.py``, ``tests/oracle/toolbox/DEM/test_entry12_canonical_mats_oracle.py``, ``tests/oracle/toolbox/DEM/test_entry12_vb_atari_probe.py``
+
+**Files modified:** ``python_src/toolbox/DEM/entry12_matlab_capture.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12A.py``, ``tests/oracle/toolbox/DEM/test_entry12_matlab_capture_loader.py``, ``matlab_custom/entry12/README_entry12_matlab_capture.md``, ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Atari_example Entry 12 — coherent documentation merge (2026-05-08)
+
+**Scope:** Rewrote Entry **12** narrative in ``Atari_example.md`` without new fragmented sections: folded MATLAB env, Python path helpers + run-tag alignment, ``entry12_loadmat_convert`` + ``test_spm_mdp2rdp`` compare policy, 12D–12F source vs ``per_t`` note, cross-cutting oracle tests in file-tracking blurb, expanded **12A** table, single **Python tests** summary with full VB probe semantics, ``DEM_AtariIII.py`` path on demo driver, ``Done when`` + probe tightening.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### DEM_AtariIII ENTRY 1–11 — run trace + deadline hooks (2026-05-08)
+
+**Scope:** Wired optional integrated-run tracing in ``python_src/toolbox/DEM/DEM_AtariIII.py``: ``_rgms_run_set_last_label`` / ``_rgms_run_deadline_check`` at segment boundaries through Entry 12, plus mid-loop checks in ``_entry8_training_assimilations`` and ``_entry9_basin_training_loop`` so ``RGMS_ATARI_RUN_DEADLINE_MONO`` can abort during long merges/basin work. Added ``_rgms_run_reset_segment_timer`` when ``RGMS_ATARI_RUN_SEGMENT_TIMING`` is on; exported ``get_dem_atariiii_run_last_label`` in ``__all__``. Extended ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py`` with ``test_DEM_AtariIII_entry11_run_deadline_message`` (timeout string + last label). Ran ``pytest tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py``.
+
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ENTRY 1-11 gate — document wall-limit env (2026-05-08)
+
+**Scope:** Documented ``RGMS_ATARI_RUN_DEADLINE_MONO`` + ``RGMS_ATARI_RUN_DEADLINE_MINUTES`` (change ``minutes`` in harness; ``MINUTES`` is message-only) in ``DEM_AtariIII.py`` comment block, ``run_dem_atariiii`` / ``_rgms_run_deadline_check`` docstrings, and ``Atari_example.md`` § **ENTRY 1-11**.
+
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — full staged Atari ledger test + terminology (2026-05-08)
+
+**Scope:** Added opt-in integration test ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py`` (``RGMS_ATARI_RUN_FULL_STAGED_LEDGER_1_11=1``, ``outer=128``, ``training_t=10000``) distinct from fast ``test_DEM_AtariIII_entry11.py`` smoke. Documented **full staged Atari ledger** / **FSL 1–11** vs colloquial *entries 1–11* in ``Atari_example.md`` § **ENTRY 1-11** and Entry **11** test lists; one-line pointer in ``DEM_AtariIII.py``.
+
+**Files created:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``
+
+**Files modified:** ``Atari_example.md``, ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — doc + MATLAB RDP oracle wiring (2026-05-08)
+
+**Scope:** ``Atari_example.md`` § **ENTRY 1-11 (ENTRIES 1–11)**: gate test list is FSL-only; pinned fixture path ``tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_rdp.mat`` (``RDP`` variable); ``test_DEM_AtariIII_full_staged_atari_ledger_1_11.py`` gains ``test_fsl_1_11_nested_rdp_matches_matlab_fixture`` (``RGMS_ATARI_RUN_FSL_1_11_MATLAB_ORACLE`` or full FSL env; ``load_saved_rdp_as_py`` + ``_assert_nested_rdp_equal``). Added ``tests/oracle/toolbox/DEM/fixtures/.gitkeep``. ``DEM_AtariIII.py`` comment for oracle env.
+
+**Files created:** ``tests/oracle/toolbox/DEM/fixtures/.gitkeep``
+
+**Files modified:** ``Atari_example.md``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — incorporate .mat vs Python in ledger test (2026-05-08)
+
+**Scope:** Refactored ``test_DEM_AtariIII_full_staged_atari_ledger_1_11.py`` (shared FSL run helper, ``RGMS_ATARI_FSL_1_11_MAT_PATH``, load ``RDP`` or ``rdp11_nested_mat``, ``_assert_nested_rdp_equal``); structural test runs MATLAB **``.mat``** vs ``ctx["RDP"]`` when ``RGMS_ATARI_RUN_FSL_1_11_MATLAB_ORACLE=1`` (``pytest.fail`` if oracle on but fixture missing). Updated ``Atari_example.md`` § **ENTRY 1-11** and ``DEM_AtariIII.py`` header comment.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``Atari_example.md``, ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — MATLAB capture script aligned to Python driver (2026-05-08)
+
+**Scope:** Added ``matlab_custom/dump_rdp_DEM_AtariIII_FSL_1_11.m`` (writes ``tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_rdp.mat``, ``RDP`` + ``meta``, ``-v7``) with FSL-only divergences from stock dump (``tau=1``, 128 outers, one ``spm_RDP_sort``); Entry **11** assemble block per ``DEM_AtariIII.m`` (later corrected in following log entry to include ``spm_set_goals`` before costs). Documented in ``Atari_example.md`` § **ENTRY 1-11** step 1, ``notes/andrew Python Matlab Translation Issues.md``, and FSL pytest module docstring.
+
+**Files created:** ``matlab_custom/dump_rdp_DEM_AtariIII_FSL_1_11.m``
+
+**Files modified:** ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 11 / FSL — restore ledger ``spm_set_goals`` before costs (2026-05-08)
+
+**Correction:** ``DEM_AtariIII.m`` assemble-RGM uses ``RDP = spm_set_goals(MDP,...);`` then ``spm_set_costs`` / ``spm_mdp2rdp``. Reverted erroneous omission: ``dump_rdp_DEM_AtariIII_FSL_1_11.m`` and ``run_dem_atariiii`` Entry **11** now include ``spm_set_goals`` before ``spm_set_costs``. Updated ``Atari_example.md`` Entry **11** lane text, § **ENTRY 1-11** step 1, ``notes/andrew Python Matlab Translation Issues.md`` FSL policy, ``DEM_AtariIII.py`` module docstring.
+
+**Files modified:** ``matlab_custom/dump_rdp_DEM_AtariIII_FSL_1_11.m``, ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 test — assert driver scale from ``ctx`` (2026-05-08)
+
+**Scope:** ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` asserts ``entry8_outer==128``, ``entry8_NT==100``, ``GDP.T==10000``, ``GDP.tau==1`` after FSL run.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — default 20-minute perf-counter deadline in test harness (2026-05-08)
+
+**Scope:** When ``RGMS_ATARI_RUN_DEADLINE_MONO`` is unset, ``_run_fsl_entry11_context`` in ``test_DEM_AtariIII_full_staged_atari_ledger_1_11.py`` sets ``RGMS_ATARI_RUN_DEADLINE_MINUTES=20`` and a 20-minute ``time.perf_counter()`` ceiling for the FSL ``run_dem_atariiii`` call only, then restores prior env. Documented in the test module docstring and ``Atari_example.md`` § **ENTRY 1-11** (primary bullet + wall-limit subsection).
+
+**Files read:** ``test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``Atari_example.md``
+
+**Files created:** none
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Agent–user communication directives note (2026-05-08)
+
+**Scope:** Lessons from unclear FSL/opt-in/deadline replies; concrete test/env behavior; directives for future assistant turns. New file ``notes/andrew agent-user communication directives.md``.
+
+**Files created:** ``notes/andrew agent-user communication directives.md``
+
+**Files modified:** ``notes/andrew agent-user communication directives.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 background pytest — outcome (2026-05-08)
+
+**Result:** ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` **FAILED** (exit 1) after **~20 min** (pytest reported 1201.60s). **Cause:** ``RuntimeError: TIME LIMIT OF 20 MINUTES EXCEEDED. Last call = ENTRY9: outer i=58/128`` — auto-installed deadline tripped mid–Entry 9 (58/128 outers); run never reached post-run assertions. Log: ``logs/fsl_1_11_pytest_run.log``. Warnings: ``spm_log`` divide-by-zero, ``spm_MDP_MI`` invalid divide.
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``Atari_example.md`` — required reading + ``spm_log`` / ``spm_MDP_MI`` review note (2026-05-08)
+
+**Scope:** Added ``notes/andrew agent-user communication directives.md`` to **Read this first** (renumbered). Read-only review: ``python_src/spm_log.py`` already uses ``np.fmax`` (not ``np.maximum``); FSL ``divide by zero in log`` aligns with ``np.log(0)`` before clamp, not missing fmax. ``spm_MDP_MI`` line 54 matches ``matlab_src/spm_MDP_MI.m`` line 77; ``invalid value encountered in divide`` is from elementwise ``A / (marginals outer product)`` (e.g. 0/0), not from ``spm_log``’s fmax line. No edits to ``spm_log`` / ``spm_MDP_MI`` this iteration (user: investigation only).
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``spm_MDP_MI.py`` — docstring on NumPy warnings vs MATLAB (2026-05-08)
+
+**Scope:** Docstring on ``spm_MDP_MI`` for NumPy ``RuntimeWarning`` vs MATLAB quiet behavior and ``log`` inside ``fmax``/``max`` clamp.
+
+**Files modified:** ``python_src/spm_MDP_MI.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``spm_MDP_MI.py`` — ``np.errstate`` on tensor path (2026-05-08)
+
+**Scope:** Wrapped non-cell tensor body in ``with np.errstate(divide='ignore', invalid='ignore'):`` so expected ``log``/``0/0`` float warnings are suppressed only for that path (includes ``_spm_MI`` when called from here). Docstring updated. Typo fix: ``dEdD`` → ``dEdA`` caught same edit.
+
+**Files modified:** ``python_src/spm_MDP_MI.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 pytest re-run — explicit 40-minute deadline (2026-05-08)
+
+**Scope:** Background run: ``RGMS_ATARI_RUN_FULL_STAGED_LEDGER_1_11=1``, ``RGMS_ATARI_RUN_DEADLINE_MINUTES=40``, ``RGMS_ATARI_RUN_DEADLINE_MONO`` set from ``time.perf_counter() + 40*60`` at shell start (overrides default 20 when ``MONO`` unset). Output: ``logs/fsl_1_11_pytest_run_40m.log``.
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 pytest 40m run — outcome (2026-05-08)
+
+**Result:** ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` **PASSED** (exit 0). Wall time **~33m 45s** (pytest 2025.29s), under 40-minute deadline. One remaining warning: ``spm_dir_norm.py:23`` ``RuntimeWarning: invalid value encountered in divide`` (not ``spm_MDP_MI``). Log: ``logs/fsl_1_11_pytest_run_40m.log``.
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Deadline single-knob + ``spm_dir_norm`` warnings + ENTRY 1-11 run docs (2026-05-08)
+
+**Scope:** ``RGMS_ATARI_RUN_DEADLINE_MINUTES`` seeds lazy ``perf_counter`` ceiling and error text; ``MONO`` legacy only; if both set, minutes win. ``_rgms_deadline_reset_for_run`` each ``run_dem_atariiii``. FSL test installs default minutes only. ``spm_dir_norm``: ``np.errstate`` + docstring. ``Atari_example.md`` § ENTRY 1-11: **How to run FSL 1–11** PowerShell block; wall-limit bullets updated. ``test_DEM_AtariIII_entry11_run_deadline_message`` uses MONO-only expired (message ``?``). Notes: communication directives deadline line.
+
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``python_src/spm_dir_norm.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry11.py``, ``Atari_example.md``, ``notes/andrew agent-user communication directives.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL structural test — fail-fast MATLAB fixture check (2026-05-08)
+
+**Scope:** ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` requires the FSL **``.mat``** before ``_run_fsl_entry11_context()`` when ``RGMS_ATARI_RUN_FSL_1_11_MATLAB_ORACLE=1``.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 pytest — 60m + MATLAB oracle attempt (2026-05-08)
+
+**Env:** ``RGMS_ATARI_RUN_FULL_STAGED_LEDGER_1_11=1``, ``RGMS_ATARI_RUN_DEADLINE_MINUTES=60``, ``RGMS_ATARI_RUN_FSL_1_11_MATLAB_ORACLE=1``, ``MONO`` cleared. **Result:** **FAILED** ~1.5s — missing ``tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_rdp.mat``. Log: ``logs/fsl_1_11_pytest_run_60m_mat_oracle.log``.
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``dump_rdp_DEM_AtariIII_FSL_1_11.m`` — ``Sc`` parity + ``meta.Sc`` (2026-05-08)
+
+**Scope:** ``Sc`` corrected from **3** to **9** to match Python ``run_dem_atariiii`` Entry **1**; ``meta.Sc`` recorded for fixture provenance.
+
+**Files modified:** ``matlab_custom/dump_rdp_DEM_AtariIII_FSL_1_11.m``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL oracle ``.mat`` — MATLAB ``-batch`` run (2026-05-08)
+
+**Scope:** Ran ``dump_rdp_DEM_AtariIII_FSL_1_11`` via MATLAB ``-batch`` with ``addpath(genpath('<SPM_ROOT>'))`` then ``cd`` into ``matlab_custom``. Exit **0**; **~184 s** wall; wrote ``tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_rdp.mat`` (**~84 KiB**).
+
+**Files created:** ``tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_rdp.mat``
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``Atari_example.md`` § ENTRY 1-11 — minimal rerun (2026-05-08)
+
+**Scope:** **How to rerun (minimal)** — tables **A** (MATLAB dump) + **B** (pytest); compact **Next bar**; shortened primary gate bullet.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — ``ctx`` pickle dump + offline PKL vs ``.mat`` + docs (2026-05-08)
+
+**Scope:** Optional ``RGMS_ATARI_FSL_1_11_DUMP_CONTEXT_PKL=1`` writes full ``ctx`` after successful FSL tests (default ``tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_ctx.pkl``; override ``RGMS_ATARI_FSL_1_11_CONTEXT_PKL_PATH``). CLI ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py`` loads PKL + ``.mat`` and asserts nested ``RDP`` parity without ``run_dem_atariiii``. Pytest ``test_fsl_1_11_offline_ctx_pkl_matches_matlab_fixture`` when ``RGMS_ATARI_RUN_FSL_1_11_OFFLINE_COMPARE=1``. ``Atari_example.md`` § ENTRY 1-11: PKL row in table **B**, subsection **C** (offline CLI + fast pytest), PowerShell example sets dump env; **Next bar** tables **A**–**C**; primary gate bullet documents PKL/offline.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``Atari_example.md`` § ENTRY 1-11 — MATLAB parity thesis (2026-05-08)
+
+**Scope:** One paragraph after **Goal**: nested ``ctx["RDP"]`` vs table **A** ``.mat`` when ``RGMS_ATARI_RUN_FSL_1_11_MATLAB_ORACLE=1``; oracle off = Python integration only, not MATLAB match.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — structural pytest only; MATLAB parity in ``fsl_1_11_compare_ctx_pkl_to_mat.py`` (2026-05-14)
+
+**Scope:** Removed ``RGMS_ATARI_RUN_FSL_1_11_MATLAB_ORACLE``, ``test_fsl_1_11_nested_rdp_matches_matlab_fixture``, ``test_fsl_1_11_offline_ctx_pkl_matches_matlab_fixture``, and MATLAB helpers from ``test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``. Inlined load/assert into ``fsl_1_11_compare_ctx_pkl_to_mat.py``. Updated ``Atari_example.md`` § ENTRY 1-11, ``DEM_AtariIII.py`` comment, ``notes/andrew agent-user communication directives.md``. **Verify:** ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` **PASSED** in **~36m 14s** with ``RGMS_ATARI_RUN_DEADLINE_MINUTES=40`` (no MATLAB step in pytest).
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``notes/andrew agent-user communication directives.md``, ``logs/log_0.md``
+
+**Shared files touched:** ``python_src/toolbox/DEM/DEM_AtariIII.py`` (comment only)
+
+---
+
+### ``Atari_example.md`` § ENTRY 1-11 — script nicknames (2026-05-14)
+
+**Scope:** Canonical nicknames **FSL** / **Validation (or Parity)** / **MATLAB dump** 1–11 scripts before paths; Entry **11** / **12** cross-refs; tables **A**–**C**, example blocks, **Next bar**.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 — automatic ``ctx`` PKL after successful structural run (2026-05-14)
+
+**Scope:** Removed ``RGMS_ATARI_FSL_1_11_DUMP_CONTEXT_PKL`` gate; ``_dump_fsl_context_pkl`` always runs after structural assertions pass. ``RGMS_ATARI_FSL_1_11_CONTEXT_PKL_PATH`` remains optional output path override. Docs and comments updated.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``notes/andrew agent-user communication directives.md``, ``logs/log_0.md``
+
+**Shared files touched:** ``python_src/toolbox/DEM/DEM_AtariIII.py`` (comment only)
+
+---
+
+### FSL + Validation 1–11 run (2026-05-14)
+
+**Env:** ``RGMS_ATARI_RUN_FULL_STAGED_LEDGER_1_11=1``, ``RGMS_ATARI_RUN_DEADLINE_MINUTES=40``, ``MONO`` cleared. **FSL:** ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` **PASSED** ~36m 34s; wrote ``fixtures/DEMAtariIII_fsl_1_11_ctx.pkl`` (~110 MiB). **Validation:** ``fsl_1_11_compare_ctx_pkl_to_mat.py`` **exit 1** — ``AssertionError: RDP.A[0]: type py=numpy.ndarray mat=scipy.sparse._csc.csc_array``.
+
+**Files modified:** ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Validation 1–11 CLI — optional compare aids + docstring (2026-05-14)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: docstring (VB / ``spm_MDP_checkX`` RDP checklist, optional flags); ``--coerce-sparse-to-dense-for-compare`` (deep-copy both trees, densify sparse leaves only); ``--report-type-mismatches`` / ``--report-type-mismatches-only``; ``--max-type-reports``. Default strict assert unchanged.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Validation 1–11 CLI — PKL-only ``spm_MDP_checkX`` / ``T`` schema gate (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: ``_validate_rdp_checkx_schema`` (dict + ``A``/``a`` cell list + numeric tensor leaves + ``T``; optional ``B``/``b`` warn in default mode; ``--check-rdp-checkx-strict`` requires ``B``/``b``, ``U``, ``C``, ``D``, ``E``, ``id``, ``H``); flags ``--check-rdp-checkx-schema``, ``--check-rdp-checkx-schema-only`` (no ``.mat``), ``--check-rdp-checkx-strict``; schema runs before ``loadmat`` when combined with parity. ``Atari_example.md`` table **C** optional row updated.
+
+**Files read:** ``matlab_src/toolbox/DEM/spm_MDP_checkX.m``, ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``
+
+**Files created:** none
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### ``Atari_example.md`` — ENTRY 1-11 coherence (table **C** prereq + nickname) (2026-05-08)
+
+**Scope:** Table **C** prereq distinguishes default **``.mat``** parity vs PKL-only schema mode; ``.mat`` path row notes PKL-only; Validation nickname references table **C** + optional gate; **Optional** row shortened.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 Validation CLI — integrated dual checkX schema then parity (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py`` always runs ``_validate_rdp_checkx_schema`` on PKL **``ctx['RDP']``** then on MATLAB nested **``RDP``** after ``loadmat``, then type walk / assert; ``--check-rdp-checkx-schema-only`` exits after both schemas (still requires ``.mat``); removed public ``--check-rdp-checkx-schema`` (hidden no-op for backward CLI); ``Atari_example.md`` table **C** + nickname aligned.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 Validation CLI — RDP field inventory + key diff stderr (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: before each checkX schema phase, one stderr line per top-level ``RDP`` key with concise type/shape; after both schema passes, mandatory non-fatal ``RDP top-level key diff`` line (``only_in_PKL`` / ``only_in_MATLAB`` with types for asymmetric keys, or ``(none)``); emitters never alter exit logic. Module docstring updated.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 Validation CLI — UTF-8 report file under ``matlab_custom`` (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: ``_fsl_1_11_validation_output_txt_path`` + ``_TeeIO``; ``main`` writes ``__doc__`` and a ``RUN OUTPUT`` banner to ``matlab_custom/fsl_1_11_compare_ctx_pkl_to_mat_output.txt``, tees **stdout** and **stderr** through the run (including argparse ``--help``), ``except Exception`` + ``traceback.print_exc`` before restoring streams so parity failures land in the file; module docstring notes the report path.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 Validation CLI — always-on type walk + holistic stderr (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: ``_emit_nested_type_walk``; nested type walk always after key diff (including before ``--check-rdp-checkx-schema-only`` exit); ``--max-type-reports`` default ``200000``; PKL schema ERROR prints skip lines for key diff and type walk; MATLAB schema ERROR still runs key diff + type walk then ``return 1``; ``--report-type-mismatches`` hidden no-op; docstring + ``Atari_example.md`` table **C** updated.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ``Atari_example.md`` — ENTRY 1-11 Validation nickname + table **C** + example (2026-05-08)
+
+**Scope:** Validation nickname and table **C** (CLI / optional rows) document report file ``matlab_custom/fsl_1_11_compare_ctx_pkl_to_mat_output.txt`` and always-on diagnostics; optional row clarifies ``--max-type-reports`` vs always-on type walk; PowerShell example comment points at report path.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 validation script — type-walk mismatch detail lines + ``--mismatch-detail-max`` (2026-05-08)
+
+**Scope:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``: helpers to parse ``RDP`` paths from type-walk lines, resolve PKL vs MATLAB values (with ``_norm_leaf`` aligned to the walker), emit up to two optional ``[mismatch detail]`` lines per type-walk mismatch. **Follow-up (same day):** default ``--mismatch-detail-max`` is **``-1`` (unlimited)** so optional summaries are holistic; ``0`` turns summaries off; ``N>0`` caps **optional** summary line count only (the type-walk mismatch list is never shortened). User-facing text avoids “budget”/“truncated”; one line explains when the optional summary cap is reached.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 validation script — no line caps on type walk or mismatch details (2026-05-08)
+
+**Scope:** Removed ``--max-type-reports`` and ``--mismatch-detail-max``; ``_collect_type_mismatches`` uncapped; ``_emit_nested_type_walk`` always emits two ``[mismatch detail]`` lines per mismatch. Docstring + ``Atari_example.md`` table **C**. Re-ran validation CLI; ``matlab_custom/fsl_1_11_compare_ctx_pkl_to_mat_output.txt`` refreshed.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 validation report — ``--help`` must not overwrite diagnostic ``_output.txt`` (2026-05-08)
+
+**Cause:** Report file was opened and **stdout** teed before ``argparse.parse_args``; ``--help`` printed usage into the report and no PKL/MAT inventory or type walk ran.
+
+**Fix:** ``-h``/``--help`` prints to the terminal only (no report open). ``parse_args`` runs first; on ``SystemExit`` from argparse errors, return without opening the report. Refactor: ``_argv_requests_help``, ``_build_fsl_1_11_argument_parser``, ``_execute_fsl_1_11_validation``. Docstring + ``Atari_example.md`` table **C** CLI row.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 validation — appended **focused probe** block (G, C, sB, U) (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: after key diff + nested type walk (unchanged), always print ``focused probe (append): G, C, sB, U`` and per-field lines (**G** / **RDP.MDP.G**; **C[g]** squeeze-ravel ``max_abs_diff``; **sB** / **U** scalar unwrap vs MATLAB int). Sub-probes wrapped in ``try``/``except`` so one error does not silence others. PKL schema ERROR prints one skip line for focused probe. No new CLI flags. Module docstring updated.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 validation — focused probe nested **G** / **C** lines (append) (2026-05-08)
+
+**Scope:** ``fsl_1_11_compare_ctx_pkl_to_mat.py``: **G** — ``RDP.G`` per-key drill (elem0 / elem00); MAT ``G`` ravel min/max; **RDP.MDP.G** nested slots (dict vs list alignment, per-slot PKL vs MAT summaries, second list level when present). **C** — inner list lines when unwrap leaves a list; note when raw shapes differ but squeeze-ravel ``max_abs_diff`` is 0. U/sB unchanged.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 validation — **VALUE-DUMP** append for **G** / **C** (full numeric ravels + diffs) (2026-05-08)
+
+**Scope:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``: added ``_full_ndarray_1d_string`` (no ellipsis), ``_to_float64_flat_vector_or_none``, ``_pkl_rdp_g_concat_ravel_numeric``, ``_append_rdp_g_top_level_value_dump`` (after existing ``RDP.G`` lines), ``_append_pair_g_value_dump`` + ``_append_mdp_g_nested_value_dumps`` (after ``RDP.MDP.G`` nested summary lines), and ``_append_focused_probe_c_modal_value_dump`` (after each ``C[g]`` block). Existing focused-probe print paths unchanged (append-only). Module docstring extended to describe ``VALUE-DUMP``. Re-ran ``python ... --check-rdp-checkx-schema-only`` (exit 0).
+
+**Files modified:** ``tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ENTRY 1-11 doc — ``Atari_example.md`` Validation CLI (2026-05-08)
+
+**Scope:** § **ENTRY 1-11** script nickname bullet + table **C**: document **append-only ``VALUE-DUMP``** (full ``float64`` ravels / aligned diffs for ``RDP.G``, ``RDP.MDP.G``, ``C[g]``) after focused probe; optional row adds ``--report-type-mismatches-only`` and notes probe + dump always on (no caps). Removed stray extra ``)`` on the nickname line.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### FSL 1–11 driver + test — per-entry timing + run log ``_output.txt`` (2026-05-08)
+
+**Scope:** ``python_src/toolbox/DEM/DEM_AtariIII.py``: stderr ``[DEM_AtariIII entry timing] ENTRYn total_s=...`` after each Entry **1**–**12** block; Entry **8** total = Entry 8 setup wall + merge-loop sums (``_entry8_training_assimilations`` returns ``(mdp, merge_loop_s)`` when ``entry_stop==8``, else adds ``entry8_loop_s`` from ``_entry9_basin_training_loop``); Entry **9** total = ``entry9_loop_s`` (summed per-outer ``spm_RDP_basin`` wall). ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``: tee stdout/stderr to ``matlab_custom/test_DEM_AtariIII_full_staged_atari_ledger_1_11_output.txt`` during the structural test; module docstring **Run log** line.
+
+**Files modified:** ``python_src/toolbox/DEM/DEM_AtariIII.py``, ``tests/oracle/toolbox/DEM/test_DEM_AtariIII_full_staged_atari_ledger_1_11.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### ENTRY 1-11 doc — FSL run log + per-entry timing table **B** row (2026-05-08)
+
+**Scope:** ``Atari_example.md`` § **ENTRY 1-11** table **B**: one row for ``matlab_custom/test_DEM_AtariIII_full_staged_atari_ledger_1_11_output.txt`` and ``[DEM_AtariIII entry timing] ENTRYn total_s=…`` (Entries 8/9 summed loops; no ENTRY12 at ``entry_stop=11``).
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
 
 **Shared files touched:** no
 

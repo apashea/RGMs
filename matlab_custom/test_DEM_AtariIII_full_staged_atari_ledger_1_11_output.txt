@@ -1,0 +1,50 @@
+Full staged Atari ledger (1–11, pre–Entry 12) — Python integration, not Entry 11 smoke.
+
+**Vocabulary (do not confuse with per-entry smoke tests):**
+
+- **Full staged Atari ledger (1–11, pre–Entry 12)** — one Python run of
+  ``run_dem_atariiii(entry_stop=11)`` with **MATLAB-faithful driver loop counts**
+  (``RGMS_ATARI_ENTRY8_OUTER=128``, ``RGMS_ATARI_TRAINING_T=10000``), i.e. **no**
+  harness shortcuts such as ``outer=1`` / reduced ``training_t`` (see **§ Entry 11**
+  smoke in ``Atari_example.md`` only there).
+- Loose talk about *“entries 1–11”* can mean per-entry unit tests **or** this ledger;
+  in docs and issues, prefer **full staged ledger** / **FSL 1–11** when you mean **this**
+  integration bar.
+
+**Opt-in:** ``RGMS_ATARI_RUN_FULL_STAGED_LEDGER_1_11=1`` (structural FSL run, long).
+
+**Long runs — wall limit + where you died (applies here):** The structural test calls
+``run_dem_atariiii``, so the **same** env toggles documented in ``DEM_AtariIII.py`` (comment block) and ``Atari_example.md``
+§ **ENTRY 1-11** apply: ``RGMS_ATARI_RUN_DEADLINE_MINUTES`` (single knob; seeds ``perf_counter`` ceiling
+and error text) or optional explicit ``RGMS_ATARI_RUN_DEADLINE_MONO``; ``RGMS_ATARI_RUN_SEGMENT_TIMING=1``
+for stderr **segment** timings (labels at driver boundaries + inside long Entry **8/9** loops—not
+every physical source line). **Tracing** is the driver's **last segment label** string
+(``get_dem_atariiii_run_last_label()``). On **any** exception from ``run_dem_atariiii`` inside this
+module, ``_run_fsl_entry11_context`` prints ``[FSL 1-11] last traced segment = …`` to stderr, then
+re-raises (deadline ``RuntimeError`` from the driver already embeds that label).
+**If neither deadline env is set,** ``_run_fsl_entry11_context`` sets ``RGMS_ATARI_RUN_DEADLINE_MINUTES=20``
+for that run only (driver seeds the mono ceiling on first check), then restores prior env.
+
+**MATLAB nested ``RDP`` parity (separate):** After a successful run, compare saved ``ctx`` (PKL) to the
+FSL MATLAB ``.mat`` using ``python tests/oracle/toolbox/DEM/fsl_1_11_compare_ctx_pkl_to_mat.py`` only
+(see ``Atari_example.md`` § **ENTRY 1-11**). This module does **not** load ``.mat`` or assert MATLAB parity.
+
+**PKL snapshot:** After every **successful** structural run, full ``ctx`` is written to ``fixtures/DEMAtariIII_fsl_1_11_ctx.pkl`` (override output path only with ``RGMS_ATARI_FSL_1_11_CONTEXT_PKL_PATH``).
+
+**Run log:** Each invocation of ``test_full_staged_atari_ledger_1_through_11_pre_entry12`` overwrites ``matlab_custom/test_DEM_AtariIII_full_staged_atari_ledger_1_11_output.txt`` (module docstring + teed stdout/stderr during the test body).
+
+See ``Atari_example.md`` § **ENTRY 1-11 — full Python pipeline gate (ENTRIES 1–11)**.
+
+--- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\test_DEM_AtariIII_full_staged_atari_ledger_1_11_output.txt ---
+[DEM_AtariIII entry timing] ENTRY1 total_s=0.000007
+[DEM_AtariIII entry timing] ENTRY2 total_s=0.096347
+[DEM_AtariIII entry timing] ENTRY3 total_s=1197.531099
+[DEM_AtariIII entry timing] ENTRY4 total_s=10.854602
+[DEM_AtariIII entry timing] ENTRY5 total_s=0.006985
+[DEM_AtariIII entry timing] ENTRY6 total_s=0.002404
+[DEM_AtariIII entry timing] ENTRY7 total_s=23.218276
+[DEM_AtariIII entry timing] ENTRY8 total_s=295.180342
+[DEM_AtariIII entry timing] ENTRY9 total_s=507.766367
+[DEM_AtariIII entry timing] ENTRY10 total_s=49.153102
+[DEM_AtariIII entry timing] ENTRY11 total_s=0.534400
+[FSL 1-11] wrote context pickle: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_1_11_ctx.pkl

@@ -1,4 +1,7 @@
-"""Entry 12 — ``run_dem_atariiii(entry_stop=12)`` wires full ``spm_MDP_VB_XXX(RDP)``."""
+"""Entry 12 supporting integration check for driver wiring.
+
+This module is supporting-only. It is not a subentry isolate test module (12A/12B/...).
+"""
 
 from __future__ import annotations
 
