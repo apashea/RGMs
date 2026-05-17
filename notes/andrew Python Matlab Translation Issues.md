@@ -942,6 +942,89 @@ reshape it like **`(1, N)`**, broadcasting **`exp(L) * R`** to **`N×N`** instea
 **`R[f] = Pf[mask].reshape(-1, 1)`** so **`R{f}`** matches MATLAB’s column layout (fixes **`F`**
 and **`P`** on the no-**`ff`** **`spm_VBX`** path and any caller, including **`spm_forwards`**).
 
+## `spm_MDP_VB_XXX._vb_mdp_field_matrix`: ``nf×1`` hierarchical prep ``s`` / ``u``
+
+**MATLAB (~707–721):** After hierarchical prep sets ``mdp.s`` / ``mdp.u`` as column vectors
+(``mdp.s(f) = spm_sample(...)``), setup does ``k = zeros(NF,T); i = find(MDP.s); k(i) = MDP.s(i);``.
+``find`` on an ``nf×1`` vector fills the **first column** of ``k`` (column-major linear indices).
+
+**Python (2026-05-17):** Do **not** require ``s.size == NF*T`` before copying; if the raveled
+field is shorter, use ``find`` semantics on the raveled vector and assign into
+``zeros(NF,T)`` at matching linear indices (skip out-of-range). Discarding ``nf×1`` prep
+caused nested child VB to re-``spm_sample`` ``s`` at ``t=1`` and broke Entry **12E**
+``O{m,g,1}`` from child ``X{f}(:,1)`` for large factors (e.g. ``ns=41``).
+
+## Entry 12 — Phase 1 oracle lane and Validation 12 lean boundaries
+
+**XXX 12 default input (Phase 1):** `test_DEM_AtariIII_XXX_12.py` loads
+`DEMAtariIII_fsl_1_11_rdp.mat` by default (same lane as MATLAB dump / VB monitor).
+Use `RGMS_XXX_12_RDP_FROM_CTX=1` only for non-oracle ctx PKL smoke. Explicit
+`RGMS_XXX_12_RDP_FROM_MAT=1` still forces the `.mat` lane.
+
+**`spm_MDP_checkX(..., transform=False)` (Entry 12 provisional):** default unchanged. With
+`transform=True` and `transform_reference` (raw ``.mat`` nested template), run checkX once
+then align container types (e.g. ``csc_array`` on ``A{g}``, ``id.g`` as ``(1, ng)`` ``ndarray``).
+**VB compute** uses ``entry12_rdp_for_vb_from_mat_nested`` (checkX only, no transform).
+**Validation 12 input RDP** uses ``entry12_rdp_for_validation_from_mat_nested`` +
+``entry12_align_py_rdp_to_validation_lane`` and reuses
+``compare_nested_rdp_oracle_lane`` from ``fsl_1_11_compare_ctx_pkl_to_mat.py`` (same mat path:
+``_fsl_1_11_mat_path`` / ``_load_matlab_nested_rdp_for_fsl_oracle``).
+
+**`spm_MDP_checkX` — ``C{g}`` 1-D from ``loadmat(..., simplify_cells=True)`:** FSL oracle load
+can yield ``C{g}`` shape ``(n,)`` instead of ``(n, 1)``; reshape to column before
+``spm_dir_norm`` so normalization matches MATLAB column vectors.
+
+**VB RNG replay (Phase 1):** `spm_MDP_VB_XXX(..., reuse_matlab_draws=False)` (default)
+uses native `numpy.random.rand` in file-local `_spm_sample`. With
+`reuse_matlab_draws=True`, Python replays scalars from
+`fixtures/DEMAtariIII_entry12_vb_matlab_rand_buf.mat` (env
+`RGMS_ENTRY12_VB_MATLAB_RAND_MAT`), captured once by
+`DEMAtariIII_entry12_dump_all_subentries.m` after
+`python tests/oracle/toolbox/DEM/entry12_preflight_vb_rand_k.py` writes `K`.
+XXX 12 oracle uses `monitoring=False`, `dump_subentries=True` to match the dump.
+Opt out: `RGMS_XXX_12_NATIVE_RNG=1`. Native py vs native mat VB parity without
+replay remains out of scope.
+
+**Twister / seed vs replay (do not conflate):** Phase 1 oracle parity uses
+**`vb_rand_buf` replay** — Python patches **`np.random.rand`** to return the next
+MATLAB-captured scalar. That lane does **not** set a NumPy seed to “match” MATLAB
+twister. For **native** `rand()` vs `rand(1,'twister')` in MATLAB, the same
+non-zero seed can align only up to finite precision; **`randperm`** is a separate
+stream contract (see RNG subsection above). **Do not** refresh `vb_rand_buf` / `K`
+without draw-count or protocol justification.
+
+**Entry 12F draw-index audit (2026-05-17):** Under replay (`K=27199`,
+`entry12_v5_preamble_rewind`), Python consumes **exactly** `K` scalars;
+`spm_sample` call count equals `K`; parent `t=1` `spm_forwards` uses **no**
+additional `rand()` between entry and return (`draw_index` 424). Stochastic
+divergence vs canonical MATLAB **`MDP.G`** (−32.4 vs −64.4) must occur **before**
+that index (hierarchical / outcome / path sampling), not inside `spm_forwards`.
+**Frozen cross-check:** On Python replay inputs (`entry12_12f_live_inputs.mat`),
+MATLAB Engine reports **`ih≈32`**, **`spm_dot=0`**, same `R` support (231, 458
+1-based) and **`Qf(R>0)=0`** as Python — so the **−32 `G` gap is not an
+`spm_dot` implementation difference** on the replay belief; paired probe
+MATLAB `spm_dot≈+32` used **native RNG**, a different trajectory. Snap `P`/`Q`
+can match while stored `G` differs (uniform row shift; `Pu` softmax invariant).
+
+**Validation 12 — MATLAB struct-row broadcast on lean 12D–12F snaps:** When MATLAB saves
+`struct('t', t, 'O', Ot)` with `Ot` a non-scalar cell, `save -struct` can produce a
+1×N struct row; `mat_nested_to_py` becomes a Python `list` of dicts. For **12E**,
+Validation 12 reassembles `O` into `[row]` (one model row) before compare. For other
+keys, take the first snap when the list is a broadcast artifact. **`matlab_release`**
+on **12I** `spine` is environment metadata — stripped on both sides before compare.
+
+**`spm_MDP_checkX` — scalar `MDP.B{f}` from `.mat`:** Hierarchical child MDPs from
+`mat_nested_to_py` can leave `B{f}` as a Python `int` (MATLAB 1×1 scalar). Treat
+`int` / `float` / 0-D numeric as `reshape(1, 1)` before `ns[f] = bf.shape[0]`.
+
+## Entry 12 — `spm_MDP_checkX` and `id.g` covert partitions
+
+**Policy:** MATLAB `id.g{i}` is one **covert partition** (a vector of modality indices for that partition). `numel(id.g)` is the number of partitions, not the number of modalities.
+
+**Bug (fixed):** Normalizing `id.g` with `np.asarray(flat, dtype=object).ravel()` on a single cell holding `array(1, n)` produced shape `(1, 1, n)` and raveled into **n** scalar cells. That inflated `Ni` in `spm_forwards` to **n**, repeated the same `iH` risk term on every column, and made `sum(G, 2)` about **n×** too negative (12F `MDP.G` / `v` off by ~640 for Atari with one `(1,20)` partition).
+
+**Fix:** `_id_g_cell_partitions` in `spm_MDP_checkX.py` iterates **cells** (partitions), not modality scalars inside one row.
+
 ## Entry 12 — `.mat` capture oracles (canonical tag)
 
 **Sources:** **`matlab_custom/saved_rdp_DEM_AtariIII.mat`** (`RDP`) and **`DEMAtariIII_entry12_<runTag>_12A.mat`** (`MDP` after MATLAB **`spm_MDP_checkX`**), produced by **`DEMAtariIII_entry12_dump_all_subentries.m`**.

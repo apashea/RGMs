@@ -75,9 +75,9 @@ assert. **Default (non-strict):** only
 After **each** type-walk mismatch line, **two** **``[mismatch detail]``** lines always follow, resolving the same path
 on **PKL** vs **MATLAB** ``RDP`` (shape, dtype, short numeric preview where applicable, dict key heads, list/scalar
 summaries). For paths under **``RDP.A``** / **``RDP.B``** / **``RDP.H``** / **``RDP.MDP.A``** / **``RDP.MDP.B``** /
-**``RDP.MDP.H``**, when the mismatch involves tensor shapes that **jointly** include **524** and **485**, the first
+**``RDP.MDP.H``**, when the mismatch involves tensor shapes that **jointly** include **511** and **485**, the first
 detail line may be prefixed with
-**``[accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy]``** (ledger drift accepted for validation).
+**``[accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy]``** (ledger drift accepted for validation).
 
 **``--report-type-mismatches``**
     Accepted for backward compatibility; the type walk is **always** emitted (flag has no effect).
@@ -100,11 +100,11 @@ Optional CLI flags (**default: off** — compare aids only)
     This does **not** fix differing tensor **shapes** or **numeric** divergence; those surface as the next assertion errors if present.
 
 --- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\fsl_1_11_compare_ctx_pkl_to_mat_output.txt ---
-[checkX schema PKL field] A=list(len=20,elem=ndarray(41, 524))
-[checkX schema PKL field] B=list(len=1,elem=ndarray(524, 524, 6))
+[checkX schema PKL field] A=list(len=20,elem=ndarray(41, 511))
+[checkX schema PKL field] B=list(len=1,elem=ndarray(511, 511, 6))
 [checkX schema PKL field] C=list(len=20,elem=ndarray(41, 1))
 [checkX schema PKL field] G=dict(len=1)
-[checkX schema PKL field] H=list(len=1,elem=ndarray(524, 1))
+[checkX schema PKL field] H=list(len=1,elem=ndarray(511, 1))
 [checkX schema PKL field] L=int
 [checkX schema PKL field] MDP=dict(len=12)
 [checkX schema PKL field] T=float
@@ -114,6 +114,33 @@ Optional CLI flags (**default: off** — compare aids only)
 [checkX schema PKL field] sB=list(len=1,elem=int)
 [checkX schema PKL field] sC=list(len=20,elem=int)
 [checkX schema PKL field] ss=dict(len=4)
+[FSL 1-11 validation] MDP chain L=2 path=RDP (PKL)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field A=list(len=20,elem=ndarray(41, 511))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field B=list(len=1,elem=ndarray(511, 511, 6))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field C=list(len=20,elem=ndarray(41, 1))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field G=dict(len=1)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field H=list(len=1,elem=ndarray(511, 1))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field L=int
+[FSL 1-11 validation] MDP chain L=1 path=RDP.MDP (PKL)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field A=list(len=111,elem=ndarray(5, 41))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field B=list(len=60,elem=ndarray(41, 41, 14))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field C=list(len=111,elem=ndarray(5, 1))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field G=dict(len=4)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field L=int
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field T=float
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field U=ndarray(1, 60)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field id=dict(len=3)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field sA=list(len=111,elem=int)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field sB=list(len=60,elem=int)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field sC=list(len=111,elem=int)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field ss=dict(len=4)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field T=float
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field U=ndarray(1, 1)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field id=dict(len=3)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field sA=list(len=20,elem=int)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field sB=list(len=1,elem=int)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field sC=list(len=20,elem=int)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field ss=dict(len=4)
 [FSL 1-11 validation] checkX schema (PKL): 0 issue(s) (strict=False)
 [checkX schema MATLAB field] A=list(len=20,elem=csc_array(41, 485))
 [checkX schema MATLAB field] B=ndarray(485, 485, 6)
@@ -129,56 +156,83 @@ Optional CLI flags (**default: off** — compare aids only)
 [checkX schema MATLAB field] sB=int
 [checkX schema MATLAB field] sC=ndarray(20,)
 [checkX schema MATLAB field] ss=dict(len=4)
+[FSL 1-11 validation] MDP chain L=2 path=RDP (MATLAB)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field A=list(len=20,elem=csc_array(41, 485))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field B=ndarray(485, 485, 6)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field C=list(len=20,elem=ndarray(41,))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field G=ndarray(14,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field H=csc_array(485, 1)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field L=int
+[FSL 1-11 validation] MDP chain L=1 path=RDP.MDP (MATLAB)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field A=list(len=111,elem=csc_array(5, 41))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field B=list(len=60,elem=ndarray(41, 41, 14))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field C=list(len=111,elem=ndarray(5,))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field G=list(len=4,elem=list)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field L=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field T=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field U=ndarray(60,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field id=dict(len=3)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field sA=ndarray(111,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field sB=ndarray(60,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field sC=ndarray(111,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field ss=dict(len=4)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field T=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field U=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field id=dict(len=3)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field sA=ndarray(20,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field sB=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field sC=ndarray(20,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field ss=dict(len=4)
 [FSL 1-11 validation] checkX schema (MATLAB): 0 issue(s) (strict=False)
 [FSL 1-11 validation] RDP top-level key diff: only_in_PKL=(none); only_in_MATLAB=(none)
 [FSL 1-11 validation] type walk: 236 mismatch line(s)
 RDP.A[0]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(41, 524) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(41, 511) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(41, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.A[1]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(14, 524) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 1. 0. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(14, 511) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 1. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(14, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 1. 1. 1. 1. 1. 1.]
 RDP.A[2]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 1. 1. 0. 1. 1. 0.]
 RDP.A[3]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 0. 0. 1. 0. 0. 1. 0.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 0. 0. 1. 0. 0. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 0.]
 RDP.A[4]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 0. 1. 1. 1. 1.]
 RDP.A[5]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 0. 1. 0. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 1. 1. 0. 1. 1. 0. 1.]
 RDP.A[6]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 0. 1. 0. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 0. 1. 1. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.A[7]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.A[8]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 0. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 0. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 0. 1. 1. 0. 1. 1.]
 RDP.A[9]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[0. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 0. 0. 1. 1.]
 RDP.A[10]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 0. 1.]
 RDP.A[11]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(10, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(10, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
 RDP.A[12]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(5, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(5, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 0. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(5, 485) nnz=485 preview_dense_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
 RDP.A[13]: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(5, 524) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(5, 511) dtype=float64 preview_ravel[:8]=[1. 1. 1. 1. 1. 1. 1. 1.]
   [mismatch detail] MAT csc_array shape=(5, 485) nnz=485 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.G: type py=dict mat=ndarray
   [mismatch detail] PKL dict(len=1) keys_head=[1] key_types_head=['1:list']
   [mismatch detail] MAT ndarray shape=(14,) dtype=uint8 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
 RDP.H: type py=ndarray mat=csc_array
-  [accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(524, 1) dtype=float64 preview_ravel[:8]=[4.8708e-16 4.8708e-16 4.8708e-16 4.8708e-16 3.8462e-02 3.8462e-02 3.8462e-02 4.8708e-16]
+  [accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] [mismatch detail] PKL ndarray shape=(511, 1) dtype=float64 preview_ravel[:8]=[4.5455e-02 4.5455e-02 5.7564e-16 5.7564e-16 5.7564e-16 5.7564e-16 5.7564e-16 4.5455e-02]
   [mismatch detail] MAT csc_array shape=(485, 1) nnz=485 preview_dense_ravel[:8]=[5.0657e-16 5.0657e-16 4.0000e-02 5.0657e-16 5.0657e-16 5.0657e-16 5.0657e-16 4.0000e-02]
 RDP.MDP.A[0]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
@@ -187,31 +241,31 @@ RDP.MDP.A[1]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[2]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
 RDP.MDP.A[3]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[4]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
   [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[5]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[6]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.MDP.A[7]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[8]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
 RDP.MDP.A[9]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[10]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.MDP.A[11]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -220,7 +274,7 @@ RDP.MDP.A[12]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[13]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
 RDP.MDP.A[14]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -232,13 +286,13 @@ RDP.MDP.A[16]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[17]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
 RDP.MDP.A[18]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[19]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[20]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -250,7 +304,7 @@ RDP.MDP.A[22]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[23]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
 RDP.MDP.A[24]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
@@ -265,19 +319,19 @@ RDP.MDP.A[27]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[28]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
 RDP.MDP.A[29]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[30]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.MDP.A[31]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[32]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
 RDP.MDP.A[33]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -292,37 +346,37 @@ RDP.MDP.A[36]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[37]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
 RDP.MDP.A[38]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[39]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[40]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[41]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.MDP.A[42]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[43]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
 RDP.MDP.A[44]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[45]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
 RDP.MDP.A[46]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[47]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[48]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
@@ -337,19 +391,19 @@ RDP.MDP.A[51]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[52]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[53]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[54]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
 RDP.MDP.A[55]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[56]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[57]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -364,7 +418,7 @@ RDP.MDP.A[60]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[61]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
 RDP.MDP.A[62]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -376,13 +430,13 @@ RDP.MDP.A[64]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[65]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.MDP.A[66]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[67]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
 RDP.MDP.A[68]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -394,7 +448,7 @@ RDP.MDP.A[70]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[71]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
 RDP.MDP.A[72]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
@@ -403,31 +457,31 @@ RDP.MDP.A[73]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[74]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
 RDP.MDP.A[75]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[76]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
 RDP.MDP.A[77]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[78]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
 RDP.MDP.A[79]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[80]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
 RDP.MDP.A[81]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[82]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
 RDP.MDP.A[83]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -436,37 +490,37 @@ RDP.MDP.A[84]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 41) nnz=41 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[85]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[86]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[87]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
 RDP.MDP.A[88]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[89]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
 RDP.MDP.A[90]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[91]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[92]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[93]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[94]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[95]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[96]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 41) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
@@ -475,31 +529,31 @@ RDP.MDP.A[97]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[98]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 1. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
 RDP.MDP.A[99]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[100]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
 RDP.MDP.A[101]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[102]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 1. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.A[103]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[104]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 5) dtype=float64 preview_ravel[:8]=[0. 1. 0. 0. 0. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 5) nnz=5 preview_dense_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
 RDP.MDP.A[105]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(5, 1) nnz=1 preview_dense_ravel[:8]=[0. 0. 0. 0. 1.]
 RDP.MDP.A[106]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 1. 0.]
+  [mismatch detail] PKL ndarray shape=(5, 10) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1. 0. 0. 0.]
   [mismatch detail] MAT csc_array shape=(5, 10) nnz=10 preview_dense_ravel[:8]=[0. 0. 1. 0. 0. 0. 0. 0.]
 RDP.MDP.A[107]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(5, 1) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 1.]
@@ -511,7 +565,7 @@ RDP.MDP.A[109]: type py=ndarray mat=csc_array
   [mismatch detail] PKL ndarray shape=(2, 2) dtype=float64 preview_ravel[:8]=[1. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(2, 2) nnz=2 preview_dense_ravel[:8]=[1. 0. 0. 1.]
 RDP.MDP.A[110]: type py=ndarray mat=csc_array
-  [mismatch detail] PKL ndarray shape=(9, 9) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
+  [mismatch detail] PKL ndarray shape=(9, 9) dtype=float64 preview_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 1.]
   [mismatch detail] MAT csc_array shape=(9, 9) nnz=9 preview_dense_ravel[:8]=[0. 0. 0. 0. 0. 0. 0. 0.]
 RDP.MDP.B[7]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
@@ -820,7 +874,7 @@ RDP.id.cid: type py=list mat=ndarray
   [mismatch detail] PKL list(len=0) elem0_unwrap_type=n/a
   [mismatch detail] MAT ndarray shape=(0,) dtype=uint8 preview_ravel[:8]=[]
 RDP.id.hid: type py=list mat=ndarray
-  [mismatch detail] PKL list(len=26) elem0_unwrap_type=int
+  [mismatch detail] PKL list(len=22) elem0_unwrap_type=int
   [mismatch detail] MAT ndarray shape=(25,) dtype=uint16 preview_ravel[:8]=[ 3  8 13 14 16 19 23 24]
 RDP.sA: type py=list mat=ndarray
   [mismatch detail] PKL list(len=20) elem0_unwrap_type=int
@@ -845,43 +899,43 @@ RDP.ss.IE: list len py=4 mat=16
   [focused probe G] MAT v ndarray shape=(14,) dtype=uint8 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
   [focused probe G] PKL dict len=1 vs MAT ndarray ravel len=14
   [focused probe G] RDP.G PKL dict: per-key drill (1 of 1 key(s))
-  [focused probe G]   key=1: list len=1; elem0 ndarray shape=(14, 1) dtype=int64 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
+  [focused probe G]   key=1: list len=1; elem0 ndarray shape=(14, 1) dtype=int64 preview_ravel[:8]=[ 1  2  3  4  9 10  5  6]
   [focused probe G] MAT ndarray ravel: dtype=uint8 size=14 min=1 max=14
   [focused probe G] RDP.G VALUE-DUMP (append-only): begin
-  [focused probe G] RDP.G VALUE-DUMP PKL dict concat→float64_ravel n=14 full=[ 1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14.]
+  [focused probe G] RDP.G VALUE-DUMP PKL dict concat→float64_ravel n=14 full=[ 1.  2.  3.  4.  9. 10.  5.  6.  7.  8. 11. 12. 13. 14.]
   [focused probe G] RDP.G VALUE-DUMP MAT float64_ravel n=14 full=[ 1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14.]
-  [focused probe G] RDP.G VALUE-DUMP aligned elementwise_diff n=14 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs=0.0
+  [focused probe G] RDP.G VALUE-DUMP aligned elementwise_diff n=14 full=[ 0.  0.  0.  0.  4.  4. -2. -2. -2. -2.  0.  0.  0.  0.] max_abs=4.0
   [focused probe G] RDP.G VALUE-DUMP (append-only): end
   [focused probe G] RDP.MDP.G PKL v dict(len=4) keys_head=[1, 2, 3, 4] key_types_head=['1:list', '2:list', '3:list', '4:list']
   [focused probe G] RDP.MDP.G MAT v list(len=4) elem0_unwrap_type=list
   [focused probe G] RDP.MDP.G nested: PKL dict vs MAT list — 4 aligned slot(s) (PKL keys order)
-  [focused probe G] RDP.MDP.G nested slot=0 PKL_key=1: list len=57; elem0 PKL ndarray shape=(9, 1) dtype=int64 preview_ravel[:8]=[37 49 61 73 25 85 13 97] || list len=57; elem0 MAT ndarray shape=(9,) dtype=uint8 preview_ravel[:8]=[61 49 73 37 85 25 97 13]
+  [focused probe G] RDP.MDP.G nested slot=0 PKL_key=1: list len=57; elem0 PKL ndarray shape=(9, 1) dtype=int64 preview_ravel[:8]=[61 73 49 37 25 85 13  1] || list len=57; elem0 MAT ndarray shape=(9,) dtype=uint8 preview_ravel[:8]=[61 49 73 37 85 25 97 13]
   [focused probe G] RDP.MDP.G nested slot=1 PKL_key=2: list len=1; elem0 PKL ndarray shape=(1, 1) dtype=int64 preview_ravel[:8]=[109] || MAT scalar repr=109
   [focused probe G] RDP.MDP.G nested slot=2 PKL_key=3: list len=1; elem0 PKL ndarray shape=(1, 1) dtype=int64 preview_ravel[:8]=[110] || MAT scalar repr=110
   [focused probe G] RDP.MDP.G nested slot=3 PKL_key=4: list len=1; elem0 PKL ndarray shape=(1, 1) dtype=int64 preview_ravel[:8]=[111] || MAT scalar repr=111
   [focused probe G] RDP.MDP.G VALUE-DUMP (append-only): begin
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1: both list PKL len=57 MAT len=57; drilling 57 index pair(s)
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: PKL float64_ravel(len=9) full=[37. 49. 61. 73. 25. 85. 13. 97.  1.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: PKL float64_ravel(len=9) full=[61. 73. 49. 37. 25. 85. 13.  1. 97.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: MAT float64_ravel(len=9) full=[61. 49. 73. 37. 85. 25. 97. 13.  1.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: elementwise_diff full=[-24.   0. -12.  36. -60.  60. -84.  84.   0.] max_abs_diff=84.0
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: PKL float64_ravel(len=9) full=[64. 42. 81. 51. 94. 16. 20. 38. 70.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[0]: elementwise_diff full=[  0.  24. -24.   0. -60.  60. -84. -12.  96.] max_abs_diff=96.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: PKL float64_ravel(len=9) full=[42. 81. 64. 70. 29. 31. 38. 77. 86.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: MAT float64_ravel(len=9) full=[64. 42. 81. 92. 94. 20. 22. 38. 51.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: elementwise_diff full=[  0.   0.   0. -41.   0.  -4.  -2.   0.  19.] max_abs_diff=41.0
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: PKL float64_ravel(len=9) full=[77. 29. 53. 90. 22. 35. 55. 75. 86.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[1]: elementwise_diff full=[-22.  39. -17. -22. -65.  11.  16.  39.  35.] max_abs_diff=65.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: PKL float64_ravel(len=9) full=[92. 16. 83. 35. 59. 68. 94. 20. 53.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: MAT float64_ravel(len=9) full=[55. 59. 68. 70. 90. 75. 77. 83. 86.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: elementwise_diff full=[ 22. -30. -15.  20. -68. -40. -22.  -8.   0.] max_abs_diff=68.0
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: PKL float64_ravel(len=9) full=[68. 31. 59. 92. 44. 40. 14. 18. 27.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[2]: elementwise_diff full=[ 37. -43.  15. -35. -31.  -7.  17. -63. -33.] max_abs_diff=63.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: PKL float64_ravel(len=9) full=[51. 75. 22. 55. 90. 44. 79. 18. 57.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: MAT float64_ravel(len=9) full=[16. 29. 35. 31. 53. 18. 44. 14. 88.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: elementwise_diff full=[ 52.   2.  24.  61.  -9.  22. -30.   4. -61.] max_abs_diff=61.0
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: PKL float64_ravel(len=9) full=[79. 46. 66. 83. 57. 33. 88. 62.  3.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[3]: elementwise_diff full=[ 35.  46. -13.  24.  37.  26.  35.   4. -31.] max_abs_diff=46.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: PKL float64_ravel(len=9) full=[ 33.  46.  66.  14.  62.  88.  27.  40. 103.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: MAT float64_ravel(len=9) full=[ 79.  46.  57.  66.  62.  33.  40.  27. 107.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: elementwise_diff full=[   0.    0.    9.   17.   -5.    0.   48.   35. -104.] max_abs_diff=104.0
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: PKL float64_ravel(len=9) full=[  9. 103. 107.  48.  96. 105.   7.  11.  99.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[4]: elementwise_diff full=[-46.   0.   9. -52.   0.  55. -13.  13.  -4.] max_abs_diff=55.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: PKL float64_ravel(len=9) full=[  3.   9.  96. 107.  48.   5.   7.  11.  24.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: MAT float64_ravel(len=9) full=[103.  48.   3.   9.  96.  11.  72.  99.  24.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: elementwise_diff full=[-94.  55. 104.  39.   0.  94. -65. -88.  75.] max_abs_diff=104.0
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: PKL float64_ravel(len=4) full=[  5.  24.  72. 101.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[5]: elementwise_diff full=[-100.  -39.   93.   98.  -48.   -6.  -65.  -88.    0.] max_abs_diff=100.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: PKL float64_ravel(len=4) full=[ 99. 105.  72. 101.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: MAT float64_ravel(len=4) full=[  5.   7. 101. 105.]
-  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: elementwise_diff full=[  0.  17. -29.  -4.] max_abs_diff=29.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[6]: elementwise_diff full=[ 94.  98. -29.  -4.] max_abs_diff=98.0
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[7]: PKL float64_ravel(len=1) full=[2.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[7]: MAT float64_ravel(len=1) full=[2.]
   [focused probe G] VALUE-DUMP RDP.MDP.G slot=0_PKL_key=1[7]: elementwise_diff full=[0.] max_abs_diff=0.0
@@ -1190,10 +1244,10 @@ RDP.ss.IE: list len py=4 mat=16
   [focused probe U] MAT v scalar repr=1
   [focused probe U] scalar compare: PKL unwrap=1 MAT=1 equal=True
 Traceback (most recent call last):
-  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1285, in main
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1334, in main
     return _execute_fsl_1_11_validation(args)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1365, in _execute_fsl_1_11_validation
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1414, in _execute_fsl_1_11_validation
     _assert_nested_rdp_equal(py_rdp, mat_rdp, "RDP")
   File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 83, in _assert_nested_rdp_equal
     _assert_nested_rdp_equal(py[k], mat[k], f"{path}.{k}")

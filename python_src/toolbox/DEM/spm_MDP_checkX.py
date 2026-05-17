@@ -58,9 +58,124 @@ def _to_dense_double(x: Any) -> np.ndarray:
     return np.asarray(x, dtype=np.float64)
 
 
-def spm_MDP_checkX(MDP: Union[dict, List[Any]]):
+def _id_g_cell_partitions(g_cell: Any) -> list[np.ndarray]:
+    """
+    MATLAB ``id.g`` covert partitions: one cell per partition, each holding modality indices.
+
+    Do not ``ravel`` an object array built from a single ``(1, n)`` row — that splits one
+    partition into ``n`` scalar cells and inflates ``numel(id.g)`` in ``spm_forwards``.
+    """
+    if isinstance(g_cell, np.ndarray) and g_cell.dtype == object:
+        items = [g_cell.reshape(-1, order="F")[k] for k in range(g_cell.size)]
+    elif isinstance(g_cell, list):
+        items = list(g_cell)
+    else:
+        items = [g_cell]
+    row_cells: list[np.ndarray] = []
+    for item in items:
+        v = np.asarray(item, dtype=np.float64)
+        if v.ndim == 0:
+            v = v.reshape(1, 1)
+        elif v.ndim == 1:
+            v = v.reshape(1, -1)
+        elif v.ndim >= 2:
+            v = np.squeeze(v)
+            if v.ndim == 1:
+                v = v.reshape(1, -1)
+            elif v.ndim == 0:
+                v = v.reshape(1, 1)
+            else:
+                v = v.reshape(1, -1)
+        row_cells.append(np.asarray(v, dtype=np.float64))
+    return row_cells
+
+
+def _list_cell_to_ndarray_like_reference(val_list: list[Any], ref: np.ndarray) -> np.ndarray:
+    """Pack checkX ``id.g``-style list-of-rows into one MATLAB-shaped ndarray."""
+    parts: list[np.ndarray] = []
+    for item in val_list:
+        parts.append(np.asarray(item, dtype=np.float64).reshape(-1, order="F"))
+    flat = np.concatenate(parts) if parts else np.array([], dtype=np.float64)
+    arr = np.asarray(flat, dtype=ref.dtype)
+    if ref.shape and arr.size == int(np.prod(ref.shape)):
+        return arr.reshape(ref.shape, order="F")
+    return arr
+
+
+def _cast_leaf_like_reference(val: Any, ref: Any) -> Any:
+    """Entry 12 ``transform``: match MATLAB ``.mat`` container types; keep Python numeric content."""
+    if val is None and isinstance(ref, np.ndarray):
+        return np.array([], dtype=ref.dtype)
+    if sparse.issparse(ref):
+        arr = _to_dense_double(val)
+        if hasattr(sparse, "csc_array") and type(ref).__name__ == "csc_array":
+            return sparse.csc_array(arr)
+        if isinstance(ref, sparse.csr_matrix):
+            return sparse.csr_matrix(arr)
+        return sparse.csc_matrix(arr)
+    if isinstance(ref, np.ndarray):
+        if isinstance(val, list):
+            return _list_cell_to_ndarray_like_reference(val, ref)
+        if ref.dtype.kind in "iu":
+            arr = np.asarray(val, dtype=ref.dtype)
+            if ref.shape and arr.size == int(np.prod(ref.shape)):
+                return np.asarray(arr, dtype=ref.dtype).reshape(ref.shape, order="F")
+            return np.asarray(arr, dtype=ref.dtype)
+        arr = np.asarray(val, dtype=np.float64)
+        if ref.shape and arr.size == int(np.prod(ref.shape)):
+            return np.asarray(arr, dtype=np.float64).reshape(ref.shape, order="F")
+        return np.asarray(arr, dtype=np.float64)
+    if isinstance(ref, (int, float, np.integer, np.floating)):
+        if isinstance(ref, (bool, np.bool_)):
+            return bool(np.asarray(val).item())
+        if isinstance(ref, (np.integer, int)):
+            return int(np.asarray(val).item())
+        return float(np.asarray(val).item())
+    if isinstance(ref, dict):
+        if not isinstance(val, dict):
+            return copy.deepcopy(ref)
+        return _align_nested_to_reference(val, ref)
+    if isinstance(ref, list):
+        if not isinstance(val, list):
+            return copy.deepcopy(ref)
+        out: list[Any] = []
+        for i in range(len(ref)):
+            vi = val[i] if i < len(val) else val[-1]
+            out.append(_cast_leaf_like_reference(vi, ref[i]))
+        if len(val) > len(ref):
+            out.extend(val[len(ref) :])
+        return out
+    return val
+
+
+def _align_nested_to_reference(val: dict[str, Any], ref: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, ref_v in ref.items():
+        if key in val:
+            out[key] = _cast_leaf_like_reference(val[key], ref_v)
+    for key, val_v in val.items():
+        if key not in out:
+            out[key] = val_v
+    return out
+
+
+def _spm_MDP_checkX_transform_align(mdp: dict[str, Any], reference: dict[str, Any]) -> None:
+    """Align checked ``mdp`` nested types to MATLAB ``loadmat`` / ``mat_nested_to_py`` template."""
+    aligned = _align_nested_to_reference(mdp, reference)
+    mdp.clear()
+    mdp.update(aligned)
+
+
+def spm_MDP_checkX(
+    MDP: Union[dict, List[Any]],
+    transform: bool = False,
+    transform_reference: Any | None = None,
+):
     """
     FORMAT MDP = spm_MDP_checkX(MDP)
+
+    ``transform`` (Entry 12 only, provisional): after standard checking, coerce container
+    types to match ``transform_reference`` (typically ``mat_nested_to_py(loadmat(RDP))``).
     """
     single, grid = _normalize_mdp_argument(MDP)
     if grid is not None:
@@ -70,11 +185,21 @@ def spm_MDP_checkX(MDP: Union[dict, List[Any]]):
             out: List[List[dict]] = [[None] * cols for _ in range(rows)]
             for m in range(rows):
                 for i in range(cols):
-                    out[m][i] = spm_MDP_checkX(copy.deepcopy(grid[m][i]))
+                    out[m][i] = spm_MDP_checkX(
+                        copy.deepcopy(grid[m][i]),
+                        transform=transform,
+                        transform_reference=transform_reference,
+                    )
             return out
         single = grid[0][0]
 
     _spm_MDP_checkX_single(single)
+    if transform:
+        if not isinstance(transform_reference, dict):
+            raise TypeError(
+                "transform_reference must be a dict when transform=True (MATLAB nested RDP template)"
+            )
+        _spm_MDP_checkX_transform_align(single, transform_reference)
     return single
 
 
@@ -132,8 +257,14 @@ def _spm_MDP_checkX_single(MDP: dict) -> None:
     B = _getfield(MDP, "B")
     for f in range(len(B)):
         bf = B[f]
+        if isinstance(bf, (int, float, np.integer, np.floating)):
+            bf = np.asarray(float(bf), dtype=np.float64).reshape(1, 1)
+            B[f] = bf
+            continue
         if _isnumeric_like(bf):
             bf = _to_dense_double(bf)
+            if bf.ndim == 0:
+                bf = np.atleast_2d(bf)
             bf = np.asarray(spm_dir_norm(bf), dtype=np.float64)
             # MATLAB drops a trailing Nu=1 dimension (e.g. ones(n,n,1) is stored as n×n).
             if bf.ndim == 3 and bf.shape[2] == 1:
@@ -168,7 +299,10 @@ def _spm_MDP_checkX_single(MDP: dict) -> None:
         _setfield(MDP, "C", c_list)
     C = _getfield(MDP, "C")
     for g in range(ng):
-        C[g] = np.asarray(spm_dir_norm(C[g]), dtype=np.float64)
+        cg = np.asarray(C[g], dtype=np.float64)
+        if cg.ndim == 1:
+            cg = cg.reshape(-1, 1, order="F")
+        C[g] = np.asarray(spm_dir_norm(cg), dtype=np.float64)
     _setfield(MDP, "C", C)
 
     if not _hasfield(MDP, "D"):
@@ -254,18 +388,7 @@ def _spm_MDP_checkX_single(MDP: dict) -> None:
         _setfield(MDP, "id", idd)
 
     try:
-        g_cell = idd["g"]
-        if isinstance(g_cell, np.ndarray) and g_cell.dtype == object:
-            flat = [g_cell.reshape(-1, order="F")[k] for k in range(g_cell.size)]
-        elif isinstance(g_cell, list):
-            flat = list(g_cell)
-        else:
-            flat = [g_cell]
-        row_cells = []
-        for item in np.asarray(flat, dtype=object).ravel(order="F"):
-            v = np.asarray(item, dtype=np.float64).reshape(-1, 1, order="F").T
-            row_cells.append(v)
-        idd["g"] = row_cells
+        idd["g"] = _id_g_cell_partitions(idd["g"])
         for g in range(len(idd["g"])):
             v = np.asarray(idd["g"][g], dtype=np.float64).reshape(-1, 1, order="F").T
             idd["g"][g] = v

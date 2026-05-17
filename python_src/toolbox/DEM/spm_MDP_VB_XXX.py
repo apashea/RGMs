@@ -14,7 +14,12 @@ as private Python functions in this module.
 from __future__ import annotations
 
 import copy
+import os
+import pickle
+import sys
+import time
 import warnings
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -40,6 +45,325 @@ from python_src.toolbox.DEM.spm_index import spm_index
 from python_src.toolbox.DEM.spm_MDP_size import spm_MDP_size
 from python_src.toolbox.DEM.spm_parents import spm_parents
 from python_src.toolbox.DEM.spm_VBX import spm_VBX
+
+_VB_TIMING_DEPTH = 0
+_VB_TIMING_LOOP_12E = 0.0
+_VB_TIMING_LOOP_12F = 0.0
+_VB_TIMING_BAND_WALL: dict[str, float] = {}
+
+_VB_RAND_REPLAY_ITER: Any = None
+_VB_RAND_REPLAY_ORIG_RAND: Any = None
+
+
+def _vb_default_matlab_rand_buf_path() -> Path:
+    from python_src.toolbox.DEM.entry12_matlab_capture import (
+        default_entry12_vb_matlab_rand_buf_mat_path,
+    )
+
+    return default_entry12_vb_matlab_rand_buf_mat_path()
+
+
+def _vb_load_matlab_rand_buf(path: Path | None = None) -> np.ndarray:
+    p = path if path is not None else _vb_default_matlab_rand_buf_path()
+    if not p.is_file():
+        raise FileNotFoundError(
+            f"MATLAB VB rand buffer not found: {p}\n"
+            "Run Entry 12 MATLAB dump (after entry12_preflight_vb_rand_k.py) to create it."
+        )
+    from scipy.io import loadmat
+
+    raw = loadmat(str(p))
+    if "vb_rand_buf" not in raw:
+        keys = sorted(k for k in raw if not k.startswith("__"))
+        raise KeyError(f"expected vb_rand_buf in {p}, got keys={keys}")
+    return np.asarray(raw["vb_rand_buf"], dtype=np.float64).ravel(order="F")
+
+
+class _VbMatlabRandReplay:
+    """Replay MATLAB ``rand(K,1)`` scalars through ``numpy.random.rand`` for ``_spm_sample``."""
+
+    __slots__ = ("_it", "_orig")
+
+    def __init__(self, buf: np.ndarray) -> None:
+        data = np.asarray(buf, dtype=np.float64).ravel(order="F").tolist()
+        self._it = iter(data)
+        self._orig = np.random.rand
+
+    def _shim(self, *args: Any, **kwargs: Any) -> float:
+        if args or kwargs:
+            raise RuntimeError(
+                "spm_MDP_VB_XXX reuse_matlab_draws: only scalar np.random.rand() is supported"
+            )
+        try:
+            return float(next(self._it))
+        except StopIteration as e:
+            raise RuntimeError(
+                "spm_MDP_VB_XXX reuse_matlab_draws: exhausted MATLAB vb_rand_buf "
+                "(Python drew more scalars than MATLAB; refresh K preflight and dump)"
+            ) from e
+
+    def __enter__(self) -> _VbMatlabRandReplay:
+        global _VB_RAND_REPLAY_ITER, _VB_RAND_REPLAY_ORIG_RAND
+        _VB_RAND_REPLAY_ITER = self._it
+        _VB_RAND_REPLAY_ORIG_RAND = self._orig
+        np.random.rand = self._shim  # type: ignore[method-assign]
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        global _VB_RAND_REPLAY_ITER, _VB_RAND_REPLAY_ORIG_RAND
+        np.random.rand = self._orig  # type: ignore[method-assign]
+        _VB_RAND_REPLAY_ITER = None
+        _VB_RAND_REPLAY_ORIG_RAND = None
+        if exc_type is not None:
+            return
+        try:
+            next(self._it)
+        except StopIteration:
+            return
+        raise RuntimeError(
+            "spm_MDP_VB_XXX reuse_matlab_draws: unused draws remain in vb_rand_buf "
+            "(Python drew fewer scalars than MATLAB; K preflight / OPTIONS mismatch)"
+        )
+
+
+def _vb_segment_timing_enabled() -> bool:
+    return str(os.getenv("RGMS_ATARI_RUN_SEGMENT_TIMING", "")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _vb_timing_enter() -> None:
+    global _VB_TIMING_DEPTH, _VB_TIMING_LOOP_12E, _VB_TIMING_LOOP_12F, _VB_TIMING_BAND_WALL
+    _VB_TIMING_DEPTH += 1
+    if _VB_TIMING_DEPTH == 1 and _vb_segment_timing_enabled():
+        _VB_TIMING_LOOP_12E = 0.0
+        _VB_TIMING_LOOP_12F = 0.0
+        _VB_TIMING_BAND_WALL.clear()
+
+
+def _vb_timing_leave() -> None:
+    global _VB_TIMING_DEPTH
+    try:
+        if _VB_TIMING_DEPTH == 1 and _vb_segment_timing_enabled():
+            _vb_timing_flush()
+    finally:
+        _VB_TIMING_DEPTH = max(0, _VB_TIMING_DEPTH - 1)
+
+
+def _vb_timing_set_band_wall(label: str, wall_s: float) -> None:
+    if _VB_TIMING_DEPTH == 1 and _vb_segment_timing_enabled():
+        _VB_TIMING_BAND_WALL[label] = float(wall_s)
+
+
+def _vb_timing_add_12e(dt: float) -> None:
+    """Sum child ``spm_MDP_VB_XXX`` wall when the caller is top-level (depth 1)."""
+    global _VB_TIMING_LOOP_12E
+    if _VB_TIMING_DEPTH == 1 and _vb_segment_timing_enabled():
+        _VB_TIMING_LOOP_12E += float(dt)
+
+
+def _vb_timing_add_12f(dt: float) -> None:
+    global _VB_TIMING_LOOP_12F
+    if _VB_TIMING_DEPTH == 1 and _vb_segment_timing_enabled():
+        _VB_TIMING_LOOP_12F += float(dt)
+
+
+_VB_MONITOR_REQUESTED = False
+_VB_DUMP_SPEC: dict[str, Any] | None = None
+
+
+def _vb_dump_resolve_spec() -> dict[str, Any]:
+    """Entry 12 subentry pickle output dir/tag (aligned with MATLAB capture)."""
+    repo = Path(__file__).resolve().parents[3]
+    raw_out = str(os.getenv("RGMS_ENTRY12_CAPTURE_OUT_DIR", "")).strip()
+    out_dir = Path(raw_out) if raw_out else repo / "tests" / "oracle" / "toolbox" / "DEM" / "fixtures"
+    tag = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "rgms_canonical")).strip() or "rgms_canonical"
+    return {"enabled": True, "out_dir": out_dir, "run_tag": tag}
+
+
+def _vb_dump_active() -> bool:
+    return bool(_VB_DUMP_SPEC and _VB_DUMP_SPEC.get("enabled") and _VB_TIMING_DEPTH == 1)
+
+
+def _vb_dump_mdp_payload(models: list[dict[str, Any]]) -> Any:
+    if len(models) == 1:
+        return copy.deepcopy(models[0])
+    return copy.deepcopy(models)
+
+
+def _vb_isfield_mdp_array(models: list[dict[str, Any]], name: str) -> bool:
+    """MATLAB ``elseif isfield(MDP,'field')`` on the VB struct array (nonempty & any present)."""
+    if not models:
+        return False
+    return any(name in md for md in models)
+
+
+def _vb_mdp_factor_field(md: dict[str, Any], name: str, f_idx: int) -> Any:
+    """``MDP.(A|B|C|D|E|H){f}`` — list cell or top-level matrix when ``Nf==1``."""
+    val = md.get(name)
+    if val is None:
+        return None
+    if isinstance(val, list):
+        v = val[f_idx]
+        return v[0] if isinstance(v, list) and len(v) == 1 else v
+    if f_idx == 0:
+        return val
+    raise IndexError(f"spm_MDP_VB_XXX: {name}{{f}} requested f={f_idx} but field is not a cell list")
+
+
+def _vb_as_float64_array(x: Any) -> np.ndarray:
+    if sparse.issparse(x):
+        return np.asarray(mfull(x), dtype=np.float64)
+    return np.asarray(x, dtype=np.float64)
+
+
+def _vb_dump_save(
+    code: str,
+    options: dict[str, Any],
+    meta_extra: dict[str, Any],
+    bundle: dict[str, Any],
+) -> None:
+    if not _vb_dump_active() or _VB_DUMP_SPEC is None:
+        return
+    out_dir = Path(_VB_DUMP_SPEC["out_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tag = str(_VB_DUMP_SPEC["run_tag"])
+    meta: dict[str, Any] = {
+        "subentry": code,
+        "run_tag": tag,
+        "capture_instrument": "spm_MDP_VB_XXX.py",
+    }
+    meta.update(meta_extra)
+    blob = {**bundle, "OPTIONS": copy.deepcopy(options), "meta": meta}
+    path = out_dir / f"DEMAtariIII_entry12_{tag}_{code}.pkl"
+    with path.open("wb") as f:
+        pickle.dump(blob, f, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"[XXX 12 dump] wrote {path}", file=sys.stderr, flush=True)
+
+
+def _vb_monitoring_active() -> bool:
+    """Top-level VB only (depth 1); survives nested child ``spm_MDP_VB_XXX`` calls."""
+    return bool(_VB_MONITOR_REQUESTED and _VB_TIMING_DEPTH == 1)
+
+
+def _vb_monitor_desc(v: Any) -> str:
+    """Concise type/shape text aligned with ``spm_MDP_VB_XXX_monitor_desc_`` (MATLAB)."""
+    import numpy as np
+
+    def _size_bracket(shape: tuple[int, ...]) -> str:
+        if not shape:
+            return ""
+        return " ".join(str(int(x)) for x in shape)
+
+    try:
+        if isinstance(v, list):
+            if not v:
+                return "list(len=0)"
+            return f"list(len={len(v)},elem={_vb_monitor_desc(v[0])})"
+        if isinstance(v, dict):
+            return f"struct(len={len(v)})"
+        if isinstance(v, np.ndarray):
+            sh = tuple(int(x) for x in v.shape)
+            if sh == ():
+                sh = (1, 1)
+            return f"ndarray[{_size_bracket(sh)}]"
+        if hasattr(v, "toarray") and callable(getattr(v, "toarray")) and hasattr(v, "shape"):
+            sh = tuple(int(x) for x in v.shape)
+            return f"sparse[{_size_bracket(sh)}]"
+        if isinstance(v, (bool, int, float, str)):
+            return type(v).__name__
+        return type(v).__name__
+    except Exception as exc:
+        return f"{type(v).__name__}(desc_error={type(exc).__name__})"
+
+
+def _vb_monitor_unwrap_mdp(v: Any) -> Any | None:
+    import numpy as np
+
+    if v is None:
+        return None
+    if isinstance(v, list) and v:
+        return v[0]
+    if isinstance(v, dict):
+        return v
+    if isinstance(v, np.ndarray) and v.dtype == object and v.size > 0:
+        return v.ravel(order="F")[0]
+    return None
+
+
+def _vb_monitor_chain(
+    band: str,
+    node: Any,
+    path_str: str,
+    m: int | None,
+    t: int | None,
+    iter_tag: str,
+) -> None:
+    if node is None:
+        return
+    if not isinstance(node, dict):
+        print(
+            f"[VB monitor {band}] path={path_str} iter={iter_tag} "
+            f"<not a dict> type={type(node).__name__}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return
+    l_val = node.get("L")
+    l_str = f" L={l_val}" if l_val is not None else ""
+    m_str = f" m={m}" if m is not None else ""
+    t_str = f" t={t}" if t is not None else ""
+    print(
+        f"[VB monitor {band}]{l_str} path={path_str} iter={iter_tag}{m_str}{t_str} (PY)",
+        file=sys.stderr,
+        flush=True,
+    )
+    for k in sorted(node.keys(), key=str):
+        if k == "MDP":
+            child = _vb_monitor_unwrap_mdp(node[k])
+            if child is not None:
+                _vb_monitor_chain(band, child, f"{path_str}.MDP", m, t, iter_tag)
+            continue
+        desc = _vb_monitor_desc(node[k])
+        print(
+            f"[VB monitor {band} PY field] path={path_str} {k}={desc}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+def _vb_monitor_snapshot(
+    band: str,
+    mdp: Any,
+    m: int | None,
+    t: int | None,
+    iter_tag: str,
+) -> None:
+    if not _vb_monitoring_active():
+        return
+    path_str = f"MDP({m})" if m is not None else "MDP"
+    if band == "12E":
+        path_str = f"{path_str}.MDP"
+    _vb_monitor_chain(band, mdp, path_str, m, t, iter_tag)
+
+
+def _vb_timing_flush() -> None:
+    """One ``total_s=`` line per band (loop bands summed like FSL ENTRY8/9)."""
+    for label in ("12A", "12B", "12C", "12F", "12E", "12G", "12H"):
+        if label in ("12F", "12E"):
+            total = _VB_TIMING_LOOP_12F if label == "12F" else _VB_TIMING_LOOP_12E
+        else:
+            if label not in _VB_TIMING_BAND_WALL:
+                continue
+            total = _VB_TIMING_BAND_WALL[label]
+        print(
+            f"[spm_MDP_VB_XXX {label}] total_s={total:.6f}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def _spm_sample(p: Any) -> int:
@@ -130,7 +454,12 @@ def _spm_induction_vb(
             raise NotImplementedError("spm_induction: id.hid function_handle not translated")
         hid_full = np.asarray(hid_m, dtype=np.float64)
         if hid_full.ndim < 2:
-            hid_full = np.reshape(hid_full, (-1, 1), order="F")
+            # MATLAB ``id.hid`` is ``Nf×Ni``; a flat vector is ``1×Ni`` when ``Nf==1``, not ``Nf×1``.
+            nf_h = len(H)
+            if nf_h == 1:
+                hid_full = np.reshape(hid_full, (1, -1), order="F")
+            else:
+                hid_full = np.reshape(hid_full, (-1, 1), order="F")
         hif = (np.flatnonzero(np.any(hid_full != 0, axis=1)) + 1).astype(np.int64).reshape(1, -1)
         hid = hid_full
     else:
@@ -192,7 +521,8 @@ def _spm_induction_vb(
         return np.array([]), np.array([], dtype=np.int64)
     if hid.size == 0 or np.all(hid == 0):
         if d_tensor is True:
-            return np.array([]), np.asarray(hif_list, dtype=np.int64)
+            # MATLAB ``if isempty(hid), R = 32*D;`` with scalar ``D = true`` → ``R = 32``.
+            return np.asarray(32.0, dtype=np.float64), np.asarray(hif_list, dtype=np.int64)
         r32 = (32.0 * np.asarray(d_flat, dtype=np.float32).ravel(order="F")).astype(np.float32)
         return r32, np.asarray(hif_list, dtype=np.int64)
 
@@ -310,13 +640,12 @@ def _spm_induction_vb(
     n_use = int(n_sel[j0])
     col_idx = max(n_use - 1, 1) - 1
     p_vec = p_use[:, col_idx].astype(np.float64)
-    ns_shape = tuple(ns_by_pos)
-    r_body = p_vec.reshape(ns_shape, order="F").astype(np.float32)
+    p_col = p_vec.reshape(-1, 1, order="F")
     if d_tensor is True:
-        d_reshape = np.ones(r_body.shape, dtype=bool)
+        d_col = np.ones_like(p_col, dtype=bool)
     else:
-        d_reshape = np.asarray(d_tensor, dtype=bool).reshape(ns_shape, order="F")
-    R = 32.0 * np.logical_and(r_body.astype(bool), d_reshape.astype(bool)).astype(np.float32)
+        d_col = np.asarray(d_tensor, dtype=bool).reshape(p_col.shape, order="F")
+    R = (32.0 * np.logical_and(p_col.astype(bool), d_col.astype(bool))).astype(np.float64)
     return R, np.asarray(hif_kept, dtype=np.int64)
 
 
@@ -354,18 +683,21 @@ def spm_forwards(
     for f in range(len(Q_upd)):
         P[mi][f][t - 1] = Q_upd[f]
 
-    if t > T or (nk * Ni == 1):
+    if t > T or G.size == 1:
         return G, P, float(F), id_list, Pa
 
     B_slice = B[mi]
     H_slice = H[mi]
     P_now = [P[mi][f][t - 1] for f in range(nf)]
     R, r = _spm_induction_vb(B_slice, H_slice, P_now, int(T - t), idm)
-    if np.asarray(R).size and np.asarray(R).ndim >= 1:
+    if np.asarray(R).size:
         Rv = np.asarray(R, dtype=np.float64)
-        if Rv.ndim == 1 or (Rv.ndim == 2 and min(Rv.shape) == 1):
-            Rv = Rv.reshape(1, -1)
-        R = Rv
+        if Rv.ndim == 1:
+            R = Rv.reshape(1, -1, order="F")
+        elif Rv.ndim == 2 and Rv.shape[1] == 1:
+            R = Rv.reshape(1, -1, order="F")
+        else:
+            R = Rv
 
     Qp: list[Any] = [None] * nf
     id_fp = np.asarray(idm.get("fp", np.zeros(0, dtype=np.int64)), dtype=np.int64).ravel()
@@ -387,7 +719,8 @@ def spm_forwards(
         for f in id_iH.tolist():
             Qf = np.asarray(Qp[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
             Hf = np.asarray(H_slice[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
-            G[k, :] -= float((Qf.T @ (_spm_log(Qf) - _spm_log(Hf))).reshape(-1)[0])
+            ih_term = float((Qf.T @ (_spm_log(Qf) - _spm_log(Hf))).reshape(-1)[0])
+            G[k, :] -= ih_term
 
         for f in id_iI.tolist():
             Pmf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(1, -1, order="F")
@@ -988,6 +1321,18 @@ def _spm_wnorm(a: Any) -> np.ndarray | Any:
     return out
 
 
+def _spm_one_hot(o: Any, no: int) -> np.ndarray:
+    """File-local ``spm_one_hot`` from ``spm_MDP_VB_XXX.m`` (~2660): ``O(o)=1``, ``No×1``."""
+    oi = int(round(float(o)))
+    ni = int(no)
+    if ni < 1:
+        raise ValueError("spm_one_hot: No must be positive")
+    if oi < 1 or oi > ni:
+        raise ValueError(f"spm_one_hot: index {oi} out of range 1..{ni}")
+    mat = sparse.csr_matrix(([1.0], ([oi - 1], [0])), shape=(ni, 1))
+    return np.asarray(mat.toarray(), dtype=np.float64)
+
+
 def _spm_hnorm(a: Any) -> np.ndarray | Any:
     """Local ``spm_hnorm`` (~2665–2676)."""
     if not (isinstance(a, np.ndarray) and np.issubdtype(a.dtype, np.number)):
@@ -1250,11 +1595,15 @@ def _vb_id_and_policy_blocks(
 
 def _vb_mdp_field_matrix(md: dict[str, Any], key: str, n_rows: int, t_int: int) -> None:
     """
-    MATLAB ``spm_MDP_VB_XXX.m`` ~674–699: ``k = zeros(...); try i = find(MDP.s); k(i)=MDP.s(i); end``.
+    MATLAB ``spm_MDP_VB_XXX.m`` ~705–730: ``k = zeros(...); i = find(MDP.s); k(i)=MDP.s(i);``.
 
-    Column-major linear indexing (MATLAB ``find`` / ``(:)``).
+    Column-major linear indexing (MATLAB ``find`` / ``(:)``). Hierarchical prep sets
+    ``mdp.s`` / ``mdp.u`` as ``nf×1`` vectors; ``find`` + ``k(i)=s(i)`` fills the
+    leading column of ``zeros(NF,T)`` without resampling at generation time.
     """
-    k = np.zeros((n_rows, t_int), dtype=np.float64)
+    # Fortran-ordered so ``ravel(order='F')`` is a view (C-order ``ravel('F')`` copies).
+    k = np.zeros((n_rows, t_int), dtype=np.float64, order="F")
+    k_flat = k.ravel(order="F")
     try:
         if key not in md or md[key] is None:
             md[key] = k
@@ -1263,12 +1612,16 @@ def _vb_mdp_field_matrix(md: dict[str, Any], key: str, n_rows: int, t_int: int) 
         if s.size == 0:
             md[key] = k
             return
-        if s.size != n_rows * t_int:
-            md[key] = k
-            return
-        s_mat = np.reshape(s, (n_rows, t_int), order="F")
-        idx = np.flatnonzero(s_mat.ravel(order="F"))
-        k.ravel(order="F")[idx] = s_mat.ravel(order="F")[idx]
+        s_lin = s.ravel(order="F")
+        if s_lin.size == n_rows * t_int:
+            idx = np.flatnonzero(s_lin)
+            k_flat[idx] = s_lin[idx]
+        else:
+            idx = np.flatnonzero(s_lin)
+            if idx.size:
+                valid = idx[idx < k_flat.size]
+                if valid.size:
+                    k_flat[valid] = s_lin[valid]
     except Exception:
         pass
     md[key] = k
@@ -1366,8 +1719,9 @@ def _vb_prealloc_BP_IP(bundle: dict[str, Any]) -> tuple[list, list]:
     nf = int(bundle["Nf"][m_last])
     npp = int(bundle["Np"][m_last])
     npp_shell = max(1, npp)
-    BP = [[[None for _ in range(npp_shell)] for _ in range(nf)] for _ in range(nm)]
-    IP = [[[None for _ in range(npp_shell)] for _ in range(nf)] for _ in range(nm)]
+    empty = np.array([], dtype=np.float64)
+    BP = [[[empty for _ in range(npp_shell)] for _ in range(nf)] for _ in range(nm)]
+    IP = [[[empty for _ in range(npp_shell)] for _ in range(nf)] for _ in range(nm)]
     return BP, IP
 
 
@@ -1544,24 +1898,20 @@ def _vb_gen_states_one_model(mi: int, models: list[dict[str, Any]], bundle: dict
         md["s"][f_idx, t_idx] = float(_spm_sample(ps))
 
 
-def _vb_generation_paths_states_share(
+def _vb_generation_paths_states(
     models: list[dict[str, Any]],
     bundle: dict[str, Any],
     t_idx: int,
     M_row: np.ndarray,
 ) -> None:
     """
-    MATLAB ``spm_MDP_VB_XXX.m`` inner ``for m = M(t,:)``: ~756–855 (partial), then ~858–869.
+    MATLAB ``spm_MDP_VB_XXX.m`` ~756–920 (per ``t``, before share-states ~934).
 
-    Order per model: **u** (``NF``) → if ``t>1``: **Pu**/**Q**/**P** (``Nf``, needs ``bundle['Pu_carry'][m]``),
-    **control** → **s** (``NF``). ``Pu_carry[m]`` is ``None`` until the belief phase sets it (MATLAB: persists from prior ``t``).
-
-    Outcomes (~873+) and ``spm_forwards`` are separate.
+    Order per model: **u** (``NF``) → if ``t>1``: **Pu**/**Q**/**P**, **control** → **s** (``NF``).
     """
     nm = int(bundle.get("Nm", len(models)))
     bundle.setdefault("Pu_carry", [None] * nm)
     Pu_carry: list[Any] = bundle["Pu_carry"]
-    NF_arr = bundle["NF"]
 
     M_vec = np.asarray(M_row, dtype=np.int64).ravel()
     for mm in M_vec:
@@ -1576,6 +1926,16 @@ def _vb_generation_paths_states_share(
             _vb_gen_control_one_model(mi, models, bundle, t_idx)
         _vb_gen_states_one_model(mi, models, bundle, t_idx)
 
+
+def _vb_share_states_one_t(
+    models: list[dict[str, Any]],
+    bundle: dict[str, Any],
+    t_idx: int,
+    M_row: np.ndarray,
+) -> None:
+    """MATLAB ``spm_MDP_VB_XXX.m`` ~934–945 (share states via ``MDP.m``)."""
+    NF_arr = bundle["NF"]
+    M_vec = np.asarray(M_row, dtype=np.int64).ravel()
     for mm in M_vec:
         mi = int(mm) - 1
         if mi < 0:
@@ -1589,6 +1949,17 @@ def _vb_generation_paths_states_share(
             n_agent = int(round(float(m_src[f_idx])))
             if n_agent > 0:
                 md["s"][f_idx, t_idx] = float(models[n_agent - 1]["s"][f_idx, t_idx])
+
+
+def _vb_generation_paths_states_share(
+    models: list[dict[str, Any]],
+    bundle: dict[str, Any],
+    t_idx: int,
+    M_row: np.ndarray,
+) -> None:
+    """Generation (~756–920) then share-states (~934–945). Outcomes (~873+) are separate."""
+    _vb_generation_paths_states(models, bundle, t_idx, M_row)
+    _vb_share_states_one_t(models, bundle, t_idx, M_row)
 
 
 def _tensor_nonempty(x: Any) -> bool:
@@ -2083,9 +2454,7 @@ def _vb_generate_outcomes_if_options_o(
                         no_mo = int(bundle["No"][mi, o_idx])
                         oi = int(round(float(md["o"][o_idx, t_idx])))
                         if no_mo > 0 and oi > 0 and oi <= no_mo:
-                            hot = np.zeros((no_mo, 1), dtype=np.float64)
-                            hot[oi - 1, 0] = 1.0
-                            O_shell[mi][o_idx][t_idx] = hot
+                            O_shell[mi][o_idx][t_idx] = _spm_one_hot(oi, no_mo)
                     continue
                 n_ot = float(n_mat[o_idx, t_idx])
 
@@ -2345,6 +2714,8 @@ def _vb_hierarchical_subordinate_outcomes(
     t_idx: int,
     M_row: np.ndarray,
     recurse_partial: bool,
+    *,
+    reuse_matlab_draws: bool = False,
 ) -> None:
     """
     MATLAB ``spm_MDP_VB_XXX.m`` ~973+ (hierarchical ``MDP(m).MDP`` branch), partial Pass 1.
@@ -2521,9 +2892,23 @@ def _vb_hierarchical_subordinate_outcomes(
         child.pop("o", None)
         _vb_hierarchical_apply_S_as_O_if_present(child)
 
+        t_1based = t_idx + 1
+        t_last = t_int
+        if _vb_monitoring_active() and t_1based in (1, t_last):
+            _vb_monitor_snapshot("12E", child, mi + 1, t_1based, "before")
         # MATLAB ~1160 recurses with full ``spm_MDP_VB_XXX(mdp)``; keep staged partial recurse only when parent run is partial.
-        child_opts = {"_rgms_partial_ok": 1} if recurse_partial else {}
-        child_upd = spm_MDP_VB_XXX(child, child_opts)
+        child_opts = copy.deepcopy(bundle.get("options_vb") or _default_options_vb())
+        if recurse_partial:
+            child_opts["_rgms_partial_ok"] = 1
+        t_child = time.perf_counter()
+        child_upd = spm_MDP_VB_XXX(
+            child,
+            child_opts,
+            reuse_matlab_draws=reuse_matlab_draws,
+        )
+        if _vb_monitoring_active() and t_1based in (1, t_last):
+            _vb_monitor_snapshot("12E", child_upd, mi + 1, t_1based, "after")
+        _vb_timing_add_12e(time.perf_counter() - t_child)
 
         id_child = child_upd.get("id", {})
         idD = id_child.get("D", [])
@@ -2576,22 +2961,125 @@ def _vb_build_partial_output(models: list[dict[str, Any]], bundle: dict[str, Any
     return out
 
 
+def _entry12_snap_12d(
+    models: list[dict[str, Any]],
+    bundle: dict[str, Any],
+    t_label: int,
+    mrow: Any,
+) -> dict[str, Any]:
+    md = copy.deepcopy(_vb_dump_mdp_payload(models))
+    t_int = int(bundle["T"])
+    t_lab = int(t_label)
+    # MATLAB ``snapD`` at ``t == T`` is before belief/outcomes at ``T`` (``F`` length ``T-1``).
+    if t_lab == t_int:
+        ff = md.get("F")
+        if isinstance(ff, np.ndarray):
+            flat = np.asarray(ff, dtype=np.float64).ravel()
+            keep = max(0, t_int - 1)
+            if flat.size > keep:
+                md["F"] = np.asarray(flat[:keep], dtype=np.float64)
+        gg = md.get("G")
+        if isinstance(gg, list) and len(gg) > max(0, t_int - 1):
+            md["G"] = gg[: max(0, t_int - 1)]
+    return {
+        "t": t_lab,
+        "MDP": md,
+        "Mrow": np.asarray(mrow, dtype=np.int64).copy(),
+    }
+
+
+def _entry12_O_at_t(bundle: dict[str, Any], t_idx: int) -> list[list[Any]]:
+    """``O{m,g,t}`` slice only (lean 12E boundary)."""
+    o_shell = bundle["O"]
+    out: list[list[Any]] = []
+    for mi, o_mi in enumerate(o_shell):
+        out.append([copy.deepcopy(o_mi[g][t_idx]) for g in range(len(o_mi))])
+    return out
+
+
+def _entry12_snap_12e(
+    models: list[dict[str, Any]],
+    bundle: dict[str, Any],
+    t_label: int,
+    *,
+    t_idx: int | None = None,
+) -> dict[str, Any]:
+    snap: dict[str, Any] = {"t": int(t_label)}
+    if t_idx is not None:
+        snap["O"] = _entry12_O_at_t(bundle, t_idx)
+    return snap
+
+
+def _entry12_snap_12f(
+    models: list[dict[str, Any]],
+    bundle: dict[str, Any],
+    t_label: int,
+    *,
+    include_policy_traces: bool = False,
+) -> dict[str, Any]:
+    snap: dict[str, Any] = {
+        "t": int(t_label),
+        "Q": copy.deepcopy(bundle["Q"]),
+        "P": copy.deepcopy(bundle["P"]),
+        "MDP": _vb_dump_mdp_payload(models),
+    }
+    if include_policy_traces:
+        snap["R"] = copy.deepcopy(bundle["R_policy"])
+        snap["v"] = copy.deepcopy(bundle["v_policy"])
+        snap["w"] = copy.deepcopy(bundle["w_policy"])
+    return snap
+
+
 def _vb_run_partial_t_loop(
     models: list[dict[str, Any]],
     bundle: dict[str, Any],
     alpha: float,
     recurse_partial: bool,
+    *,
+    reuse_matlab_draws: bool = False,
 ) -> None:
     """Per ``t``: generation → outcomes ~873–949 → ~952–969 → ``BP``/``IP`` → ``spm_forwards`` → belief."""
     M_upd = bundle["M_update"]
     t_int = int(bundle["T"])
     n_depth = int(bundle["N_policy_depth"])
+    if _vb_dump_active():
+        bundle["entry12_D"] = {
+            "in": _entry12_snap_12d(models, bundle, 0, M_upd[0, :]),
+        }
+        bundle["entry12_E"] = {
+            "in": _entry12_snap_12e(models, bundle, 0),
+        }
+        bundle["entry12_F"] = {
+            "in": _entry12_snap_12f(models, bundle, 0, include_policy_traces=False),
+        }
     for t_idx in range(t_int):
+        t_iter = time.perf_counter()
         row = M_upd[t_idx, :]
-        _vb_generation_paths_states_share(models, bundle, t_idx, row)
+        t_1based = t_idx + 1
+        _vb_generation_paths_states(models, bundle, t_idx, row)
+        if _vb_dump_active():
+            snap_d = _entry12_snap_12d(models, bundle, t_1based, row)
+            if t_1based == 1:
+                bundle["entry12_D"]["out_t1"] = snap_d
+            if t_1based == t_int:
+                bundle["entry12_D"]["out_tT"] = snap_d
+        _vb_share_states_one_t(models, bundle, t_idx, row)
         _vb_generate_outcomes_if_options_o(models, bundle, t_idx, row)
         _vb_shared_probabilistic_outcomes(models, bundle, t_idx, row)
-        _vb_hierarchical_subordinate_outcomes(models, bundle, t_idx, row, recurse_partial)
+        _vb_hierarchical_subordinate_outcomes(
+            models,
+            bundle,
+            t_idx,
+            row,
+            recurse_partial,
+            reuse_matlab_draws=reuse_matlab_draws,
+        )
+        if _vb_dump_active():
+            snap_e = _entry12_snap_12e(models, bundle, t_1based, t_idx=t_idx)
+            if t_1based == 1:
+                bundle["entry12_E"]["out_t1"] = snap_e
+            if t_1based == t_int:
+                bundle["entry12_E"]["out_tT"] = snap_e
         _vb_fill_BP_IP_at_t(bundle, t_idx)
         t_m = t_idx + 1
         n_horiz = int(min(t_int, t_m + n_depth))
@@ -2633,9 +3121,22 @@ def _vb_run_partial_t_loop(
             models[mi]["Z"][t_idx] = float(Zt)
             models[mi]["Pa"] = copy.deepcopy(Pa_step)
             _vb_in_loop_id_ig_and_sn(mi, bundle, t_idx)
+            if _vb_monitoring_active():
+                t_1based = t_idx + 1
+                if t_1based == 1:
+                    _vb_monitor_snapshot("12F", models[mi], mi + 1, t_1based, "first")
+                if t_1based == t_int:
+                    _vb_monitor_snapshot("12F", models[mi], mi + 1, t_1based, "last")
 
         if t_idx + 1 == t_int:
             _vb_trim_mdp_o_s_u_at_terminal_horizon(models, bundle)
+        if _vb_dump_active():
+            snap_f = _entry12_snap_12f(models, bundle, t_1based, include_policy_traces=True)
+            if t_1based == 1:
+                bundle["entry12_F"]["out_t1"] = snap_f
+            if t_1based == t_int:
+                bundle["entry12_F"]["out_tT"] = snap_f
+        _vb_timing_add_12f(time.perf_counter() - t_iter)
 
 
 def _vb_optional_backwards_replay(
@@ -3031,6 +3532,8 @@ def _vb_assemble_mdp_results_1691(models: list[dict[str, Any]], bundle: dict[str
     """
     nm = int(bundle["Nm"])
     for mi in range(nm):
+        if _vb_monitoring_active():
+            _vb_monitor_snapshot("12H", models[mi], mi + 1, None, "first")
         md = models[mi]
         ng_m = int(bundle["Ng"][mi])
         nf_m = int(bundle["Nf"][mi])
@@ -3051,6 +3554,8 @@ def _vb_assemble_mdp_results_1691(models: list[dict[str, Any]], bundle: dict[str
                 for f in range(nf_m)
             ]
         _vb_normalize_AB_from_ab_if_missing(md, ng_m, nf_m)
+        if _vb_monitoring_active():
+            _vb_monitor_snapshot("12H", models[mi], mi + 1, None, "last")
 
 
 def _vb_init_QXSP_outcomes_and_process(
@@ -3145,6 +3650,9 @@ def _vb_init_QXSP_outcomes_and_process(
                         O_shell[m][g_idx][t_idx] = []
                         options["O"] = True
 
+        if _vb_monitoring_active():
+            _vb_monitor_snapshot("12B", models[m], m + 1, None, "last")
+
     for m in range(nm):
         if proc[m] > 0:
             models[m]["GV"] = bundle["GV"][m]
@@ -3200,6 +3708,8 @@ def _vb_tensors_through_H(
     NU = np.zeros((nm, max_guess_nf), dtype=np.int64)
 
     for m in range(nm):
+        if _vb_monitoring_active():
+            _vb_monitor_snapshot("12B", models[m], m + 1, None, "first")
         md = models[m]
         gpm = gp[m]
         if proc[m] > 0:
@@ -3335,11 +3845,14 @@ def _vb_tensors_through_H(
             else:
                 Ag = md["A"][g_idx]
                 Ag = Ag[0] if isinstance(Ag, list) and len(Ag) == 1 else Ag
-                Ag_arr = np.asarray(Ag)
-                if np.issubdtype(Ag_arr.dtype, np.number) and Ag_arr.dtype != bool:
-                    qa_mg = Ag_arr.astype(np.float64) * 512.0
+                if sparse.issparse(Ag):
+                    qa_mg = _vb_as_float64_array(Ag) * 512.0
                 else:
-                    qa_mg = Ag
+                    Ag_arr = np.asarray(Ag)
+                    if np.issubdtype(Ag_arr.dtype, np.number) and Ag_arr.dtype != bool:
+                        qa_mg = Ag_arr.astype(np.float64) * 512.0
+                    else:
+                        qa_mg = Ag
 
             pa_t[m][g_idx] = qa_mg
             qa_t[m][g_idx] = qa_mg
@@ -3365,7 +3878,7 @@ def _vb_tensors_through_H(
             elif "C" in md:
                 Cg = md["C"][g_idx]
                 Cg = Cg[0] if isinstance(Cg, list) and len(Cg) == 1 else Cg
-                qc_m = np.asarray(Cg, dtype=np.float64) * 512.0
+                qc_m = _vb_as_float64_array(Cg) * 512.0
             else:
                 qc_m = np.zeros((0, 0), dtype=np.float64)
 
@@ -3384,7 +3897,7 @@ def _vb_tensors_through_H(
             else:
                 Bg = md["B"][f_idx]
                 Bg = Bg[0] if isinstance(Bg, list) and len(Bg) == 1 else Bg
-                qb_m = np.asarray(Bg, dtype=np.float64) * 512.0
+                qb_m = _vb_as_float64_array(Bg) * 512.0
 
             qb_t[m][f_idx] = qb_m
             pb_t[m][f_idx] = qb_m
@@ -3409,7 +3922,7 @@ def _vb_tensors_through_H(
             elif "D" in md:
                 Dg = md["D"][f_idx]
                 Dg = Dg[0] if isinstance(Dg, list) and len(Dg) == 1 else Dg
-                qd_m = np.asarray(Dg, dtype=np.float64) * 512.0
+                qd_m = _vb_as_float64_array(Dg) * 512.0
             else:
                 qd_m = np.ones((int(Ns[m, f_idx]), 1), dtype=np.float64)
 
@@ -3423,7 +3936,7 @@ def _vb_tensors_through_H(
             elif "E" in md:
                 Eg = md["E"][f_idx]
                 Eg = Eg[0] if isinstance(Eg, list) and len(Eg) == 1 else Eg
-                qe_m = np.asarray(Eg, dtype=np.float64) * 512.0
+                qe_m = _vb_as_float64_array(Eg) * 512.0
             else:
                 qe_m = np.ones((int(Nu[m, f_idx]), 1), dtype=np.float64)
 
@@ -3434,10 +3947,9 @@ def _vb_tensors_through_H(
             if "h" in md:
                 qh_m = md["h"][f_idx]
                 qh_m = qh_m[0] if isinstance(qh_m, list) and len(qh_m) == 1 else qh_m
-            elif "H" in md:
-                Hg = md["H"][f_idx]
-                Hg = Hg[0] if isinstance(Hg, list) and len(Hg) == 1 else Hg
-                qh_m = np.asarray(Hg, dtype=np.float64) * 512.0
+            elif _vb_isfield_mdp_array(models, "H"):
+                Hg = _vb_mdp_factor_field(md, "H", f_idx)
+                qh_m = _vb_as_float64_array(Hg) * 512.0
             else:
                 qh_m = np.zeros((0, 0), dtype=np.float64)
 
@@ -3509,7 +4021,40 @@ def _vb_tensors_through_H(
     }
 
 
-def spm_MDP_VB_XXX(mdp_in: Any, options: Any | None = None) -> Any:
+def _spm_MDP_update(mdp: dict[str, Any], out: dict[str, Any]) -> dict[str, Any]:
+    """
+    File-local ``spm_MDP_update`` from ``spm_MDP_VB_XXX.m`` (~2821–2843).
+
+    Moves Dirichlet parameters from prior-trial ``OUT`` into the next-trial ``MDP``.
+    """
+    mdp = copy.deepcopy(mdp)
+    for key in ("a", "b", "c", "d", "e"):
+        if key in out:
+            mdp[key] = copy.deepcopy(out[key])
+    nested_mdp = out.get("mdp")
+    if nested_mdp is not None and "MDP" in mdp:
+        child = mdp["MDP"]
+        if isinstance(child, list) and child:
+            child0 = child[0]
+        else:
+            child0 = child
+        if isinstance(child0, dict) and isinstance(nested_mdp, list) and nested_mdp:
+            last_out = nested_mdp[-1]
+            if isinstance(last_out, dict):
+                for key in ("a", "b", "c", "d", "e"):
+                    if key in last_out:
+                        child0[key] = copy.deepcopy(last_out[key])
+    return mdp
+
+
+def spm_MDP_VB_XXX(
+    mdp_in: Any,
+    options: Any | None = None,
+    *,
+    monitoring: bool = False,
+    dump_subentries: bool = False,
+    reuse_matlab_draws: bool = False,
+) -> Any:
     """
     FORMAT ``MDP = spm_MDP_VB_XXX(MDP, OPTIONS)``
 
@@ -3546,36 +4091,176 @@ def spm_MDP_VB_XXX(mdp_in: Any, options: Any | None = None) -> Any:
 
     ``spm_figure`` / graphics branches from MATLAB are intentionally omitted.
     """
-    opts = _merge_options_vb(options)
-    partial_ok = bool(int(opts.pop("_rgms_partial_ok", 0)))
-    if _vb_has_multiple_epoch_columns(mdp_in):
-        raise NotImplementedError(
-            "spm_MDP_VB_XXX: multiple epochs (size(MDP,2)>1) are not translated yet"
+    global _VB_MONITOR_REQUESTED, _VB_DUMP_SPEC
+    _vb_timing_enter()
+    rand_replay: _VbMatlabRandReplay | None = None
+    if reuse_matlab_draws and _VB_TIMING_DEPTH == 1:
+        rand_replay = _VbMatlabRandReplay(_vb_load_matlab_rand_buf())
+        rand_replay.__enter__()
+    if monitoring and _VB_TIMING_DEPTH == 1:
+        _VB_MONITOR_REQUESTED = True
+    if dump_subentries and _VB_TIMING_DEPTH == 1:
+        _VB_DUMP_SPEC = _vb_dump_resolve_spec()
+    try:
+        t_band = time.perf_counter()
+        opts = _merge_options_vb(options)
+        partial_ok = bool(int(opts.pop("_rgms_partial_ok", 0)))
+        if _vb_has_multiple_epoch_columns(mdp_in):
+            raise NotImplementedError(
+                "spm_MDP_VB_XXX: multiple epochs (size(MDP,2)>1) are not translated yet"
+            )
+        mdp_checked = spm_MDP_checkX(copy.deepcopy(mdp_in))
+        models = _vb_models_after_checkx(mdp_checked)
+        if _vb_dump_active():
+            _vb_dump_save("12A", opts, {"note": "post-checkX"}, {"MDP": _vb_dump_mdp_payload(models)})
+        _vb_timing_set_band_wall("12A", time.perf_counter() - t_band)
+        nm = len(models)
+        if _vb_monitoring_active():
+            for mi in range(nm):
+                _vb_monitor_snapshot("12A", models[mi], mi + 1, None, "once")
+        hp = _vb_hyperparameters_mdp1(models[0])
+        t_h = float(models[0]["T"])
+        t_band = time.perf_counter()
+        bundle = _vb_tensors_through_H(models, nm, t_h)
+        post = _vb_init_QXSP_outcomes_and_process(
+            models, bundle, opts, float(hp["chi"])
         )
-    mdp_checked = spm_MDP_checkX(copy.deepcopy(mdp_in))
-    models = _vb_models_after_checkx(mdp_checked)
-    nm = len(models)
-    hp = _vb_hyperparameters_mdp1(models[0])
-    t_h = float(models[0]["T"])
-    bundle = _vb_tensors_through_H(models, nm, t_h)
-    post = _vb_init_QXSP_outcomes_and_process(
-        models, bundle, opts, float(hp["chi"])
-    )
-    bundle.update(post)
-    bundle.update(_vb_policy_depth_and_get_M(models, bundle, hp))
-    bundle["options_vb"] = opts
-    _vb_run_partial_t_loop(models, bundle, float(hp["alpha"]), partial_ok)
-    _vb_optional_backwards_replay(models, bundle, opts)
-    _vb_accumulate_dirichlet_parameter_learning(models, bundle, hp)
-    _vb_posterior_predictive_Y(models, bundle, opts)
-    _vb_reorganize_X_S_from_QP(bundle)
-    _vb_options_N_neural_simulated_responses(models, bundle, opts)
-    _vb_assemble_mdp_results_1691(models, bundle)
-    if partial_ok:
-        return _vb_build_partial_output(models, bundle)
-    if len(models) == 1:
-        return copy.deepcopy(models[0])
-    return copy.deepcopy(models)
+        bundle.update(post)
+        _vb_timing_set_band_wall("12B", time.perf_counter() - t_band)
+        if _vb_dump_active():
+            _vb_dump_save(
+                "12B",
+                opts,
+                {"note": "post-setup"},
+                {
+                    "process": copy.deepcopy(bundle["process"]),
+                    "GP": copy.deepcopy(bundle["gp"]),
+                    "id": copy.deepcopy(bundle["id"]),
+                    "ID": copy.deepcopy(bundle["ID"]),
+                    "Ng": copy.deepcopy(bundle["Ng"]),
+                    "Nf": copy.deepcopy(bundle["Nf"]),
+                    "No": copy.deepcopy(bundle["No"]),
+                    "Ns": copy.deepcopy(bundle["Ns"]),
+                    "Nu": copy.deepcopy(bundle["Nu"]),
+                    "NG": copy.deepcopy(bundle["NG"]),
+                    "NF": copy.deepcopy(bundle["NF"]),
+                    "NS": copy.deepcopy(bundle["NS"]),
+                    "NU": copy.deepcopy(bundle["NU"]),
+                    "Nm": int(bundle["Nm"]),
+                    "T": int(bundle["T"]),
+                    "MDP": _vb_dump_mdp_payload(models),
+                },
+            )
+        t_band = time.perf_counter()
+        bundle.update(_vb_policy_depth_and_get_M(models, bundle, hp))
+        bundle["options_vb"] = opts
+        _vb_timing_set_band_wall("12C", time.perf_counter() - t_band)
+        if _vb_dump_active():
+            _vb_dump_save(
+                "12C",
+                opts,
+                {"note": "before for t"},
+                {
+                    "M": copy.deepcopy(bundle["M_update"]),
+                    "N": int(bundle["N_policy_depth"]),
+                    "MDP": _vb_dump_mdp_payload(models),
+                    "O": copy.deepcopy(bundle["O"]),
+                    "A": copy.deepcopy(bundle["A"]),
+                    "B": copy.deepcopy(bundle["B"]),
+                    "BP": copy.deepcopy(bundle["BP"]),
+                    "IP": copy.deepcopy(bundle["IP"]),
+                },
+            )
+        if _vb_monitoring_active():
+            for mi in range(nm):
+                _vb_monitor_snapshot("12C", models[mi], mi + 1, None, "once")
+        _vb_run_partial_t_loop(
+            models,
+            bundle,
+            float(hp["alpha"]),
+            partial_ok,
+            reuse_matlab_draws=reuse_matlab_draws,
+        )
+        if _vb_dump_active():
+            opts_loop = bundle.get("options_vb", opts)
+            _vb_dump_save(
+                "12D",
+                opts_loop,
+                {"note": "early band boundaries"},
+                copy.deepcopy(bundle.get("entry12_D", {})),
+            )
+            _vb_dump_save(
+                "12E",
+                opts_loop,
+                {"note": "outcomes/hierarchical boundaries"},
+                copy.deepcopy(bundle.get("entry12_E", {})),
+            )
+            _vb_dump_save(
+                "12F",
+                opts_loop,
+                {"note": "belief-update boundaries"},
+                copy.deepcopy(bundle.get("entry12_F", {})),
+            )
+            _vb_dump_save(
+                "12G",
+                opts_loop,
+                {"note": "after time loop"},
+                {
+                    "Q": copy.deepcopy(bundle["Q"]),
+                    "P": copy.deepcopy(bundle["P"]),
+                    "O": copy.deepcopy(bundle["O"]),
+                    "R": copy.deepcopy(bundle["R_policy"]),
+                    "v": copy.deepcopy(bundle["v_policy"]),
+                    "w": copy.deepcopy(bundle["w_policy"]),
+                    "id": copy.deepcopy(bundle["id"]),
+                    "MDP": _vb_dump_mdp_payload(models),
+                },
+            )
+        t_band = time.perf_counter()
+        if _vb_monitoring_active():
+            for mi in range(nm):
+                _vb_monitor_snapshot("12G", models[mi], mi + 1, None, "first")
+        _vb_optional_backwards_replay(models, bundle, opts)
+        _vb_accumulate_dirichlet_parameter_learning(models, bundle, hp)
+        _vb_posterior_predictive_Y(models, bundle, opts)
+        _vb_reorganize_X_S_from_QP(bundle)
+        _vb_options_N_neural_simulated_responses(models, bundle, opts)
+        if _vb_monitoring_active():
+            for mi in range(nm):
+                _vb_monitor_snapshot("12G", models[mi], mi + 1, None, "last")
+        _vb_timing_set_band_wall("12G", time.perf_counter() - t_band)
+        t_band = time.perf_counter()
+        _vb_assemble_mdp_results_1691(models, bundle)
+        _vb_timing_set_band_wall("12H", time.perf_counter() - t_band)
+        if partial_ok:
+            out_partial = _vb_build_partial_output(models, bundle)
+            return out_partial
+        if len(models) == 1:
+            out_final = copy.deepcopy(models[0])
+        else:
+            out_final = copy.deepcopy(models)
+        if _vb_dump_active():
+            _vb_dump_save("12H", opts, {"subentry": "12H"}, {"PDP": copy.deepcopy(out_final)})
+            _vb_dump_save(
+                "12I",
+                opts,
+                {"subentry": "12I"},
+                {
+                    "spine": {
+                        "T": int(bundle["T"]),
+                        "Nm": int(bundle["Nm"]),
+                        "N": int(bundle["N_policy_depth"]),
+                    }
+                },
+            )
+        return out_final
+    finally:
+        if rand_replay is not None and _VB_TIMING_DEPTH == 1:
+            rand_replay.__exit__(None, None, None)
+        _vb_timing_leave()
+        if _VB_TIMING_DEPTH == 0:
+            _VB_MONITOR_REQUESTED = False
+            _VB_DUMP_SPEC = None
 
 
 __all__ = ["spm_MDP_VB_XXX", "_spm_sample"]

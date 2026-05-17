@@ -1,0 +1,52 @@
+**XXX 12** — FSL-input Entry 12: ``spm_MDP_VB_XXX(ctx["RDP"])`` at full FSL ``RDP``.
+
+Loads nested ``RDP`` from ``DEMAtariIII_fsl_1_11_rdp.mat`` by default (Phase **1** oracle; same as
+``vb_12_monitor_spm_MDP_VB_XXX_from_fsl_rdp.m`` / ``RGMS_ATARI_FSL_1_11_MAT_PATH``). Set
+``RGMS_XXX_12_RDP_FROM_CTX=1`` to use FSL context PKL (``fixtures/DEMAtariIII_fsl_1_11_ctx.pkl``) instead.
+Explicit ``RGMS_XXX_12_RDP_FROM_MAT=1`` still forces the ``.mat`` lane.
+Writes ``fixtures/DEMAtariIII_XXX_12_pdp.pkl`` (dict with top-level key ``PDP`` only;
+override ``RGMS_XXX_12_PDP_PKL_PATH``).
+
+**Opt-in:** ``RGMS_ATARI_RUN_XXX_12=1`` (VB on full Atari ``RDP`` can be long).
+
+**Long runs — wall limit + where you died (applies here):** The test calls
+``spm_MDP_VB_XXX`` with the **same** env toggles documented in ``DEM_AtariIII.py`` and
+``Atari_example.md`` § **ENTRY 1-11**: ``RGMS_ATARI_RUN_DEADLINE_MINUTES`` (seeds
+``perf_counter`` ceiling and error text) or optional explicit ``RGMS_ATARI_RUN_DEADLINE_MONO``;
+``RGMS_ATARI_RUN_SEGMENT_TIMING=1`` for stderr segment timings. **Tracing** is
+``get_dem_atariiii_run_last_label()``. On **any** exception from ``spm_MDP_VB_XXX`` inside
+``_run_xxx12_spm_mdp_vb_xxx``, the harness prints ``[XXX 12] last traced segment = …``, the
+traceback, and—only when the exception is the deadline ``RuntimeError``—``[XXX 12] exit reason:
+time limit reached``, then re-raises. **If neither deadline env is set,**
+``_run_xxx12_spm_mdp_vb_xxx`` sets ``RGMS_ATARI_RUN_DEADLINE_MINUTES=40`` for that run only,
+then restores prior env.
+
+**Run log:** overwrites ``matlab_custom/test_DEM_AtariIII_XXX_12_output.txt`` (module
+docstring + teed stdout/stderr).
+
+**Segment timing:** when ``RGMS_ATARI_RUN_SEGMENT_TIMING=1`` (same env as ``DEM_AtariIII`` /
+FSL 1-11), stderr includes harness ``[XXX 12 run trace]`` at load/save and VB bands
+``[spm_MDP_VB_XXX 12X] total_s=…`` per band inside ``spm_MDP_VB_XXX.py`` (12E/12F summed). Total VB wall time:
+``[XXX 12] spm_MDP_VB_XXX wall_s=...``.
+
+**Validation:** after a successful run and a MATLAB ``DEMAtariIII_XXX_12_pdp.mat`` from
+``matlab_custom/dump_pdp_DEM_AtariIII_XXX_12_from_fsl_rdp.m``, run
+``python tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``. See
+``Atari_example.md`` § **Entry 12** (XXX 12 / Validation 12 table).
+
+--- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\test_DEM_AtariIII_XXX_12_output.txt ---
+[XXX 12] RDP source: FSL RDP mat
+[XXX 12] reuse_matlab_draws=True
+[XXX 12] vb_rand_buf: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_vb_matlab_rand_buf.mat
+[XXX 12] wrote RDP pickle: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rdp.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12A.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12B.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12C.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12D.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12E.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12F.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12G.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12H.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12I.pkl
+[XXX 12] spm_MDP_VB_XXX wall_s=9.268055
+[XXX 12] wrote PDP pickle: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_pdp.pkl

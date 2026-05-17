@@ -92,6 +92,23 @@ def test_spm_MDP_checkX_A_from_a_oracle(dem_eng):
     assert_matlab_match(a_m, m2_out["A"][0])
 
 
+def test_spm_MDP_checkX_id_g_one_row_many_modalities_stays_one_partition() -> None:
+    """``id.g{1}`` with modalities ``1:20`` is one covert partition (``numel(id.g)==1``), not twenty."""
+    ng = 20
+    m_in = {
+        "A": [np.ones((3, ng), dtype=np.float64)],
+        "B": [np.ones((5, 5, 1), dtype=np.float64) * 0.2],
+        "id": {
+            "g": [np.arange(1, ng + 1, dtype=np.float64).reshape(1, -1)],
+            "A": [np.arange(1, 3, dtype=np.float64).reshape(1, -1)],
+            "C": [np.array([], dtype=np.float64)],
+        },
+    }
+    m_out = spm_MDP_checkX(copy.deepcopy(m_in))
+    assert len(m_out["id"]["g"]) == 1
+    assert int(np.asarray(m_out["id"]["g"][0]).size) == ng
+
+
 def test_spm_MDP_checkX_two_trial_grid_oracle(dem_eng):
     dem_eng.eval(
         "t1.A = {ones(2,2)}; t1.B = {ones(2,2,1)*0.4}; "

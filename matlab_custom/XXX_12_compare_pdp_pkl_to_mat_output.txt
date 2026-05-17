@@ -1,0 +1,452 @@
+**Validation 12** — Entry 12 artifact compare (MAT vs PKL).
+
+Compares input ``RDP``, subentry checkpoints **12A**–**12I**, and final ``PDP`` produced by
+``spm_MDP_VB_XXX(..., dump_subentries=True)`` on the MATLAB and Python sides.
+
+Default fixtures under ``tests/oracle/toolbox/DEM/fixtures/`` (override paths via env; see
+``Atari_example.md`` § Entry 12). Uses ``mat_nested_to_py``, nested type-walk, and
+``_assert_nested_rdp_equal`` (511 vs 485 ledger policy on ``RDP`` / ``PDP`` tensor paths).
+
+Each run overwrites ``matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt`` (module
+docstring + teed stdout/stderr). ``-h`` / ``--help`` prints to the terminal only and does
+not overwrite that file.
+
+See ``Atari_example.md`` § **Entry 12** (XXX 12 / Validation 12 table).
+
+--- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\XXX_12_compare_pdp_pkl_to_mat_output.txt ---
+[XXX 12 validation] --- input RDP (FSL 1-11-style lane) ---
+[checkX schema PKL field] A=list(len=20,elem=csc_array(41, 485))
+[checkX schema PKL field] B=ndarray(485, 485, 6)
+[checkX schema PKL field] C=list(len=20,elem=ndarray(41,))
+[checkX schema PKL field] D=list(len=1,elem=ndarray(485, 1))
+[checkX schema PKL field] E=list(len=1,elem=ndarray(6, 1))
+[checkX schema PKL field] G=ndarray(14,)
+[checkX schema PKL field] H=csc_array(485, 1)
+[checkX schema PKL field] L=int
+[checkX schema PKL field] MDP=dict(len=12)
+[checkX schema PKL field] T=int
+[checkX schema PKL field] U=ndarray(1, 1)
+[checkX schema PKL field] id=dict(len=5)
+[checkX schema PKL field] sA=ndarray(20,)
+[checkX schema PKL field] sB=int
+[checkX schema PKL field] sC=ndarray(20,)
+[checkX schema PKL field] ss=dict(len=4)
+[FSL 1-11 validation] MDP chain L=2 path=RDP (PKL)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field A=list(len=20,elem=csc_array(41, 485))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field B=ndarray(485, 485, 6)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field C=list(len=20,elem=ndarray(41,))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field D=list(len=1,elem=ndarray(485, 1))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field E=list(len=1,elem=ndarray(6, 1))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field G=ndarray(14,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field H=csc_array(485, 1)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field L=int
+[FSL 1-11 validation] MDP chain L=1 path=RDP.MDP (PKL)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field A=list(len=111,elem=csc_array(5, 41))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field B=list(len=60,elem=ndarray(41, 41, 14))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field C=list(len=111,elem=ndarray(5,))
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field G=list(len=4,elem=list)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field L=int
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field T=int
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field U=ndarray(60,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field id=dict(len=3)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field sA=ndarray(111,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field sB=ndarray(60,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field sC=ndarray(111,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP.MDP field ss=dict(len=4)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field T=int
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field U=ndarray(1, 1)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field id=dict(len=5)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field sA=ndarray(20,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field sB=int
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field sC=ndarray(20,)
+[FSL 1-11 validation] MDP chain (PKL) path=RDP field ss=dict(len=4)
+[XXX 12 validation] checkX schema (PKL): 0 issue(s) (strict=False)
+[checkX schema MATLAB field] A=list(len=20,elem=csc_array(41, 485))
+[checkX schema MATLAB field] B=ndarray(485, 485, 6)
+[checkX schema MATLAB field] C=list(len=20,elem=ndarray(41,))
+[checkX schema MATLAB field] D=list(len=1,elem=ndarray(485, 1))
+[checkX schema MATLAB field] E=list(len=1,elem=ndarray(6, 1))
+[checkX schema MATLAB field] G=ndarray(14,)
+[checkX schema MATLAB field] H=csc_array(485, 1)
+[checkX schema MATLAB field] L=int
+[checkX schema MATLAB field] MDP=dict(len=12)
+[checkX schema MATLAB field] T=int
+[checkX schema MATLAB field] U=ndarray(1, 1)
+[checkX schema MATLAB field] id=dict(len=5)
+[checkX schema MATLAB field] sA=ndarray(20,)
+[checkX schema MATLAB field] sB=int
+[checkX schema MATLAB field] sC=ndarray(20,)
+[checkX schema MATLAB field] ss=dict(len=4)
+[FSL 1-11 validation] MDP chain L=2 path=RDP (MATLAB)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field A=list(len=20,elem=csc_array(41, 485))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field B=ndarray(485, 485, 6)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field C=list(len=20,elem=ndarray(41,))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field D=list(len=1,elem=ndarray(485, 1))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field E=list(len=1,elem=ndarray(6, 1))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field G=ndarray(14,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field H=csc_array(485, 1)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field L=int
+[FSL 1-11 validation] MDP chain L=1 path=RDP.MDP (MATLAB)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field A=list(len=111,elem=csc_array(5, 41))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field B=list(len=60,elem=ndarray(41, 41, 14))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field C=list(len=111,elem=ndarray(5,))
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field G=list(len=4,elem=list)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field L=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field T=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field U=ndarray(60,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field id=dict(len=3)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field sA=ndarray(111,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field sB=ndarray(60,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field sC=ndarray(111,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP.MDP field ss=dict(len=4)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field T=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field U=ndarray(1, 1)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field id=dict(len=5)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field sA=ndarray(20,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field sB=int
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field sC=ndarray(20,)
+[FSL 1-11 validation] MDP chain (MATLAB) path=RDP field ss=dict(len=4)
+[XXX 12 validation] checkX schema (MATLAB): 0 issue(s) (strict=False)
+[XXX 12 validation] RDP top-level key diff: only_in_PKL=(none); only_in_MATLAB=(none)
+[XXX 12 validation] type walk: 0 mismatch line(s)
+[XXX 12 validation] focused probe (append): G, C, sB, U
+  [focused probe G] PKL v ndarray shape=(14,) dtype=uint8 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
+  [focused probe G] MAT v ndarray shape=(14,) dtype=uint8 preview_ravel[:8]=[1 2 3 4 5 6 7 8]
+  [focused probe G] MAT ndarray ravel: dtype=uint8 size=14 min=1 max=14
+  [focused probe G] RDP.G VALUE-DUMP (append-only): begin
+  [focused probe G] RDP.G VALUE-DUMP PKL non-dict float64_ravel n=14 full=[ 1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14.]
+  [focused probe G] RDP.G VALUE-DUMP MAT float64_ravel n=14 full=[ 1.  2.  3.  4.  5.  6.  7.  8.  9. 10. 11. 12. 13. 14.]
+  [focused probe G] RDP.G VALUE-DUMP aligned elementwise_diff n=14 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs=0.0
+  [focused probe G] RDP.G VALUE-DUMP (append-only): end
+  [focused probe G] RDP.MDP.G PKL v list(len=4) elem0_unwrap_type=list
+  [focused probe G] RDP.MDP.G MAT v list(len=4) elem0_unwrap_type=list
+  [focused probe G] RDP.MDP.G nested: list vs list — 4 slot(s)
+  [focused probe G] RDP.MDP.G nested slot=0: list len=57; elem0 PKL ndarray shape=(9,) dtype=uint8 preview_ravel[:8]=[61 49 73 37 85 25 97 13] || list len=57; elem0 MAT ndarray shape=(9,) dtype=uint8 preview_ravel[:8]=[61 49 73 37 85 25 97 13]
+  [focused probe G] RDP.MDP.G nested slot=1: PKL scalar repr=109 || MAT scalar repr=109
+  [focused probe G] RDP.MDP.G nested slot=2: PKL scalar repr=110 || MAT scalar repr=110
+  [focused probe G] RDP.MDP.G nested slot=3: PKL scalar repr=111 || MAT scalar repr=111
+  [focused probe G] RDP.MDP.G VALUE-DUMP (append-only): begin
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0: both list PKL len=57 MAT len=57; drilling 57 index pair(s)
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[0]: PKL float64_ravel(len=9) full=[61. 49. 73. 37. 85. 25. 97. 13.  1.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[0]: MAT float64_ravel(len=9) full=[61. 49. 73. 37. 85. 25. 97. 13.  1.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[0]: elementwise_diff full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[1]: PKL float64_ravel(len=9) full=[64. 42. 81. 92. 94. 20. 22. 38. 51.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[1]: MAT float64_ravel(len=9) full=[64. 42. 81. 92. 94. 20. 22. 38. 51.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[1]: elementwise_diff full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[2]: PKL float64_ravel(len=9) full=[55. 59. 68. 70. 90. 75. 77. 83. 86.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[2]: MAT float64_ravel(len=9) full=[55. 59. 68. 70. 90. 75. 77. 83. 86.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[2]: elementwise_diff full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[3]: PKL float64_ravel(len=9) full=[16. 29. 35. 31. 53. 18. 44. 14. 88.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[3]: MAT float64_ravel(len=9) full=[16. 29. 35. 31. 53. 18. 44. 14. 88.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[3]: elementwise_diff full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[4]: PKL float64_ravel(len=9) full=[ 79.  46.  57.  66.  62.  33.  40.  27. 107.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[4]: MAT float64_ravel(len=9) full=[ 79.  46.  57.  66.  62.  33.  40.  27. 107.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[4]: elementwise_diff full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[5]: PKL float64_ravel(len=9) full=[103.  48.   3.   9.  96.  11.  72.  99.  24.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[5]: MAT float64_ravel(len=9) full=[103.  48.   3.   9.  96.  11.  72.  99.  24.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[5]: elementwise_diff full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[6]: PKL float64_ravel(len=4) full=[  5.   7. 101. 105.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[6]: MAT float64_ravel(len=4) full=[  5.   7. 101. 105.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[6]: elementwise_diff full=[0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[7]: PKL float64_ravel(len=1) full=[2.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[7]: MAT float64_ravel(len=1) full=[2.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[7]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[8]: PKL float64_ravel(len=1) full=[4.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[8]: MAT float64_ravel(len=1) full=[4.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[8]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[9]: PKL float64_ravel(len=1) full=[6.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[9]: MAT float64_ravel(len=1) full=[6.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[9]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[10]: PKL float64_ravel(len=1) full=[8.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[10]: MAT float64_ravel(len=1) full=[8.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[10]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[11]: PKL float64_ravel(len=1) full=[10.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[11]: MAT float64_ravel(len=1) full=[10.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[11]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[12]: PKL float64_ravel(len=1) full=[12.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[12]: MAT float64_ravel(len=1) full=[12.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[12]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[13]: PKL float64_ravel(len=1) full=[15.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[13]: MAT float64_ravel(len=1) full=[15.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[13]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[14]: PKL float64_ravel(len=1) full=[17.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[14]: MAT float64_ravel(len=1) full=[17.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[14]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[15]: PKL float64_ravel(len=1) full=[19.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[15]: MAT float64_ravel(len=1) full=[19.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[15]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[16]: PKL float64_ravel(len=1) full=[21.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[16]: MAT float64_ravel(len=1) full=[21.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[16]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[17]: PKL float64_ravel(len=1) full=[23.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[17]: MAT float64_ravel(len=1) full=[23.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[17]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[18]: PKL float64_ravel(len=1) full=[26.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[18]: MAT float64_ravel(len=1) full=[26.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[18]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[19]: PKL float64_ravel(len=1) full=[28.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[19]: MAT float64_ravel(len=1) full=[28.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[19]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[20]: PKL float64_ravel(len=1) full=[30.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[20]: MAT float64_ravel(len=1) full=[30.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[20]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[21]: PKL float64_ravel(len=1) full=[32.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[21]: MAT float64_ravel(len=1) full=[32.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[21]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[22]: PKL float64_ravel(len=1) full=[34.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[22]: MAT float64_ravel(len=1) full=[34.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[22]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[23]: PKL float64_ravel(len=1) full=[36.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[23]: MAT float64_ravel(len=1) full=[36.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[23]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[24]: PKL float64_ravel(len=1) full=[39.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[24]: MAT float64_ravel(len=1) full=[39.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[24]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[25]: PKL float64_ravel(len=1) full=[41.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[25]: MAT float64_ravel(len=1) full=[41.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[25]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[26]: PKL float64_ravel(len=1) full=[43.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[26]: MAT float64_ravel(len=1) full=[43.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[26]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[27]: PKL float64_ravel(len=1) full=[45.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[27]: MAT float64_ravel(len=1) full=[45.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[27]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[28]: PKL float64_ravel(len=1) full=[47.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[28]: MAT float64_ravel(len=1) full=[47.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[28]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[29]: PKL float64_ravel(len=1) full=[50.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[29]: MAT float64_ravel(len=1) full=[50.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[29]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[30]: PKL float64_ravel(len=1) full=[52.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[30]: MAT float64_ravel(len=1) full=[52.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[30]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[31]: PKL float64_ravel(len=1) full=[54.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[31]: MAT float64_ravel(len=1) full=[54.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[31]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[32]: PKL float64_ravel(len=1) full=[56.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[32]: MAT float64_ravel(len=1) full=[56.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[32]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[33]: PKL float64_ravel(len=1) full=[58.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[33]: MAT float64_ravel(len=1) full=[58.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[33]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[34]: PKL float64_ravel(len=1) full=[60.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[34]: MAT float64_ravel(len=1) full=[60.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[34]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[35]: PKL float64_ravel(len=1) full=[63.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[35]: MAT float64_ravel(len=1) full=[63.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[35]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[36]: PKL float64_ravel(len=1) full=[65.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[36]: MAT float64_ravel(len=1) full=[65.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[36]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[37]: PKL float64_ravel(len=1) full=[67.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[37]: MAT float64_ravel(len=1) full=[67.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[37]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[38]: PKL float64_ravel(len=1) full=[69.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[38]: MAT float64_ravel(len=1) full=[69.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[38]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[39]: PKL float64_ravel(len=1) full=[71.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[39]: MAT float64_ravel(len=1) full=[71.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[39]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[40]: PKL float64_ravel(len=1) full=[74.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[40]: MAT float64_ravel(len=1) full=[74.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[40]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[41]: PKL float64_ravel(len=1) full=[76.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[41]: MAT float64_ravel(len=1) full=[76.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[41]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[42]: PKL float64_ravel(len=1) full=[78.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[42]: MAT float64_ravel(len=1) full=[78.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[42]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[43]: PKL float64_ravel(len=1) full=[80.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[43]: MAT float64_ravel(len=1) full=[80.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[43]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[44]: PKL float64_ravel(len=1) full=[82.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[44]: MAT float64_ravel(len=1) full=[82.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[44]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[45]: PKL float64_ravel(len=1) full=[84.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[45]: MAT float64_ravel(len=1) full=[84.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[45]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[46]: PKL float64_ravel(len=1) full=[87.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[46]: MAT float64_ravel(len=1) full=[87.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[46]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[47]: PKL float64_ravel(len=1) full=[89.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[47]: MAT float64_ravel(len=1) full=[89.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[47]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[48]: PKL float64_ravel(len=1) full=[91.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[48]: MAT float64_ravel(len=1) full=[91.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[48]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[49]: PKL float64_ravel(len=1) full=[93.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[49]: MAT float64_ravel(len=1) full=[93.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[49]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[50]: PKL float64_ravel(len=1) full=[95.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[50]: MAT float64_ravel(len=1) full=[95.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[50]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[51]: PKL float64_ravel(len=1) full=[98.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[51]: MAT float64_ravel(len=1) full=[98.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[51]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[52]: PKL float64_ravel(len=1) full=[100.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[52]: MAT float64_ravel(len=1) full=[100.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[52]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[53]: PKL float64_ravel(len=1) full=[102.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[53]: MAT float64_ravel(len=1) full=[102.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[53]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[54]: PKL float64_ravel(len=1) full=[104.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[54]: MAT float64_ravel(len=1) full=[104.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[54]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[55]: PKL float64_ravel(len=1) full=[106.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[55]: MAT float64_ravel(len=1) full=[106.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[55]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[56]: PKL float64_ravel(len=1) full=[108.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[56]: MAT float64_ravel(len=1) full=[108.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=0[56]: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=1: PKL float64_ravel(len=1) full=[109.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=1: MAT float64_ravel(len=1) full=[109.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=1: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=2: PKL float64_ravel(len=1) full=[110.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=2: MAT float64_ravel(len=1) full=[110.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=2: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=3: PKL float64_ravel(len=1) full=[111.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=3: MAT float64_ravel(len=1) full=[111.]
+  [focused probe G] VALUE-DUMP RDP.MDP.G slot=3: elementwise_diff full=[0.] max_abs_diff=0.0
+  [focused probe G] RDP.MDP.G VALUE-DUMP (append-only): end
+  [focused probe C] list lens PKL=20 MAT=20; comparing first 20 elements
+  [focused probe C[0]] PKL shape=(41,) MAT shape=(41,); squeeze-ravel same len=41; max_abs_diff=0.0
+  [focused probe C[0]] VALUE-DUMP (append-only): begin
+  [focused probe C[0]] VALUE-DUMP PKL squeeze-ravel float64 len=41 full=[0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439]
+  [focused probe C[0]] VALUE-DUMP MAT squeeze-ravel float64 len=41 full=[0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439 0.024390243902439]
+  [focused probe C[0]] VALUE-DUMP elementwise_diff float64 len=41 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[0]] VALUE-DUMP (append-only): end
+  [focused probe C[1]] PKL shape=(14,) MAT shape=(14,); squeeze-ravel same len=14; max_abs_diff=1.3877787807814457e-17
+  [focused probe C[1]] VALUE-DUMP (append-only): begin
+  [focused probe C[1]] VALUE-DUMP PKL squeeze-ravel float64 len=14 full=[0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715 0.0714285714285715]
+  [focused probe C[1]] VALUE-DUMP MAT squeeze-ravel float64 len=14 full=[0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714 0.0714285714285714]
+  [focused probe C[1]] VALUE-DUMP elementwise_diff float64 len=14 full=[1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17 1.3877787807814457e-17] max_abs_diff=1.3877787807814457e-17
+  [focused probe C[1]] VALUE-DUMP (append-only): end
+  [focused probe C[2]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[2]] VALUE-DUMP (append-only): begin
+  [focused probe C[2]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[2]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[2]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[2]] VALUE-DUMP (append-only): end
+  [focused probe C[3]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[3]] VALUE-DUMP (append-only): begin
+  [focused probe C[3]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[3]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[3]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[3]] VALUE-DUMP (append-only): end
+  [focused probe C[4]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[4]] VALUE-DUMP (append-only): begin
+  [focused probe C[4]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[4]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[4]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[4]] VALUE-DUMP (append-only): end
+  [focused probe C[5]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[5]] VALUE-DUMP (append-only): begin
+  [focused probe C[5]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[5]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[5]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[5]] VALUE-DUMP (append-only): end
+  [focused probe C[6]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[6]] VALUE-DUMP (append-only): begin
+  [focused probe C[6]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[6]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[6]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[6]] VALUE-DUMP (append-only): end
+  [focused probe C[7]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[7]] VALUE-DUMP (append-only): begin
+  [focused probe C[7]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[7]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[7]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[7]] VALUE-DUMP (append-only): end
+  [focused probe C[8]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[8]] VALUE-DUMP (append-only): begin
+  [focused probe C[8]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[8]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[8]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[8]] VALUE-DUMP (append-only): end
+  [focused probe C[9]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[9]] VALUE-DUMP (append-only): begin
+  [focused probe C[9]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[9]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[9]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[9]] VALUE-DUMP (append-only): end
+  [focused probe C[10]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[10]] VALUE-DUMP (append-only): begin
+  [focused probe C[10]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[10]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[10]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[10]] VALUE-DUMP (append-only): end
+  [focused probe C[11]] PKL shape=(10,) MAT shape=(10,); squeeze-ravel same len=10; max_abs_diff=0.0
+  [focused probe C[11]] VALUE-DUMP (append-only): begin
+  [focused probe C[11]] VALUE-DUMP PKL squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[11]] VALUE-DUMP MAT squeeze-ravel float64 len=10 full=[0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1]
+  [focused probe C[11]] VALUE-DUMP elementwise_diff float64 len=10 full=[0. 0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[11]] VALUE-DUMP (append-only): end
+  [focused probe C[12]] PKL shape=(5,) MAT shape=(5,); squeeze-ravel same len=5; max_abs_diff=0.0
+  [focused probe C[12]] VALUE-DUMP (append-only): begin
+  [focused probe C[12]] VALUE-DUMP PKL squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[12]] VALUE-DUMP MAT squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[12]] VALUE-DUMP elementwise_diff float64 len=5 full=[0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[12]] VALUE-DUMP (append-only): end
+  [focused probe C[13]] PKL shape=(5,) MAT shape=(5,); squeeze-ravel same len=5; max_abs_diff=0.0
+  [focused probe C[13]] VALUE-DUMP (append-only): begin
+  [focused probe C[13]] VALUE-DUMP PKL squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[13]] VALUE-DUMP MAT squeeze-ravel float64 len=5 full=[0.2 0.2 0.2 0.2 0.2]
+  [focused probe C[13]] VALUE-DUMP elementwise_diff float64 len=5 full=[0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[13]] VALUE-DUMP (append-only): end
+  [focused probe C[14]] PKL shape=(2,) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[14]] VALUE-DUMP (append-only): begin
+  [focused probe C[14]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[1.2664165549094015e-14 9.9999999999998734e-01]
+  [focused probe C[14]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[1.2664165549094015e-14 9.9999999999998734e-01]
+  [focused probe C[14]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[14]] VALUE-DUMP (append-only): end
+  [focused probe C[15]] PKL shape=(2,) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[15]] VALUE-DUMP (append-only): begin
+  [focused probe C[15]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[15]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[15]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[15]] VALUE-DUMP (append-only): end
+  [focused probe C[16]] PKL shape=(2,) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[16]] VALUE-DUMP (append-only): begin
+  [focused probe C[16]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[9.9999999999998734e-01 1.2664165549094015e-14]
+  [focused probe C[16]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[9.9999999999998734e-01 1.2664165549094015e-14]
+  [focused probe C[16]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[16]] VALUE-DUMP (append-only): end
+  [focused probe C[17]] PKL shape=(2,) MAT shape=(2,); squeeze-ravel same len=2; max_abs_diff=0.0
+  [focused probe C[17]] VALUE-DUMP (append-only): begin
+  [focused probe C[17]] VALUE-DUMP PKL squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[17]] VALUE-DUMP MAT squeeze-ravel float64 len=2 full=[0.5 0.5]
+  [focused probe C[17]] VALUE-DUMP elementwise_diff float64 len=2 full=[0. 0.] max_abs_diff=0.0
+  [focused probe C[17]] VALUE-DUMP (append-only): end
+  [focused probe C[18]] PKL shape=(9,) MAT shape=(9,); squeeze-ravel same len=9; max_abs_diff=0.0
+  [focused probe C[18]] VALUE-DUMP (append-only): begin
+  [focused probe C[18]] VALUE-DUMP PKL squeeze-ravel float64 len=9 full=[0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111]
+  [focused probe C[18]] VALUE-DUMP MAT squeeze-ravel float64 len=9 full=[0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111 0.1111111111111111]
+  [focused probe C[18]] VALUE-DUMP elementwise_diff float64 len=9 full=[0. 0. 0. 0. 0. 0. 0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[18]] VALUE-DUMP (append-only): end
+  [focused probe C[19]] PKL shape=(3,) MAT shape=(3,); squeeze-ravel same len=3; max_abs_diff=0.0
+  [focused probe C[19]] VALUE-DUMP (append-only): begin
+  [focused probe C[19]] VALUE-DUMP PKL squeeze-ravel float64 len=3 full=[0.3333333333333333 0.3333333333333333 0.3333333333333333]
+  [focused probe C[19]] VALUE-DUMP MAT squeeze-ravel float64 len=3 full=[0.3333333333333333 0.3333333333333333 0.3333333333333333]
+  [focused probe C[19]] VALUE-DUMP elementwise_diff float64 len=3 full=[0. 0. 0.] max_abs_diff=0.0
+  [focused probe C[19]] VALUE-DUMP (append-only): end
+  [focused probe sB] PKL v scalar repr=1
+  [focused probe sB] MAT v scalar repr=1
+  [focused probe sB] scalar compare: int(PKL unwrap)=1 int(MAT)=1 equal=True
+  [focused probe U] PKL v ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+  [focused probe U] MAT v ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
+Traceback (most recent call last):
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\XXX_12_compare_pdp_pkl_to_mat.py", line 572, in main
+    return _execute_validation(args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\XXX_12_compare_pdp_pkl_to_mat.py", line 412, in _execute_validation
+    rdp_code = compare_nested_rdp_oracle_lane(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fsl_1_11_compare_ctx_pkl_to_mat.py", line 1320, in compare_nested_rdp_oracle_lane
+    _assert_nested_rdp_equal(py_rdp, mat_rdp, "RDP")
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 83, in _assert_nested_rdp_equal
+    _assert_nested_rdp_equal(py[k], mat[k], f"{path}.{k}")
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 89, in _assert_nested_rdp_equal
+    _assert_nested_rdp_equal(a, b, f"{path}[{i}]")
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_spm_mdp2rdp.py", line 100, in _assert_nested_rdp_equal
+    raise AssertionError(f"{path}: unsupported types py={type(py)} mat={type(mat)}")
+AssertionError: RDP.A[0]: unsupported types py=<class 'scipy.sparse._csc.csc_array'> mat=<class 'scipy.sparse._csc.csc_array'>

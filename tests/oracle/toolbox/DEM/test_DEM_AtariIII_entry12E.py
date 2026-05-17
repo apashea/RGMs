@@ -71,6 +71,49 @@ def test_entry12e_options_o_disabled_leaves_outcomes_unchanged() -> None:
     assert float(models[0]["o"][0, 0]) == 0.0
 
 
+def test_entry12f_align_Rvw_at_t_boundary_slice() -> None:
+    """12F compare lane: Python policy traces at ``t`` → MATLAB lean ``out_t1`` slice."""
+    import numpy as np
+
+    from python_src.toolbox.DEM.entry12_matlab_capture import entry12_align_12F_snap_to_mat
+
+    py_snap = {
+        "t": 1,
+        "R": [np.ones((6, 64), dtype=np.float64)],
+        "v": [np.arange(64, dtype=np.float64)],
+        "w": [np.full((64,), -1.79175947, dtype=np.float64)],
+        "MDP": {"G": [np.full((6,), -32.0, dtype=np.float64)], "F": np.arange(64, dtype=np.float64)},
+    }
+    mat_snap = {
+        "t": 1,
+        "R": np.ones((6,), dtype=np.float64),
+        "v": float(0.0),
+        "w": float(-1.79175947),
+        "MDP": {"G": np.full((6,), -32.0, dtype=np.float64), "F": np.float64(-163.0)},
+    }
+    out = entry12_align_12F_snap_to_mat(py_snap, mat_snap)
+    assert np.allclose(np.asarray(out["R"]).ravel(), 1.0)
+    assert float(out["v"]) == 0.0
+    assert float(out["w"]) == -1.79175947
+    assert np.allclose(np.asarray(out["MDP"]["G"]).ravel(), -32.0)
+
+
+def test_entry12e_mdp_field_matrix_preserves_nf_by_1_prep_s_u() -> None:
+    """MATLAB ~707–721: hierarchical ``mdp.s(f)`` / ``mdp.u(f)`` as ``nf×1`` → first column of ``NF×T``."""
+    md: dict = {}
+    md["s"] = np.ones((4, 1), dtype=np.float64)
+    md["s"][0, 0] = 9.0
+    md["u"] = np.ones((4, 1), dtype=np.float64)
+    md["u"][1, 0] = 3.0
+    vbxxx_mod._vb_mdp_field_matrix(md, "s", 4, 2)
+    vbxxx_mod._vb_mdp_field_matrix(md, "u", 4, 2)
+    assert md["s"].shape == (4, 2)
+    assert float(md["s"][0, 0]) == 9.0
+    assert float(md["s"][0, 1]) == 0.0
+    assert float(md["u"][1, 0]) == 3.0
+    assert float(md["u"][1, 1]) == 0.0
+
+
 def test_entry12e_hierarchy_S_to_O_transcription_and_parent_mapping(monkeypatch) -> None:
     """~1138–1152 and ~1164–1175: child `S -> O`, then child posteriors map back to parent `O`."""
     child = {
@@ -97,7 +140,7 @@ def test_entry12e_hierarchy_S_to_O_transcription_and_parent_mapping(monkeypatch)
         "Q": [[[np.array([[0.5], [0.5]], dtype=np.float64)]]],
     }
 
-    def _fake_child_solver(mdp_in, _options=None):
+    def _fake_child_solver(mdp_in, _options=None, **kwargs):
         # Ensure transcription happened before recurse
         assert "O" in mdp_in and np.asarray(mdp_in["O"]).shape[1] == 1
         return {

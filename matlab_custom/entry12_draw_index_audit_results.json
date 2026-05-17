@@ -1,0 +1,95 @@
+{
+  "K": 27199,
+  "buf_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf.mat",
+  "replay": {
+    "draw_start": 424,
+    "P_argmax_1b": 1,
+    "P_top_mass": 0.002061855670103093,
+    "draw_after_forwards": 424,
+    "G00": -62.613705638874634,
+    "total_draws": 27199,
+    "unused_draws": 0,
+    "PDP_G1": -64.40546510810269,
+    "spm_sample_calls": 27199,
+    "spm_sample_last8": [
+      {
+        "draw_start": 27191,
+        "draw_end": 27192,
+        "kind": "numeric",
+        "k": 0,
+        "out": 5
+      },
+      {
+        "draw_start": 27192,
+        "draw_end": 27193,
+        "kind": "numeric",
+        "k": 0,
+        "out": 5
+      },
+      {
+        "draw_start": 27193,
+        "draw_end": 27194,
+        "kind": "numeric",
+        "k": 0,
+        "out": 5
+      },
+      {
+        "draw_start": 27194,
+        "draw_end": 27195,
+        "kind": "numeric",
+        "k": 0,
+        "out": 5
+      },
+      {
+        "draw_start": 27195,
+        "draw_end": 27196,
+        "kind": "numeric",
+        "k": 0,
+        "out": 5
+      },
+      {
+        "draw_start": 27196,
+        "draw_end": 27197,
+        "kind": "numeric",
+        "k": 0,
+        "out": 1
+      },
+      {
+        "draw_start": 27197,
+        "draw_end": 27198,
+        "kind": "numeric",
+        "k": 0,
+        "out": 1
+      },
+      {
+        "draw_start": 27198,
+        "draw_end": 27199,
+        "kind": "numeric",
+        "k": 0,
+        "out": 4
+      }
+    ],
+    "draw_window": [
+      [
+        424,
+        0.1536567175913066
+      ],
+      [
+        425,
+        0.2810053025338709
+      ],
+      [
+        426,
+        0.44008513900172086
+      ]
+    ]
+  },
+  "native": {
+    "native_spm_sample_calls": 27199
+  },
+  "coherence": {
+    "protocol": "entry12_v5_preamble_rewind (buf from MATLAB post-rewind rand(K,1))",
+    "note": "Replay injects MATLAB scalars; NumPy twister seed is NOT used. Twister/seed parity applies only to native rand() vs MATLAB rand(), not replay.",
+    "sample_calls_match": true
+  }
+}

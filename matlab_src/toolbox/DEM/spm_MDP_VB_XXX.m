@@ -1,6 +1,10 @@
-function [MDP] = spm_MDP_VB_XXX(MDP,OPTIONS)
+function [MDP] = spm_MDP_VB_XXX(MDP,OPTIONS,monitoring,dump_subentries)
 % active inference and learning using belief propagation (factorised)
-% FORMAT [MDP] = spm_MDP_VB_XXX(MDP,OPTIONS)
+% FORMAT [MDP] = spm_MDP_VB_XXX(MDP,OPTIONS,monitoring,dump_subentries)
+% monitoring (optional, default false): when true at top-level call only,
+% fprintf minimal MDP(1) field inventory at subentry bands 12A-12H.
+% dump_subentries (optional, default false): when true, write Entry 12
+% checkpoint .mat files (12A-12I) via spm_MDP_VB_XXX_entry12_dump on path.
 %
 % Input; MDP(m,n)       - structure array of m models over n epochs
 % MDP.U(1,Nf)           - controllable factors
@@ -202,10 +206,29 @@ try, OPTIONS.O; catch, OPTIONS.O = 1; end      % generate outcomes
 try, OPTIONS.P; catch, OPTIONS.P = 0; end      % graphics
 try, OPTIONS.Y; catch, OPTIONS.Y = 1; end      % posterior predictions
 
+if nargin < 3 || isempty(monitoring)
+    monitoring = false;
+end
+if nargin < 4 || isempty(dump_subentries)
+    dump_subentries = false;
+end
+if dump_subentries
+    if exist('spm_MDP_VB_XXX_entry12_dump', 'file') ~= 2
+        error('dump_subentries requires spm_MDP_VB_XXX_entry12_dump on the MATLAB path (matlab_custom/entry12).');
+    end
+    dumpSpec = spm_MDP_VB_XXX_entry12_resolve_dump_spec_();
+    MDP = spm_MDP_VB_XXX_entry12_dump(MDP, OPTIONS, dumpSpec);
+    return
+end
+persistent vbMonDepth
+if isempty(vbMonDepth)
+    vbMonDepth = 0;
+end
+vbMonDepth = vbMonDepth + 1;
+
 % check MDP specification
 %--------------------------------------------------------------------------
 MDP = spm_MDP_checkX(MDP);
-
 
 % handle multiple trials, ensuring parameters (and posteriors) are updated
 %==========================================================================
@@ -271,6 +294,7 @@ if size(MDP,2) > 1
         end
         spm_MDP_VB_game(MDP(1,:))
     end
+    vbMonDepth = max(0, vbMonDepth - 1);
     return
 end
 
@@ -292,7 +316,11 @@ try, N     = MDP(1).N;     catch, N     = 0;    end % depth of policy search
 %==========================================================================
 T     = MDP(1).T;                              % number of updates
 Nm    = numel(MDP);
-
+if monitoring && vbMonDepth == 1
+    for m = 1:Nm
+        spm_MDP_VB_XXX_monitor_snapshot_('12A', MDP(m), m, [], 'once');
+    end
+end
 
 % Prelimninaries and checks
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -301,6 +329,9 @@ Nm    = numel(MDP);
 %--------------------------------------------------------------------------
 process = zeros(Nm,1);
 for m = 1:Nm
+    if monitoring && vbMonDepth == 1
+        spm_MDP_VB_XXX_monitor_snapshot_('12B', MDP(m), m, [], 'first');
+    end
 
     % Check for generative process (invoking explicit action)
     %----------------------------------------------------------------------
@@ -721,6 +752,10 @@ for m = 1:Nm
         end
     end
 
+    if monitoring && vbMonDepth == 1
+        spm_MDP_VB_XXX_monitor_snapshot_('12B', MDP(m), m, [], 'last');
+    end
+
 end % end model (m)
 
 % save policies if action is explicit
@@ -736,6 +771,11 @@ end
 %--------------------------------------------------------------------------
 N       = min(N,T);                          % depth of policy search
 [M,MDP] = spm_MDP_get_M(MDP,T,Ng);           % order of model updating
+if monitoring && vbMonDepth == 1
+    for m = 1:Nm
+        spm_MDP_VB_XXX_monitor_snapshot_('12C', MDP(m), m, [], 'once');
+    end
+end
 
 % pre-allocation of cell arrays
 %--------------------------------------------------------------------------
@@ -1157,7 +1197,13 @@ for t = 1:T
 
             % update
             %--------------------------------------------------------------
+            if monitoring && vbMonDepth == 1 && (t == 1 || t == T)
+                spm_MDP_VB_XXX_monitor_snapshot_('12E', mdp, m, t, 'before');
+            end
             mdp   = spm_MDP_VB_XXX(mdp);
+            if monitoring && vbMonDepth == 1 && (t == 1 || t == T)
+                spm_MDP_VB_XXX_monitor_snapshot_('12E', mdp, m, t, 'after');
+            end
 
             % Outcomes: posteriors over initial states of children
             %--------------------------------------------------------------
@@ -1220,6 +1266,9 @@ for t = 1:T
     % Bayesian belief updating, given O: hidden states (Q) and paths (P)
     %======================================================================
     for m = M(t,:)
+        if monitoring && vbMonDepth == 1 && t == 1
+            spm_MDP_VB_XXX_monitor_snapshot_('12F', MDP(m), m, t, 'first');
+        end
 
         % belief propagation (BP) under policy k
         %------------------------------------------------------------------
@@ -1431,6 +1480,10 @@ for t = 1:T
             end
         end
 
+        if monitoring && vbMonDepth == 1 && t == T
+            spm_MDP_VB_XXX_monitor_snapshot_('12F', MDP(m), m, t, 'last');
+        end
+
     end % end of loop over models (agents)
 
     % terminate evidence accumulation
@@ -1450,13 +1503,15 @@ for t = 1:T
 
 end % end of loop over time
 
-
 % accumulate Dirichlet parameters and prepare outputs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % loop over models
 %--------------------------------------------------------------------------
 for m = 1:size(MDP,1)
+    if monitoring && vbMonDepth == 1
+        spm_MDP_VB_XXX_monitor_snapshot_('12G', MDP(m), m, [], 'first');
+    end
 
     % Smoothing or backwards pass: replay
     %======================================================================
@@ -1687,9 +1742,15 @@ for m = 1:size(MDP,1)
 
     end % if neural responses
 
+    if monitoring && vbMonDepth == 1
+        spm_MDP_VB_XXX_monitor_snapshot_('12G', MDP(m), m, [], 'last');
+    end
 
     % assemble results and place in NDP structure
     %======================================================================
+    if monitoring && vbMonDepth == 1
+        spm_MDP_VB_XXX_monitor_snapshot_('12H', MDP(m), m, [], 'first');
+    end
     MDP(m).T  = T;            % number of outcomes
     MDP(m).U  = V{m};         % policies (combinations of control paths)
     MDP(m).R  = R{m};         % conditional expectations over policies
@@ -1729,8 +1790,13 @@ for m = 1:size(MDP,1)
 
     end
 
+    if monitoring && vbMonDepth == 1
+        spm_MDP_VB_XXX_monitor_snapshot_('12H', MDP(m), m, [], 'last');
+    end
+
 end % end loop over models (m)
 
+vbMonDepth = max(0, vbMonDepth - 1);
 
 % plot
 %==========================================================================
@@ -2884,4 +2950,113 @@ DEM_image_compression       % RGM for MNIST (Digits)
 DEM_MNIST_RGM               % RGM for MNIST (Digits)
 DEM_MNIST                   % Active selection without dynamics
 DEM_MNIST_mixture           % RGM for mixture of MNIST experts (MDPs)
+
+
+function spm_MDP_VB_XXX_monitor_snapshot_(band, mdp, m, t, iterTag)
+% Band snapshot: nested MDP chain field inventory (stdout).
+pathStr = 'MDP';
+if ~isempty(m)
+    pathStr = sprintf('MDP(%d)', m);
+end
+if strcmp(band, '12E')
+    pathStr = [pathStr '.MDP'];
+end
+spm_MDP_VB_XXX_monitor_chain_(band, mdp, pathStr, m, t, iterTag);
+
+
+function spm_MDP_VB_XXX_monitor_chain_(band, node, pathStr, m, t, iterTag)
+if isempty(node)
+    return
+end
+if ~isstruct(node)
+    fprintf(1, '[VB monitor %s] path=%s iter=%s <not a struct> class=%s\n', ...
+        band, pathStr, iterTag, class(node));
+    return
+end
+Lstr = '';
+if isfield(node, 'L')
+    Lstr = sprintf(' L=%g', node.L);
+end
+mt = '';
+if ~isempty(m)
+    mt = sprintf(' m=%d', m);
+end
+tt = '';
+if ~isempty(t)
+    tt = sprintf(' t=%d', t);
+end
+fprintf(1, '[VB monitor %s]%s path=%s iter=%s%s%s (MATLAB)\n', ...
+    band, Lstr, pathStr, iterTag, mt, tt);
+fn = sort(fieldnames(node));
+for i = 1:numel(fn)
+    k = fn{i};
+    if strcmp(k, 'MDP')
+        child = spm_MDP_VB_XXX_monitor_unwrap_mdp_(node.(k));
+        if ~isempty(child)
+            spm_MDP_VB_XXX_monitor_chain_(band, child, [pathStr '.MDP'], m, t, iterTag);
+        end
+        continue
+    end
+    desc = spm_MDP_VB_XXX_monitor_desc_(node.(k));
+    fprintf(1, '[VB monitor %s MAT field] path=%s %s=%s\n', band, pathStr, k, desc);
+end
+
+
+function node = spm_MDP_VB_XXX_monitor_unwrap_mdp_(x)
+node = [];
+if isempty(x)
+    return
+end
+if iscell(x)
+    if numel(x) >= 1
+        node = x{1};
+    end
+elseif isstruct(x)
+    if numel(x) >= 1
+        node = x(1);
+    end
+end
+
+
+function desc = spm_MDP_VB_XXX_monitor_desc_(v)
+try
+    if iscell(v)
+        if isempty(v)
+            desc = 'list(len=0)';
+        else
+            desc = sprintf('list(len=%d,elem=%s)', numel(v), spm_MDP_VB_XXX_monitor_desc_(v{1}));
+        end
+    elseif isnumeric(v) || islogical(v)
+        if issparse(v)
+            desc = sprintf('sparse%s', mat2str(size(v)));
+        else
+            desc = sprintf('ndarray%s', mat2str(size(v)));
+        end
+    elseif isstruct(v)
+        desc = sprintf('struct(len=%d)', numel(v));
+    elseif ischar(v)
+        desc = 'char';
+    elseif isstring(v)
+        desc = 'string';
+    else
+        desc = class(v);
+    end
+catch me
+    desc = sprintf('%s(desc_error=%s)', class(v), me.identifier);
+end
+
+
+function dumpSpec = spm_MDP_VB_XXX_entry12_resolve_dump_spec_()
+% Resolve Entry 12 dump directory/tag from environment (see DEMAtariIII_entry12_dump_all_subentries.m).
+here = fileparts(mfilename('fullpath'));
+repoRoot = fileparts(fileparts(fileparts(here)));
+outDir = getenv('RGMS_ENTRY12_CAPTURE_OUT_DIR');
+if isempty(outDir)
+    outDir = fullfile(repoRoot, 'tests', 'oracle', 'toolbox', 'DEM', 'fixtures');
+end
+tag = getenv('RGMS_ENTRY12_CAPTURE_RUN_TAG');
+if isempty(tag)
+    tag = 'rgms_canonical';
+end
+dumpSpec = struct('enabled', true, 'outDir', outDir, 'runTag', tag);
 

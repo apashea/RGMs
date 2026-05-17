@@ -408,29 +408,6 @@ for m = 1:Nm
 
 end
 
-% Entry 12 checkpoint: 12B (end of setup)
-%--------------------------------------------------------------------------
-if dumpSpec.enabled
-    b12 = struct();
-    b12.process = process;
-    b12.GP      = GP;
-    b12.id      = id;
-    b12.ID      = ID;
-    b12.Ng      = Ng;
-    b12.Nf      = Nf;
-    b12.No      = No;
-    b12.Ns      = Ns;
-    b12.Nu      = Nu;
-    b12.NG      = NG;
-    b12.NF      = NF;
-    b12.NS      = NS;
-    b12.NU      = NU;
-    b12.Nm      = Nm;
-    b12.T       = T;
-    b12.MDP     = MDP;
-    entry12_dump_bundle_save(dumpSpec, '12B', OPTIONS, struct('note','post-setup'), b12);
-end
-
 % parameters of generative model and policies
 %==========================================================================
 O     = cell(Nm,max(Ng),T);                   % outcomes
@@ -773,6 +750,29 @@ for m = 1:Nm
     end
 end
 
+% Entry 12 checkpoint: 12B (end of setup — post Q/X/S/P, pre spm_MDP_get_M)
+%--------------------------------------------------------------------------
+if dumpSpec.enabled
+    b12 = struct();
+    b12.process = process;
+    b12.GP      = GP;
+    b12.id      = id;
+    b12.ID      = ID;
+    b12.Ng      = Ng;
+    b12.Nf      = Nf;
+    b12.No      = No;
+    b12.Ns      = Ns;
+    b12.Nu      = Nu;
+    b12.NG      = NG;
+    b12.NF      = NF;
+    b12.NS      = NS;
+    b12.NU      = NU;
+    b12.Nm      = Nm;
+    b12.T       = T;
+    b12.MDP     = MDP;
+    entry12_dump_bundle_save(dumpSpec, '12B', OPTIONS, struct('note','post-setup'), b12);
+end
+
 % ensure any outcome generating agent is updated first
 %--------------------------------------------------------------------------
 N       = min(N,T);                          % depth of policy search
@@ -798,9 +798,14 @@ if dumpSpec.enabled
     entry12_dump_bundle_save(dumpSpec, '12C', OPTIONS, struct('note','before for t'), c12);
 end
 
-entry12_per_t_D = cell(1,T);
-entry12_per_t_E = cell(1,T);
-entry12_per_t_F = cell(1,T);
+if dumpSpec.enabled
+    D12 = struct();
+    D12.in = struct('t', 0, 'MDP', MDP, 'Mrow', M(1,:));
+    E12 = struct();
+    E12.in = struct('t', 0);
+    F12 = struct();
+    F12.in = struct('t', 0, 'Q', Q, 'P', P, 'MDP', MDP);
+end
 
 % Bayesian model inversion
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -914,10 +919,16 @@ for t = 1:T
 
     end % end generating over models
 
-    % Entry 12: per-t band 12D (early within-t)
+    % Entry 12: band 12D (early within-t) — out_t1 / out_tT only
     %----------------------------------------------------------------------
     if dumpSpec.enabled
-        entry12_per_t_D{t} = struct('t', t, 'MDP', MDP, 'Mrow', M(t,:));
+        snapD = struct('t', t, 'MDP', MDP, 'Mrow', M(t,:));
+        if t == 1
+            D12.out_t1 = snapD;
+        end
+        if t == T
+            D12.out_tT = snapD;
+        end
     end
 
     % share states if specified in MDP.m
@@ -1285,10 +1296,16 @@ for t = 1:T
 
     end % end generating outcomes O for all models
 
-    % Entry 12: per-t band 12E (outcomes / hierarchical segment)
+    % Entry 12: band 12E (outcomes / hierarchical) — out_t1 / out_tT only
     %----------------------------------------------------------------------
     if dumpSpec.enabled
-        entry12_per_t_E{t} = struct('t', t, 'MDP', MDP, 'O', O);
+        snapE = struct('t', t, 'O', entry12_dump_O_at_t_(O, Nm, Ng, t));
+        if t == 1
+            E12.out_t1 = snapE;
+        end
+        if t == T
+            E12.out_tT = snapE;
+        end
     end
 
     % Bayesian belief updating, given O: hidden states (Q) and paths (P)
@@ -1507,10 +1524,16 @@ for t = 1:T
 
     end % end of loop over models (agents)
 
-    % Entry 12: per-t band 12F (belief update segment)
+    % Entry 12: band 12F (belief update) — out_t1 / out_tT only
     %----------------------------------------------------------------------
     if dumpSpec.enabled
-        entry12_per_t_F{t} = struct('t', t, 'Q', Q, 'P', P, 'R', R, 'v', v, 'w', w, 'MDP', MDP);
+        snapF = struct('t', t, 'Q', Q, 'P', P, 'R', R, 'v', v, 'w', w, 'MDP', MDP);
+        if t == 1
+            F12.out_t1 = snapF;
+        end
+        if t == T
+            F12.out_tT = snapF;
+        end
     end
 
     % terminate evidence accumulation
@@ -1533,13 +1556,18 @@ end % end of loop over time
 % Entry 12 checkpoints: roll up per-t bands; post-loop 12G
 %--------------------------------------------------------------------------
 if dumpSpec.enabled
-    Dbundle = struct(); Dbundle.per_t = entry12_per_t_D;
-    entry12_dump_bundle_save(dumpSpec, '12D', OPTIONS, struct('note','per-t early band'), Dbundle);
-    Ebundle = struct(); Ebundle.per_t = entry12_per_t_E;
-    entry12_dump_bundle_save(dumpSpec, '12E', OPTIONS, struct('note','per-t outcomes/hierarchical'), Ebundle);
-    Fbundle = struct(); Fbundle.per_t = entry12_per_t_F;
-    entry12_dump_bundle_save(dumpSpec, '12F', OPTIONS, struct('note','per-t belief update'), Fbundle);
-    g12 = struct('Q', Q, 'P', P, 'O', O, 'R', R, 'v', v, 'w', w, 'id', id, 'MDP', MDP);
+    entry12_dump_bundle_save(dumpSpec, '12D', OPTIONS, struct('note','early band boundaries'), D12);
+    entry12_dump_bundle_save(dumpSpec, '12E', OPTIONS, struct('note','outcomes/hierarchical boundaries'), E12);
+    entry12_dump_bundle_save(dumpSpec, '12F', OPTIONS, struct('note','belief-update boundaries'), F12);
+    g12 = struct();
+    g12.Q = Q;
+    g12.P = P;
+    g12.O = O;
+    g12.R = R;
+    g12.v = v;
+    g12.w = w;
+    g12.id = id;
+    g12.MDP = MDP;
     entry12_dump_bundle_save(dumpSpec, '12G', OPTIONS, struct('note','after time loop'), g12);
 end
 
@@ -1848,6 +1876,16 @@ end
 
 % auxillary functions
 %==========================================================================
+function Ot = entry12_dump_O_at_t_(O, Nm, Ng, t)
+% Outcomes ``O{m,g,t}`` at one time index only (lean 12E boundary).
+Ot = cell(Nm, max(Ng));
+for m = 1:Nm
+    for g = 1:Ng(m)
+        Ot{m,g} = O{m,g,t};
+    end
+end
+
+
 function entry12_dump_bundle_save(dumpSpec, code, OPTIONS, meta_extra, bundle)
 %ENTRY12_DUMP_BUNDLE_SAVE  Write one DEMAtariIII_entry12_<runTag>_<code>.mat (v7).
 if nargin < 5 || isempty(bundle)
@@ -1878,7 +1916,6 @@ S.meta = meta;
 fname = fullfile(dumpSpec.outDir, sprintf('DEMAtariIII_entry12_%s_%s.mat', dumpSpec.runTag, code));
 save(fname, '-struct', 'S', '-v7');
 fprintf(1, '[entry12 dump] wrote %s\n', fname);
-end
 
 
 function [G,P,F,id,Pa] = spm_forwards(O,P,A,B,C,H,K,W,I,t,T,N,m,id,pA,qa)

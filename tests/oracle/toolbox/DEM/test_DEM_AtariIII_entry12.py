@@ -113,38 +113,44 @@ def count_numpy_rand_calls_for_vb_on_rdp11(rdp11: dict[str, Any]) -> int:
         return float(real_rand())
 
     with patch("numpy.random.rand", side_effect=shim):
-        spm_MDP_VB_XXX(copy.deepcopy(rdp11))
+        spm_MDP_VB_XXX(
+            copy.deepcopy(rdp11),
+            {},
+            monitoring=False,
+            dump_subentries=True,
+            reuse_matlab_draws=False,
+        )
     return int(ctr[0])
 
 
 def spm_MDP_VB_XXX_with_matlab_rand_buf(rdp11: dict[str, Any], buf: np.ndarray | None) -> Any:
-    """Run Python VB on a deep-copied ``rdp11``, replaying MATLAB's preamble-aligned ``rand(K,1)`` (capture v5+)."""
+    """Run Python VB replaying ``buf`` via ``spm_MDP_VB_XXX(..., reuse_matlab_draws=True)``."""
     if buf is None or int(np.asarray(buf).size) == 0:
-        return spm_MDP_VB_XXX(copy.deepcopy(rdp11))
-    data = np.asarray(buf, dtype=np.float64).ravel(order="F").tolist()
-    it = iter(data)
+        return spm_MDP_VB_XXX(copy.deepcopy(rdp11), {}, reuse_matlab_draws=False)
+    import os
+    import tempfile
 
-    def shim(*args: Any, **kwargs: Any) -> Any:
-        if args or kwargs:
-            raise RuntimeError(
-                "entry12 VB replay: only scalar np.random.rand() is supported in this lane"
-            )
-        try:
-            return float(next(it))
-        except StopIteration as e:
-            raise RuntimeError(
-                "entry12 VB replay: exhausted MATLAB rand buffer before Python VB finished"
-            ) from e
+    from scipy.io import savemat
 
-    with patch("numpy.random.rand", side_effect=shim):
-        out = spm_MDP_VB_XXX(copy.deepcopy(rdp11))
+    with tempfile.NamedTemporaryFile(suffix=".mat", delete=False) as tf:
+        tmp = Path(tf.name)
+    savemat(
+        str(tmp),
+        {"vb_rand_buf": np.asarray(buf, dtype=np.float64).ravel(order="F")},
+    )
+    old = os.environ.get("RGMS_ENTRY12_VB_MATLAB_RAND_MAT")
     try:
-        next(it)
-    except StopIteration:
-        pass
-    else:
-        raise RuntimeError("entry12 VB replay: MATLAB rand buffer had unused draws (K mismatch)")
-    return out
+        os.environ["RGMS_ENTRY12_VB_MATLAB_RAND_MAT"] = str(tmp)
+        return spm_MDP_VB_XXX(copy.deepcopy(rdp11), {}, reuse_matlab_draws=True)
+    finally:
+        if old is None:
+            os.environ.pop("RGMS_ENTRY12_VB_MATLAB_RAND_MAT", None)
+        else:
+            os.environ["RGMS_ENTRY12_VB_MATLAB_RAND_MAT"] = old
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _normalize_pdp_to_cell_for_pull(dem_eng, expr: str = "rgms_pdp12") -> None:

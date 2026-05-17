@@ -76,9 +76,9 @@ assert. **Default (non-strict):** only
 After **each** type-walk mismatch line, **two** **``[mismatch detail]``** lines always follow, resolving the same path
 on **PKL** vs **MATLAB** ``RDP`` (shape, dtype, short numeric preview where applicable, dict key heads, list/scalar
 summaries). For paths under **``RDP.A``** / **``RDP.B``** / **``RDP.H``** / **``RDP.MDP.A``** / **``RDP.MDP.B``** /
-**``RDP.MDP.H``**, when the mismatch involves tensor shapes that **jointly** include **524** and **485**, the first
+**``RDP.MDP.H``**, when the mismatch involves tensor shapes that **jointly** include **511** and **485**, the first
 detail line may be prefixed with
-**``[accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy]``** (ledger drift accepted for validation).
+**``[accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy]``** (ledger drift accepted for validation).
 
 **``--report-type-mismatches``**
     Accepted for backward compatibility; the type walk is **always** emitted (flag has no effect).
@@ -116,8 +116,8 @@ _MATLAB_LOADMAT_META = frozenset({"__header__", "__version__", "__globals__"})
 
 _RDP_PATH_MISSING = object()
 
-# ENTRY 1-11: Python PKL ledger uses state size 524 vs MATLAB dump 485 on A/B/H tensors — accepted for validation.
-_ACCEPTED_LEDGER_524_485_PREFIXES: tuple[str, ...] = (
+# ENTRY 1-11: Python PKL ledger uses state size 511 vs MATLAB dump 485 on A/B/H tensors — accepted for validation.
+_ACCEPTED_LEDGER_511_485_PREFIXES: tuple[str, ...] = (
     "RDP.A",
     "RDP.B",
     "RDP.H",
@@ -281,6 +281,54 @@ def _safe_concise_value_desc(v: Any) -> str:
         return f"{type(v).__name__}(desc_error={type(exc).__name__})"
 
 
+def _unwrap_mdp_chain_child(node: Any) -> Any | None:
+    """First nested ``MDP`` child dict from an RDP/PDP node, if present."""
+    if not isinstance(node, dict):
+        return None
+    raw = _norm_leaf(node.get("MDP"))
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, list) and raw:
+        ch = _unwrap_matlab_scalar_cell(raw[0])
+        return ch if isinstance(ch, dict) else None
+    return None
+
+
+def _emit_mdp_chain_field_inventory(tag: str, root: Any, path_prefix: str) -> None:
+    """Print field inventory for ``root`` and each nested ``MDP`` level (stderr)."""
+    try:
+        if not isinstance(root, dict):
+            print(
+                f"[FSL 1-11 validation] MDP chain ({tag}) path={path_prefix} "
+                f"<not a dict> type={type(root).__name__}",
+                file=sys.stderr,
+            )
+            return
+        l_val = root.get("L")
+        l_str = f" L={l_val}" if l_val is not None else ""
+        print(
+            f"[FSL 1-11 validation] MDP chain{l_str} path={path_prefix} ({tag})",
+            file=sys.stderr,
+        )
+        for k in sorted(root.keys(), key=str):
+            if k == "MDP":
+                child = _unwrap_mdp_chain_child(root)
+                if child is not None:
+                    _emit_mdp_chain_field_inventory(tag, child, f"{path_prefix}.MDP")
+                continue
+            desc = _safe_concise_value_desc(root[k])
+            print(
+                f"[FSL 1-11 validation] MDP chain ({tag}) path={path_prefix} field {k}={desc}",
+                file=sys.stderr,
+            )
+    except Exception as exc:
+        print(
+            f"[FSL 1-11 validation] MDP chain ({tag}) path={path_prefix} "
+            f"<inventory failed> {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+
+
 def _emit_rdp_top_level_field_inventory(tag: str, rdp: Any) -> None:
     """Print each top-level ``RDP`` key with concise type to stderr; never raises."""
     try:
@@ -300,12 +348,17 @@ def _emit_rdp_top_level_field_inventory(tag: str, rdp: Any) -> None:
         )
 
 
-def _emit_rdp_top_level_key_diff(py_rdp: Any, mat_rdp: Any) -> None:
+def _emit_rdp_top_level_key_diff(
+    py_rdp: Any,
+    mat_rdp: Any,
+    *,
+    lane: str = "FSL 1-11 validation",
+) -> None:
     """Print symmetric top-level key diff (with types for keys unique to one side); never raises."""
     try:
         if not isinstance(py_rdp, dict) or not isinstance(mat_rdp, dict):
             print(
-                "[FSL 1-11 validation] RDP top-level key diff: skipped (one or both RDP not dict-like)",
+                f"[{lane}] RDP top-level key diff: skipped (one or both RDP not dict-like)",
                 file=sys.stderr,
             )
             return
@@ -322,12 +375,12 @@ def _emit_rdp_top_level_key_diff(py_rdp: Any, mat_rdp: Any) -> None:
         py_part = _fmt_side(only_py, py_rdp)
         mat_part = _fmt_side(only_mat, mat_rdp)
         print(
-            f"[FSL 1-11 validation] RDP top-level key diff: only_in_PKL={py_part}; only_in_MATLAB={mat_part}",
+            f"[{lane}] RDP top-level key diff: only_in_PKL={py_part}; only_in_MATLAB={mat_part}",
             file=sys.stderr,
         )
     except Exception as exc:
         print(
-            f"[FSL 1-11 validation] RDP top-level key diff: emit failed ({type(exc).__name__}: {exc})",
+            f"[{lane}] RDP top-level key diff: emit failed ({type(exc).__name__}: {exc})",
             file=sys.stderr,
         )
 
@@ -391,22 +444,22 @@ def _shape_tuple_if_numeric_leaf(x: Any) -> tuple[int, ...] | None:
     return None
 
 
-def _ledger_524_485_pair(py: Any, mat: Any) -> bool:
+def _ledger_511_485_pair(py: Any, mat: Any) -> bool:
     dims: set[int] = set()
     sp, sm = _shape_tuple_if_numeric_leaf(py), _shape_tuple_if_numeric_leaf(mat)
     if sp:
         dims |= set(sp)
     if sm:
         dims |= set(sm)
-    return 524 in dims and 485 in dims
+    return 511 in dims and 485 in dims
 
 
 def _is_accepted_ledger_dim_mismatch(path: str, py: Any, mat: Any) -> bool:
     if py is _RDP_PATH_MISSING or mat is _RDP_PATH_MISSING:
         return False
-    if not any(path.startswith(p) for p in _ACCEPTED_LEDGER_524_485_PREFIXES):
+    if not any(path.startswith(p) for p in _ACCEPTED_LEDGER_511_485_PREFIXES):
         return False
-    return _ledger_524_485_pair(py, mat)
+    return _ledger_511_485_pair(py, mat)
 
 
 def _format_preview_1d(x: Any, k: int) -> str:
@@ -461,7 +514,7 @@ def _summarize_one_side(label: str, x: Any, preview_k: int = 8) -> str:
 def _mismatch_value_summary_lines(path: str, py: Any, mat: Any) -> list[str]:
     tag = ""
     if _is_accepted_ledger_dim_mismatch(path, py, mat):
-        tag = "[accepted ledger dim 524 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] "
+        tag = "[accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] "
     py_l = _summarize_one_side("PKL", py)
     mat_l = _summarize_one_side("MAT", mat)
     return [f"  {tag}[mismatch detail] {py_l}", f"  [mismatch detail] {mat_l}"]
@@ -539,12 +592,19 @@ def _validate_rdp_checkx_schema(rdp: Any, *, strict: bool) -> list[tuple[str, st
     return out
 
 
-def _run_checkx_schema_phase(tag: str, rdp: Any, *, strict: bool) -> bool:
+def _run_checkx_schema_phase(
+    tag: str,
+    rdp: Any,
+    *,
+    strict: bool,
+    lane: str = "FSL 1-11 validation",
+) -> bool:
     """Run field inventory + ``_validate_rdp_checkx_schema`` and print lines to stderr. Return True if any ERROR."""
     _emit_rdp_top_level_field_inventory(tag, rdp)
+    _emit_mdp_chain_field_inventory(tag, rdp, "RDP")
     issues = _validate_rdp_checkx_schema(rdp, strict=strict)
     print(
-        f"[FSL 1-11 validation] checkX schema ({tag}): {len(issues)} issue(s) (strict={strict})",
+        f"[{lane}] checkX schema ({tag}): {len(issues)} issue(s) (strict={strict})",
         file=sys.stderr,
     )
     for level, msg in issues:
@@ -1163,9 +1223,14 @@ def _focused_probe_u(py_rdp: Any, mat_rdp: Any) -> None:
         )
 
 
-def _emit_rdp_focused_probes(py_rdp: Any, mat_rdp: Any) -> None:
+def _emit_rdp_focused_probes(
+    py_rdp: Any,
+    mat_rdp: Any,
+    *,
+    lane: str = "FSL 1-11 validation",
+) -> None:
     """Append-only stderr lines (teed to report): deeper facts for G, C, sB, U."""
-    print("[FSL 1-11 validation] focused probe (append): G, C, sB, U", file=sys.stderr)
+    print(f"[{lane}] focused probe (append): G, C, sB, U", file=sys.stderr)
     for name, fn in (
         ("G", _focused_probe_g),
         ("C", _focused_probe_c),
@@ -1181,11 +1246,16 @@ def _emit_rdp_focused_probes(py_rdp: Any, mat_rdp: Any) -> None:
             traceback.print_exc(file=sys.stderr)
 
 
-def _emit_nested_type_walk(py_rdp: Any, mat_rdp: Any) -> None:
+def _emit_nested_type_walk(
+    py_rdp: Any,
+    mat_rdp: Any,
+    *,
+    lane: str = "FSL 1-11 validation",
+) -> None:
     """Always-on nested Python vs MATLAB ``RDP`` type / shape drift plus PKL/MAT detail lines (stderr + report file)."""
     lines: list[str] = []
     _collect_type_mismatches(py_rdp, mat_rdp, "RDP", lines)
-    print(f"[FSL 1-11 validation] type walk: {len(lines)} mismatch line(s)", file=sys.stderr)
+    print(f"[{lane}] type walk: {len(lines)} mismatch line(s)", file=sys.stderr)
     for ln in lines:
         print(ln, file=sys.stderr)
         path = _type_walk_path_from_line(ln)
@@ -1195,6 +1265,62 @@ def _emit_nested_type_walk(py_rdp: Any, mat_rdp: Any) -> None:
         mat_val = _norm_leaf(_get_at_rdp_path(mat_rdp, path))
         for dl in _mismatch_value_summary_lines(path, py_val, mat_val)[:2]:
             print(dl, file=sys.stderr)
+
+
+def compare_nested_rdp_oracle_lane(
+    py_rdp: Any,
+    mat_rdp: Any,
+    *,
+    lane: str = "FSL 1-11 validation",
+    strict: bool = False,
+    report_only: bool = False,
+    coerce_sparse: bool = False,
+    schema_only: bool = False,
+) -> int:
+    """
+    FSL 1–11-style nested ``RDP`` validation (schema, key diff, type walk, focused probes, assert).
+
+    Reused by Validation 12 input ``RDP`` compare (same machinery as ``main()`` RDP phase).
+    """
+    if _run_checkx_schema_phase("PKL", py_rdp, strict=strict, lane=lane):
+        print(
+            f"[{lane}] RDP top-level key diff: skipped (MATLAB RDP not loaded — PKL schema ERROR)",
+            file=sys.stderr,
+        )
+        print(f"[{lane}] type walk: skipped (MATLAB RDP not loaded — PKL schema ERROR)", file=sys.stderr)
+        print(
+            f"[{lane}] focused probe (append): skipped (MATLAB RDP not loaded — PKL schema ERROR)",
+            file=sys.stderr,
+        )
+        return 1
+
+    mat_schema_err = _run_checkx_schema_phase("MATLAB", mat_rdp, strict=strict, lane=lane)
+
+    _emit_rdp_top_level_key_diff(py_rdp, mat_rdp, lane=lane)
+    _emit_nested_type_walk(py_rdp, mat_rdp, lane=lane)
+    _emit_rdp_focused_probes(py_rdp, mat_rdp, lane=lane)
+
+    if mat_schema_err:
+        return 1
+
+    if schema_only:
+        print(f"OK: nested RDP passed checkX schema ({lane}, --check-rdp-checkx-schema-only)", file=sys.stderr)
+        return 0
+
+    if report_only:
+        return 0
+
+    from tests.oracle.toolbox.DEM.test_spm_mdp2rdp import _assert_nested_rdp_equal
+
+    if coerce_sparse:
+        py_cmp = _densify_sparse_leaves(copy.deepcopy(py_rdp))
+        mat_cmp = _densify_sparse_leaves(copy.deepcopy(mat_rdp))
+        _assert_nested_rdp_equal(py_cmp, mat_cmp, "RDP")
+    else:
+        _assert_nested_rdp_equal(py_rdp, mat_rdp, "RDP")
+
+    print(f"OK: nested RDP parity ({lane})", file=sys.stderr)
+    return 0
 
 
 def _argv_requests_help(argv: list[str]) -> bool:
