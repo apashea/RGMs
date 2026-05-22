@@ -2,6 +2,11 @@ function [MDP] = spm_MDP_VB_XXX_entry12_dump(MDP,OPTIONS,dumpSpec)
 % active inference and learning using belief propagation (factorised)
 % FORMAT [MDP] = spm_MDP_VB_XXX_entry12_dump(MDP,OPTIONS,dumpSpec)
 %
+% VALIDATION COHERENCE: For Entry 12 oracle compares, this fork is invoked ONLY from
+% ``DEMAtariIII_entry12_dump_all_subentries.m`` (script 1b). Do not call standalone for
+% Validation 12 ``.mat`` fixtures — ad-hoc runs use different RNG/buffer context and will
+% not pair with XXX 12 ``.pkl`` or ``vb_rand_buf`` from the canonical 1a→1b chain.
+%
 % Third argument dumpSpec (optional): struct with fields outDir, runTag, and
 % optional enabled (default true when outDir and runTag are set). When enabled,
 % writes DEMAtariIII_entry12_<runTag>_12B.mat … _12I.mat alongside the run.
@@ -214,6 +219,31 @@ if nargin < 3 || isempty(dumpSpec)
     dumpSpec = struct('enabled', false);
 elseif ~isfield(dumpSpec,'enabled')
     dumpSpec.enabled = isfield(dumpSpec,'outDir') && isfield(dumpSpec,'runTag');
+end
+if ~isfield(dumpSpec,'capture_y_probe')
+    vprobe = getenv('RGMS_ENTRY12_CAPTURE_Y_PROBE');
+    if isempty(vprobe)
+        dumpSpec.capture_y_probe = true;
+    else
+        dumpSpec.capture_y_probe = ~(strcmpi(vprobe,'0') || strcmpi(vprobe,'false') || strcmpi(vprobe,'no'));
+    end
+end
+global ENTRY12_CAPTURE_CTX
+% Nested child VB (``dumpSpec.enabled=false``) must not reset parent accumulators.
+if nargin >= 3 && isfield(dumpSpec,'enabled') && ~dumpSpec.enabled
+    if isempty(ENTRY12_CAPTURE_CTX)
+        ENTRY12_CAPTURE_CTX = struct( ...
+            'enabled', false, ...
+            'active', logical(dumpSpec.capture_y_probe), ...
+            'vbx', struct(), ...
+            'phases', struct());
+    end
+else
+    ENTRY12_CAPTURE_CTX = struct( ...
+        'enabled', logical(dumpSpec.enabled), ...
+        'active', logical(dumpSpec.capture_y_probe), ...
+        'vbx', struct(), ...
+        'phases', struct());
 end
 
 % check MDP specification
@@ -868,6 +898,11 @@ for t = 1:T
 
         end
 
+        if dumpSpec.enabled && t > 1
+            ex = struct('k_policy', double(k), 'Pu', full(double(Pu(:))));
+            entry12_record_phase_(m, t, 'post_generation', Q, P, O, ex);
+        end
+
         % generate control paths (for controllable factors)
         %==================================================================
         if t > 1
@@ -919,16 +954,14 @@ for t = 1:T
 
     end % end generating over models
 
-    % Entry 12: band 12D (early within-t) — out_t1 / out_tT only
+    % Entry 12: band 12D (early within-t) — in, out_t1, out_t2, out_t3, out_tT
     %----------------------------------------------------------------------
     if dumpSpec.enabled
-        snapD = struct('t', t, 'MDP', MDP, 'Mrow', M(t,:));
+        snapD = struct('t', t, 'MDP', {MDP}, 'Mrow', M(t,:));
         if t == 1
-            D12.out_t1 = snapD;
+            snapD.entry12_prechild = entry12_prechild_from_mdp_(MDP, Nm);
         end
-        if t == T
-            D12.out_tT = snapD;
-        end
+        D12 = entry12_assign_t_boundary(D12, snapD, t, T);
     end
 
     % share states if specified in MDP.m
@@ -941,6 +974,12 @@ for t = 1:T
                     MDP(m).s(f,t) = MDP(n).s(f,t);
                 end
             end
+        end
+    end
+
+    if dumpSpec.enabled
+        for mm = M(t,:)
+            entry12_record_phase_(mm, t, 'post_share', Q, P, O, struct());
         end
     end
 
@@ -1237,6 +1276,9 @@ for t = 1:T
             if isfield(ds_child,'enabled') && ds_child.enabled
                 ds_child.enabled = false;
             end
+            if ~isfield(ds_child,'capture_y_probe')
+                ds_child.capture_y_probe = entry12_capture_y_probe_on_(dumpSpec);
+            end
             mdp   = spm_MDP_VB_XXX_entry12_dump(mdp,OPTIONS,ds_child);
 
             % Outcomes: posteriors over initial states of children
@@ -1292,20 +1334,23 @@ for t = 1:T
             %==============================================================
             MDP(m).MDP = mdp;
 
+            if dumpSpec.enabled
+                entry12_record_phase_(m, t, 'post_hierarchical', Q, P, O, struct());
+            end
+
         end % end of hierarchical mode
 
     end % end generating outcomes O for all models
 
-    % Entry 12: band 12E (outcomes / hierarchical) — out_t1 / out_tT only
+    % Entry 12: band 12E (outcomes / hierarchical) — in, out_t1, out_t2, out_t3, out_tT
     %----------------------------------------------------------------------
     if dumpSpec.enabled
-        snapE = struct('t', t, 'O', entry12_dump_O_at_t_(O, Nm, Ng, t));
-        if t == 1
-            E12.out_t1 = snapE;
+        snapE = struct('t', t, 'O', {entry12_dump_O_at_t_(O, Nm, Ng, t)});
+        snapE = entry12_attach_phase_log_to_snap_(snapE, M(t,:), t);
+        if entry12_capture_y_probe_on_(dumpSpec)
+            snapE.nested_y_summary = entry12_nested_y_summary_(MDP, Nm);
         end
-        if t == T
-            E12.out_tT = snapE;
-        end
+        E12 = entry12_assign_t_boundary(E12, snapE, t, T);
     end
 
     % Bayesian belief updating, given O: hidden states (Q) and paths (P)
@@ -1350,7 +1395,19 @@ for t = 1:T
         % posterior over hidden states (Q) and expected free energy (G)
         %==================================================================
         n          = min(T,t + N);
+        if dumpSpec.enabled
+            ex = struct();
+            if isfield(id{m},'fp'), ex.id_fp = id{m}.fp; end
+            if isfield(id{m},'fu'), ex.id_fu = id{m}.fu; end
+            if isfield(id{m},'iH'), ex.id_iH = id{m}.iH; end
+            ex.A_peaks = entry12_a_peaks_at_m_(A, m);
+            entry12_record_phase_(m, t, 'pre_forwards', Q, P, O, ex);
+        end
         [G,Q,F,id,Pa] = spm_forwards(O,Q,A,BP,C,H,K,W,IP,t,T,n,m,id,pA,qa);
+        if dumpSpec.enabled
+            entry12_record_phase_(m, t, 'post_forwards', Q, P, O, struct('F_after_fwd', double(F)));
+        end
+        entry12_flush_vbx_to_mdp_(MDP, m, t);
 
         % augment with prior probability over paths
         %------------------------------------------------------------------
@@ -1503,6 +1560,9 @@ for t = 1:T
         % (ELBO) free energy: states, policies and paths
         %------------------------------------------------------------------
         MDP(m).F(t) = F;
+        if dumpSpec.enabled
+            entry12_record_phase_(m, t, 'post_mdp_F', Q, P, O, struct('F_mdp_slot', double(F)));
+        end
         MDP(m).G{t} = G;
         MDP(m).Z(t) = Z;
 
@@ -1524,16 +1584,15 @@ for t = 1:T
 
     end % end of loop over models (agents)
 
-    % Entry 12: band 12F (belief update) — out_t1 / out_tT only
+    % Entry 12: band 12F (belief update) — in, out_t1, out_t2, out_t3, out_tT
     %----------------------------------------------------------------------
     if dumpSpec.enabled
-        snapF = struct('t', t, 'Q', Q, 'P', P, 'R', R, 'v', v, 'w', w, 'MDP', MDP);
-        if t == 1
-            F12.out_t1 = snapF;
+        snapF = struct('t', t, 'Q', {Q}, 'P', {P}, 'R', {R}, 'v', {v}, 'w', {w}, 'MDP', {MDP});
+        snapF = entry12_attach_phase_log_to_snap_(snapF, M(t,:), t);
+        if entry12_capture_y_probe_on_(dumpSpec)
+            snapF.nested_y_summary = entry12_nested_y_summary_(MDP, Nm);
         end
-        if t == T
-            F12.out_tT = snapF;
-        end
+        F12 = entry12_assign_t_boundary(F12, snapF, t, T);
     end
 
     % terminate evidence accumulation
@@ -1556,9 +1615,9 @@ end % end of loop over time
 % Entry 12 checkpoints: roll up per-t bands; post-loop 12G
 %--------------------------------------------------------------------------
 if dumpSpec.enabled
-    entry12_dump_bundle_save(dumpSpec, '12D', OPTIONS, struct('note','early band boundaries'), D12);
-    entry12_dump_bundle_save(dumpSpec, '12E', OPTIONS, struct('note','outcomes/hierarchical boundaries'), E12);
-    entry12_dump_bundle_save(dumpSpec, '12F', OPTIONS, struct('note','belief-update boundaries'), F12);
+    entry12_dump_bundle_save(dumpSpec, '12D', OPTIONS, struct('note','early band boundaries (in,out_t1,out_t2,out_t3,out_tT)'), D12);
+    entry12_dump_bundle_save(dumpSpec, '12E', OPTIONS, struct('note','outcomes/hierarchical boundaries (in,out_t1,out_t2,out_t3,out_tT)'), E12);
+    entry12_dump_bundle_save(dumpSpec, '12F', OPTIONS, struct('note','belief-update boundaries (in,out_t1,out_t2,out_t3,out_tT)'), F12);
     g12 = struct();
     g12.Q = Q;
     g12.P = P;
@@ -1710,18 +1769,31 @@ for m = 1:size(MDP,1)
     % posterior predictive density Y{g,t}
     %======================================================================
     if OPTIONS.Y
+        if entry12_capture_y_probe_on_(dumpSpec)
+            if ~isfield(MDP(m),'entry12_Yfill') || isempty(MDP(m).entry12_Yfill)
+                MDP(m).entry12_Yfill = cell(Ng(m), T);
+            end
+        end
+        has_a_y = isfield(MDP(m),'a');
         for g = 1:Ng(m)
             for t = 1:T
                 [j,i] = spm_parents(id{m},g,Q(m,:,t));
+                sites = {};
                 for o = i
                     if isa(A{m,g},'function_handle')
                         MDP(m).Y{o,t} = A{m,g}(Q(m,j,t));
                     else
                         MDP(m).Y{o,t} = spm_dot(A{m,g},Q(m,j,t));
+                        if entry12_capture_y_probe_on_(dumpSpec)
+                            sites{end+1} = entry12_yfill_site_struct_(MDP, m, g, t, o, j, i, A, Q, qa, has_a_y); %#ok<AGROW>
+                        end
                     end
                 end
                 MDP(m).j{g,t} = j;
                 MDP(m).i{g,t} = i;
+                if entry12_capture_y_probe_on_(dumpSpec)
+                    MDP(m).entry12_Yfill{g,t} = sites;
+                end
             end
         end
     end
@@ -1886,6 +1958,365 @@ for m = 1:Nm
 end
 
 
+function ws = entry12_assign_t_boundary(ws, snap, t, T)
+%ENTRY12_ASSIGN_T_BOUNDARY  Save one lean boundary snapshot for bands 12D/12E/12F.
+% ``out_t1``, ``out_t2``, ``out_t3`` at fixed early ``t``; ``out_tT`` when ``t == T``.
+% Returns ``ws`` (MATLAB structs are pass-by-value; callers must assign back).
+if t == 1
+    ws.out_t1 = snap;
+elseif t == 2
+    ws.out_t2 = snap;
+elseif t == 3
+    ws.out_t3 = snap;
+end
+if t == T
+    ws.out_tT = snap;
+end
+
+
+function tf = entry12_capture_y_probe_on_(dumpSpec)
+% True when fill-time / VBX probes should run (including nested child VB).
+if nargin < 1 || isempty(dumpSpec)
+    vprobe = getenv('RGMS_ENTRY12_CAPTURE_Y_PROBE');
+    if isempty(vprobe)
+        tf = true;
+    else
+        tf = ~(strcmpi(vprobe,'0') || strcmpi(vprobe,'false') || strcmpi(vprobe,'no'));
+    end
+    return
+end
+if isfield(dumpSpec,'capture_y_probe')
+    tf = logical(dumpSpec.capture_y_probe);
+else
+    tf = entry12_capture_y_probe_on_();
+end
+
+
+function [pk, mx] = entry12_vec_peak_(v)
+% Argmax (1-based) and max value for a numeric column vector.
+v = full(double(v(:)));
+if isempty(v)
+    pk = [];
+    mx = 0;
+    return
+end
+[mx, pk] = max(v);
+
+
+function pr = entry12_yfill_site_struct_(MDP, m, g, t, o, j, i, A, Q, qa, has_a)
+% One ``(g,t,o)`` probe at ``OPTIONS.Y`` fill (same ``j`` indexing as ``MDP(m).Y{o,t}``).
+A_ws = A{m,g};
+if ~isa(A_ws,'function_handle')
+    A_ws = full(double(A_ws(:)));
+else
+    A_ws = [];
+end
+Y_out = full(double(MDP(m).Y{o,t}(:)));
+pred = Y_out;
+Q_ws = [];
+if numel(j) >= 1
+    try
+        Q_ws = full(double(Q{m, j(1), t}(:)));
+    catch
+    end
+end
+Aexp = [];
+if isfield(MDP(m),'A') && numel(MDP(m).A) >= g && ~isempty(MDP(m).A{g})
+    Aexp = full(double(MDP(m).A{g}(:)));
+end
+qa_g = [];
+if ~isempty(qa) && numel(qa) >= m && numel(qa{m}) >= g
+    qa_g = full(double(qa{m,g}(:)));
+end
+pr = struct();
+pr.m = m;
+pr.g = g;
+pr.t = t;
+pr.o = o;
+pr.j = j;
+pr.i = i;
+pr.A_ws = A_ws;
+pr.Q_ws = Q_ws;
+pr.Y_out = Y_out;
+pr.pred_replay = pred;
+[pr.A_ws_peak, pr.A_ws_max] = entry12_vec_peak_(A_ws);
+[pr.Q_ws_peak, pr.Q_ws_max] = entry12_vec_peak_(Q_ws);
+[pr.Y_peak, pr.Y_max] = entry12_vec_peak_(Y_out);
+[pr.pred_peak, pr.pred_max] = entry12_vec_peak_(pred);
+[pr.A_export_peak, pr.A_export_max] = entry12_vec_peak_(Aexp);
+[pr.qa_peak, pr.qa_max] = entry12_vec_peak_(qa_g);
+pr.has_a = logical(has_a);
+if isfield(MDP(m),'L')
+    pr.L = MDP(m).L;
+end
+
+
+function S = entry12_nested_y_summary_(MDP, Nm)
+% Peaks on nested ``MDP.MDP`` plus any ``entry12_Yfill`` / ``entry12_VBX`` captured.
+templ = struct('parent_m', 0, 'has_a', false, 'Y21_peak', [], 'Y22_peak', [], ...
+    'A2_export_peak', [], 'X1_peak', [], 'yfill_g2t1', {{}}, 'entry12_VBX', struct());
+S = repmat(templ, 0, 1);
+for m = 1:Nm
+    if ~isfield(MDP(m),'MDP') || isempty(MDP(m).MDP)
+        continue
+    end
+    ch = MDP(m).MDP;
+    if numel(ch) > 1
+        ch = ch(1);
+    end
+    row = templ;
+    row.parent_m = m;
+    row.has_a = isfield(ch,'a');
+    row.Y21_peak = entry12_peak_Y_ot_(ch, 2, 1);
+    row.Y22_peak = entry12_peak_Y_ot_(ch, 2, 2);
+    row.A2_export_peak = entry12_peak_A_g_(ch, 2);
+    row.X1_peak = entry12_peak_X_ft_(ch, 1, 1);
+    if isfield(ch,'entry12_Yfill') && ~isempty(ch.entry12_Yfill) ...
+            && size(ch.entry12_Yfill,1) >= 2 && size(ch.entry12_Yfill,2) >= 1
+        row.yfill_g2t1 = {ch.entry12_Yfill{2,1}};
+    end
+    if isfield(ch,'entry12_VBX')
+        row.entry12_VBX = ch.entry12_VBX;
+    end
+    S(end+1) = row; %#ok<AGROW>
+end
+
+
+function pk = entry12_peak_Y_ot_(ch, o, t)
+pk = [];
+if ~isfield(ch,'Y') || isempty(ch.Y) || numel(ch.Y) < o || numel(ch.Y{o}) < t
+    return
+end
+[pk, ~] = entry12_vec_peak_(ch.Y{o,t});
+
+
+function pk = entry12_peak_A_g_(ch, g)
+pk = [];
+if ~isfield(ch,'A') || numel(ch.A) < g || isempty(ch.A{g})
+    return
+end
+[pk, ~] = entry12_vec_peak_(ch.A{g});
+
+
+function pk = entry12_peak_X_ft_(ch, f, t)
+pk = [];
+if ~isfield(ch,'X') || numel(ch.X) < f || isempty(ch.X{f})
+    return
+end
+Xf = ch.X{f};
+if size(Xf,2) < t
+    return
+end
+[pk, ~] = entry12_vec_peak_(Xf(:,t));
+
+
+function S = entry12_prechild_from_mdp_(MDP, Nm)
+% Nested template before child VB (12D ``out_t1`` context).
+templ = struct('parent_m', 0, 'A2_peak', [], 'B8_peak', [], 'B8_max', []);
+S = repmat(templ, 0, 1);
+for m = 1:Nm
+    if ~isfield(MDP(m),'MDP') || isempty(MDP(m).MDP)
+        continue
+    end
+    ch = MDP(m).MDP;
+    if numel(ch) > 1
+        ch = ch(1);
+    end
+    row = templ;
+    row.parent_m = m;
+    row.A2_peak = entry12_peak_A_g_(ch, 2);
+    if isfield(ch,'B') && numel(ch.B) >= 8 && ~isempty(ch.B{8})
+        [row.B8_peak, row.B8_max] = entry12_vec_peak_(ch.B{8});
+    end
+    S(end+1) = row; %#ok<AGROW>
+end
+
+
+function key = entry12_phase_key_(m, t)
+key = sprintf('m%dt%d', m, t);
+
+
+function entry12_record_phase_(m, t, phase_name, Q, P, O, extra)
+% Append one ordered phase record for ``(m,t)`` (inspection-only timeline).
+global ENTRY12_CAPTURE_CTX
+if isempty(ENTRY12_CAPTURE_CTX) || ~isfield(ENTRY12_CAPTURE_CTX,'enabled') || ~ENTRY12_CAPTURE_CTX.enabled
+    return
+end
+if nargin < 7 || isempty(extra)
+    extra = struct();
+end
+rec = struct('phase', char(phase_name), 'm', m, 't', t);
+rec.Q_f = entry12_q_cells_at_mt_(Q, m, t);
+rec.P_f = entry12_p_cells_at_mt_(P, m, t);
+rec.O_peaks = entry12_o_peaks_at_mt_(O, m, t);
+fn = fieldnames(extra);
+for i = 1:numel(fn)
+    rec.(fn{i}) = extra.(fn{i});
+end
+key = entry12_phase_key_(m, t);
+if ~isfield(ENTRY12_CAPTURE_CTX, 'phases')
+    ENTRY12_CAPTURE_CTX.phases = struct();
+end
+if ~isfield(ENTRY12_CAPTURE_CTX.phases, key)
+    ENTRY12_CAPTURE_CTX.phases.(key) = {};
+end
+ENTRY12_CAPTURE_CTX.phases.(key){end + 1} = rec;
+
+
+function snap = entry12_attach_phase_log_to_snap_(snap, M_active, t)
+% Attach ordered ``entry12_phase_log`` for this boundary ``t``.
+global ENTRY12_CAPTURE_CTX
+if isempty(ENTRY12_CAPTURE_CTX) || ~isfield(ENTRY12_CAPTURE_CTX,'enabled') || ~ENTRY12_CAPTURE_CTX.enabled
+    return
+end
+logs = cell(1, 0);
+for mm = M_active(:)'
+    key = entry12_phase_key_(mm, t);
+    entries = {};
+    if isfield(ENTRY12_CAPTURE_CTX.phases, key)
+        entries = ENTRY12_CAPTURE_CTX.phases.(key);
+    end
+    logs{end + 1} = struct('m', mm, 't', t, 'entries', {entries}); %#ok<AGROW>
+end
+snap.entry12_phase_log = struct('t', t, 'model_logs', {logs});
+
+
+function qf = entry12_q_cells_at_mt_(Q, m, t)
+qf = {};
+try
+    nf = numel(Q(m,:,t));
+    qf = cell(1, nf);
+    for f = 1:nf
+        qf{f} = full(double(Q{m,f,t}(:)));
+    end
+catch
+end
+
+
+function pf = entry12_p_cells_at_mt_(P, m, t)
+pf = {};
+try
+    nf = numel(P(m,:,t));
+    pf = cell(1, nf);
+    for f = 1:nf
+        pf{f} = full(double(P{m,f,t}(:)));
+    end
+catch
+end
+
+
+function peaks = entry12_o_peaks_at_mt_(O, m, t)
+peaks = [];
+try
+    ng = numel(O(m,:));
+    peaks = nan(1, max(ng, 1));
+    for g = 1:ng
+        og = O{m,g,t};
+        if ~isempty(og)
+            [peaks(g), ~] = entry12_vec_peak_(og);
+        end
+    end
+catch
+end
+
+
+function peaks = entry12_a_peaks_at_m_(A, m)
+% Argmax (1-based) per modality on workspace ``A{m,g}`` at ``spm_forwards`` / ``spm_VBX``.
+peaks = [];
+try
+    ng = numel(A(m,:));
+    peaks = nan(1, max(ng, 1));
+    for g = 1:ng
+        Ag = A{m,g};
+        if ~isempty(Ag)
+            [peaks(g), ~] = entry12_vec_peak_(Ag);
+        end
+    end
+catch
+end
+
+
+function entry12_record_vbx_probe_(m, t, Q, O, P, A, idm, F_vbx)
+% After ``spm_VBX`` (~1989): posteriors used before policy search.
+global ENTRY12_CAPTURE_CTX
+if isempty(ENTRY12_CAPTURE_CTX) || ~isfield(ENTRY12_CAPTURE_CTX,'active') || ~ENTRY12_CAPTURE_CTX.active
+    return
+end
+pr = struct();
+pr.m = m;
+pr.t = t;
+if nargin >= 8 && ~isempty(F_vbx)
+    pr.F_vbx = double(F_vbx);
+end
+pr.Q_f = cell(1, numel(Q));
+pr.Q_f_peak = nan(1, numel(Q));
+pr.Q_f_max = nan(1, numel(Q));
+for f = 1:numel(Q)
+    if ~isempty(Q{f})
+        pr.Q_f{f} = full(double(Q{f}(:)));
+        [pr.Q_f_peak(f), pr.Q_f_max(f)] = entry12_vec_peak_(Q{f});
+    end
+end
+Omt = O(m,:,t);
+if iscell(Omt)
+    ng = numel(Omt);
+else
+    ng = numel(Omt);
+end
+pr.O_peaks = nan(1, max(ng, 1));
+pr.O_max = nan(1, max(ng, 1));
+for g = 1:ng
+    try
+        if iscell(Omt)
+            og = Omt{g};
+        else
+            og = Omt(g);
+        end
+        if ~isempty(og)
+            [pr.O_peaks(g), pr.O_max(g)] = entry12_vec_peak_(og);
+        end
+    catch
+    end
+end
+Pmt = P(m,:,t);
+nf = numel(Pmt);
+pr.P_f_t = cell(1, nf);
+for f = 1:nf
+    try
+        if iscell(Pmt)
+            pf = Pmt{f};
+        else
+            pf = Pmt(f);
+        end
+        pr.P_f_t{f} = full(double(pf(:)));
+    catch
+        pr.P_f_t{f} = [];
+    end
+end
+if isfield(idm,'fp')
+    pr.id_fp = idm.fp;
+end
+if isfield(idm,'fu')
+    pr.id_fu = idm.fu;
+end
+if isfield(idm,'iH')
+    pr.id_iH = idm.iH;
+end
+key = sprintf('m%dt%d', m, t);
+ENTRY12_CAPTURE_CTX.vbx.(key) = pr;
+
+
+function entry12_flush_vbx_to_mdp_(MDP, m, t)
+global ENTRY12_CAPTURE_CTX
+if isempty(ENTRY12_CAPTURE_CTX) || ~ENTRY12_CAPTURE_CTX.active
+    return
+end
+key = sprintf('m%dt%d', m, t);
+if isfield(ENTRY12_CAPTURE_CTX.vbx, key)
+    MDP(m).entry12_VBX = ENTRY12_CAPTURE_CTX.vbx.(key);
+end
+
+
 function entry12_dump_bundle_save(dumpSpec, code, OPTIONS, meta_extra, bundle)
 %ENTRY12_DUMP_BUNDLE_SAVE  Write one DEMAtariIII_entry12_<runTag>_<code>.mat (v7).
 if nargin < 5 || isempty(bundle)
@@ -1980,8 +2411,17 @@ Pa       = {};                              % priors over models
 
 % variational (Bayesian) belief updating and free energy (ELBO)
 %--------------------------------------------------------------------------
+global ENTRY12_CAPTURE_CTX
+if ~isempty(ENTRY12_CAPTURE_CTX) && isfield(ENTRY12_CAPTURE_CTX,'enabled') && ENTRY12_CAPTURE_CTX.enabled
+    % ``spm_forwards`` formal ``P`` is workspace beliefs ``Q`` from the caller.
+    entry12_record_phase_(m, t, 'pre_vbx', P, P, O, struct('A_peaks', entry12_a_peaks_at_m_(A, m)));
+end
 [Q,F]    = spm_VBX(O(m,:,t),P(m,:,t),A(m,:),id{m});
 P(m,:,t) = Q;
+if ~isempty(ENTRY12_CAPTURE_CTX) && isfield(ENTRY12_CAPTURE_CTX,'enabled') && ENTRY12_CAPTURE_CTX.enabled
+    entry12_record_phase_(m, t, 'post_vbx', P, P, O, struct('F_vbx', double(F)));
+end
+entry12_record_vbx_probe_(m, t, Q, O, P, A, id{m}, F);
 
 % terminate search at time horizon, or if only one plausible policy
 %--------------------------------------------------------------------------
@@ -2017,8 +2457,20 @@ for k = 1:Nk
 
     % G(k): risk over latent states
     %----------------------------------------------------------------------
+    if t == 1 && m == 1 && k == 1 && Nk >= 6
+        global RGMS_PROBE_12F
+        if isempty(RGMS_PROBE_12F) || ~isstruct(RGMS_PROBE_12F)
+            RGMS_PROBE_12F = struct('G_before_iH', G(1,1), 'ih_term', 0, 'probe_induction', true);
+        end
+    end
+
     for f = id{m}.iH
         G(k,:) = G(k,:) - Q{f}'*(spm_log(Q{f}) - spm_log(H{m,f}));
+        if t == 1 && m == 1 && k == 1 && Nk >= 6
+            global RGMS_PROBE_12F
+            RGMS_PROBE_12F.ih_term = Q{f}'*(spm_log(Q{f}) - spm_log(H{m,f}));
+            RGMS_PROBE_12F.G_after_iH = G(1,1);
+        end
     end
 
     % expected information gain (transition novelty) (B)
@@ -2030,7 +2482,42 @@ for k = 1:Nk
     % inductive constraints over states
     %----------------------------------------------------------------------
     if numel(R)
-        G(k,:) = G(k,:) + spm_dot(R,Q(r));
+        dot_risk = spm_dot(R,Q(r));
+        if t == 1 && m == 1 && k == 1 && Nk >= 6
+            global RGMS_PROBE_12F
+            RGMS_PROBE_12F.spm_dot_R_Q = dot_risk;
+            RGMS_PROBE_12F.R_shape = size(R);
+            RGMS_PROBE_12F.R_max = max(R(:));
+            RGMS_PROBE_12F.R_sum = sum(R(:));
+            RGMS_PROBE_12F.r_factors = r(:)';
+            RGMS_PROBE_12F.R_nz_idx = find(R(:) > 0)';
+            if numel(r) == 1
+                Qflat = full(Q{r});
+            else
+                Qr = cell(1,numel(r));
+                for ii = 1:numel(r)
+                    Qr{ii} = Q{r(ii)};
+                end
+                Qflat = full(spm_cross(Qr{:}));
+            end
+            if numel(RGMS_PROBE_12F.R_nz_idx)
+                RGMS_PROBE_12F.Q_at_R_nz = Qflat(RGMS_PROBE_12F.R_nz_idx(1:min(8,end)));
+            else
+                RGMS_PROBE_12F.Q_at_R_nz = [];
+            end
+            RGMS_PROBE_12F.dot_manual_RQ = R(:)'*Qflat(:);
+            for fi = RGMS_PROBE_12F.r_factors
+                RGMS_PROBE_12F.(['Qf_len_f' num2str(fi)]) = numel(Q{fi});
+                RGMS_PROBE_12F.(['Qf_max_f' num2str(fi)]) = max(Q{fi}(:));
+                RGMS_PROBE_12F.(['Pf_sum_f' num2str(fi)]) = sum(P{m,fi,t}(:));
+            end
+            RGMS_PROBE_12F.done = true;
+        end
+        G(k,:) = G(k,:) + dot_risk;
+        if t == 1 && m == 1 && k == 1 && Nk >= 6
+            global RGMS_PROBE_12F
+            RGMS_PROBE_12F.G_after_dot = G(1,1);
+        end
     end
 
     % and outcomes
@@ -2627,8 +3114,30 @@ end
 
 % Return if there are no intended states or constraints
 %--------------------------------------------------------------------------
-if isempty(hif), R = [];   return, end
-if isempty(hid), R = 32*D;  return, end
+if isempty(hif)
+    global RGMS_PROBE_12F
+    if isstruct(RGMS_PROBE_12F) && isfield(RGMS_PROBE_12F,'probe_induction')
+        RGMS_PROBE_12F.ind_branch = 'empty_hif';
+    end
+    R = [];
+    return
+end
+if isempty(hid)
+    global RGMS_PROBE_12F
+    if isstruct(RGMS_PROBE_12F) && isfield(RGMS_PROBE_12F,'probe_induction')
+        RGMS_PROBE_12F.ind_branch = 'empty_hid';
+        RGMS_PROBE_12F.hid_shape = size(hid);
+        RGMS_PROBE_12F.hid_all_zero = all(hid(:) == 0);
+        RGMS_PROBE_12F.D_is_scalar = islogical(D) && isscalar(D);
+        if islogical(D) && ~isscalar(D)
+            RGMS_PROBE_12F.D_nnz = nnz(D);
+        else
+            RGMS_PROBE_12F.D_nnz = 1;
+        end
+    end
+    R = 32*D;
+    return
+end
 
 % check for RGM
 %--------------------------------------------------------------------------
@@ -2745,6 +3254,20 @@ if any(i)
     P     = P{i}(:,max(n - 1,1));
     R     = reshape(full(P),[Ns,1]);
     R     = 32*and(R,D);
+    global RGMS_PROBE_12F
+    if isstruct(RGMS_PROBE_12F) && isfield(RGMS_PROBE_12F,'probe_induction')
+        RGMS_PROBE_12F.ind_branch = 'full_induction';
+        RGMS_PROBE_12F.hid_shape = size(hid);
+        RGMS_PROBE_12F.hid_all_zero = all(hid(:) == 0);
+        RGMS_PROBE_12F.Nh = Nh;
+        RGMS_PROBE_12F.D_is_scalar = islogical(D) && isscalar(D);
+        if islogical(D) && ~isscalar(D)
+            RGMS_PROBE_12F.D_nnz = nnz(D);
+        else
+            RGMS_PROBE_12F.D_nnz = 1;
+        end
+        RGMS_PROBE_12F.R_nnz_ind = nnz(R(:));
+    end
 
 else
     R     = [];

@@ -1,0 +1,14 @@
+{
+  "python": {
+    "G1": -64.40546510810269,
+    "lane": "python spm_MDP_VB_XXX dump_subentries=False reuse_matlab_draws=True"
+  },
+  "entry12_VB_matlab_src_buf_replay": {
+    "error": "\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\rgms_entry12_rand_scalar.m, line 8, in rgms_entry12_rand_scalar\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\rand.m, line 8, in rand\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_src\\toolbox\\DEM\\spm_MDP_VB_XXX.m, line 2687, in spm_sample\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_src\\toolbox\\DEM\\spm_MDP_VB_XXX.m, line 969, in spm_MDP_VB_XXX\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_src\\toolbox\\DEM\\spm_MDP_VB_XXX.m, line 1203, in spm_MDP_VB_XXX\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\entry12_VB_matlab_src_buf_replay.m, line 29, in entry12_VB_matlab_src_buf_replay\nrgms_entry12_buf exhausted at index 27200 (numel=27199)\n"
+  },
+  "entry12_VB_matlab_buf_replay": {
+    "error": "\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\rgms_entry12_rand_scalar.m, line 8, in rgms_entry12_rand_scalar\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\rand.m, line 8, in rand\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\spm_MDP_VB_XXX_entry12_dump.m, line 2793, in spm_sample\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\spm_MDP_VB_XXX_entry12_dump.m, line 1005, in spm_MDP_VB_XXX_entry12_dump\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\spm_MDP_VB_XXX_entry12_dump.m, line 1240, in spm_MDP_VB_XXX_entry12_dump\n\n  File C:\\Users\\andre\\.cursor\\RGMs\\matlab_custom\\entry12\\entry12_VB_matlab_buf_replay.m, line 34, in entry12_VB_matlab_buf_replay\nrgms_entry12_buf exhausted at index 27200 (numel=27199)\n"
+  },
+  "canonical_mat_12F_G1": -32.4054651081035,
+  "delta_canonical_minus_py": 31.99999999999919
+}

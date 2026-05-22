@@ -29,10 +29,9 @@ FSL 1-11), stderr includes harness ``[XXX 12 run trace]`` at load/save and VB ba
 ``[spm_MDP_VB_XXX 12X] total_s=…`` per band inside ``spm_MDP_VB_XXX.py`` (12E/12F summed). Total VB wall time:
 ``[XXX 12] spm_MDP_VB_XXX wall_s=...``.
 
-**Validation:** after a successful run and a MATLAB ``DEMAtariIII_XXX_12_pdp.mat`` from
-``matlab_custom/dump_pdp_DEM_AtariIII_XXX_12_from_fsl_rdp.m``, run
-``python tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``. See
-``Atari_example.md`` § **Entry 12** (XXX 12 / Validation 12 table).
+**Validation:** after **1a → 1b → 3**, run
+``python tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`` (script **4**).
+See ``Atari_example.md`` § **Entry 12 workflow — four scripts**.
 """
 
 from __future__ import annotations
@@ -181,12 +180,15 @@ def _xxx12_pdp_pkl_out_path() -> Path:
     return Path(__file__).resolve().parent / "fixtures" / "DEMAtariIII_XXX_12_pdp.pkl"
 
 
-def _xxx12_fixtures_dir() -> Path:
+def _xxx12_out_dir() -> Path:
+    raw = str(os.getenv("RGMS_ENTRY12_CAPTURE_OUT_DIR", "")).strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
     return Path(__file__).resolve().parent / "fixtures"
 
 
 def _dump_xxx12_rdp_pkl(rdp: Any) -> None:
-    path = _xxx12_fixtures_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
+    path = _xxx12_out_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as f:
         pickle.dump({"RDP": rdp}, f, protocol=pickle.HIGHEST_PROTOCOL)

@@ -1,0 +1,8 @@
+{
+  "F_live_hook": -0.5877866649034389,
+  "F_py_fixture_OQ": -571.6368033536221,
+  "F_mat_fixture_OQ_same_A_id": -571.6368033536221,
+  "P_maxdiff_py_vs_mat": 7.888609052210118e-31,
+  "O_maxdiff_max": 0.0,
+  "A_modalities": 20
+}

@@ -8898,3 +8898,1384 @@ replay lane.
 **Shared files touched:** no
 
 ---
+
+### Entry 12 — buffer-replay compare + MATLAB rand draw count (2026-05-17)
+
+**Buffer-replay compare** (``matlab_custom/entry12_buf_replay_compare.py``):
+
+| Lane | G{1} | Notes |
+|------|------|--------|
+| Python ``dump_subentries=False``, ``reuse_matlab_draws=True`` | **−64.405** | completes; uses all **K=27199** draws |
+| Canonical 12F MAT (entry12_dump, native RNG) | **−32.405** | reference |
+| MATLAB ``entry12_VB_matlab_src_buf_replay`` | **error** | buf exhausted at index **27200** (numel=27199) |
+| MATLAB ``entry12_VB_matlab_buf_replay`` (dump fork) | **error** | same exhaustion |
+
+**Interpretation:** Cross-lane compare remains open. Canonical **−32.4** is **not** reproduced by Python buffer replay (**−64.4**). MATLAB cannot finish either VB path on the current **v5** buffer (short by **≥1** scalar ``rand()`` for replay; full native count **27263**). **Do not** refresh ``vb_rand_buf``/K without protocol proof.
+
+**MATLAB native ``rand()`` count** (``entry12_matlab_count_rand_draws.m``):
+
+| Path | ``rand()`` calls | G{1} |
+|------|------------------|------|
+| ``dump_subentries=true`` (entry12_dump fork) | **27263** | **−32.405** |
+| ``dump_subentries=false`` (matlab_src body) | **27263** | **−48.854** |
+| Python preflight / replay | **27199** | **−64.405** (replay) |
+
+Same **27263** ``rand()`` on MATLAB for both dump flags; **G{1}** differs → **code-path** divergence, not draw count alone. Python uses **64 fewer** scalar ``rand()`` (logical ``spm_sample``: MATLAB ``randperm``, Python buffer emulation).
+
+**12F value gate:** Validation 12 fails on 12F value assert (type walk OK); XXX 12 pytest passes (PKL only).
+
+**Ranked next:** (1) Probe **Q(r)** at **R** nz (230/457) parent **t=1** (MATLAB native vs Python replay); (2) diff **entry12_dump** vs Python **spm_forwards** / **Qp**; (3) no K refresh without user + v5 proof.
+
+**Files created:** ``entry12_matlab_count_rand_draws.m``, ``entry12_matlab_rand_count.py``, ``entry12_matlab_rand_count_results.json``
+
+**Files modified:** ``matlab_custom/entry12/rand.m``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 — paired Q@R probe (parent t=1, k=1) (2026-05-17)
+
+**Step 1 executed** (not buffer replay / not K refresh): env-gated probe at ``spm_dot(R,Q(r))`` in
+Python ``spm_MDP_VB_XXX.py`` (``RGMS_PROBE_12F_PARENT_T1``) and ``spm_MDP_VB_XXX_entry12_dump.m``
+(``RGMS_PROBE_12F``). Fixed MATLAB probe gate ``Nk >= 6`` (was ``size(B,3)``); fixed dump call
+``(rdp, OPTIONS, dumpSpec)``.
+
+**Paired probe** (``entry12_12f_paired_probe_results.json``):
+
+| Quantity | Python (buf replay) | MATLAB (entry12_dump native) |
+|----------|---------------------|------------------------------|
+| ``PDP_G1`` | −64.405 | −32.405 |
+| ``ih_term`` | 32 | 32 |
+| ``spm_dot_R_Q`` | **0** | **32** |
+| ``G_after_dot`` | −32 | ≈0 |
+| ``R_sum`` | **64** | **32** |
+| ``R_nz_idx`` | **[230, 457]** (0-based) | **TBD 1-based in JSON** |
+| ``Q_at_R_nz`` | **[0, 0]** | **≈1** |
+| ``Qf_max_f1``, ``Pf_sum_f1`` | ≈1 | ≈1 |
+
+**Conclusion:** Marginal ``Q{f}`` peak and ``P`` sum match; **``R`` from induction differs** (Python
+``R_sum=64`` vs MATLAB ``R_sum=32``). Python ``Q=0`` at its ``R`` nz is consistent with **wrong ``R``
+support / joint indexing**, not ``spm_dot`` on matched tensors. Next: diff **`spm_induction`** inputs
+(``P``, ``H``, ``id.hid``, ``B``) — **entry12_dump vs Python body** — not another buffer audit.
+
+**Files modified:** ``spm_MDP_VB_XXX.py`` (env-gated probe), ``spm_MDP_VB_XXX_entry12_dump.m``,
+``entry12_12f_paired_probe.py``, ``logs/log_0.md``
+
+**Shared files touched:** ``spm_MDP_VB_XXX.py`` (inactive unless ``RGMS_PROBE_12F_PARENT_T1`` set)
+
+---
+
+### Entry 12 — spm_induction diff (step 2) (2026-05-17)
+
+**Scope:** Diff ``spm_induction`` at parent ``t=1`` (**entry12_dump** fork vs Python
+``_spm_induction_vb``). No buffer/K refresh.
+
+**Induction-path probes** (extended ``RGMS_PROBE_12F`` / env hook):
+
+| Field | Python | MATLAB (entry12_dump) |
+|-------|--------|------------------------|
+| ``ind_branch`` | ``full_induction`` | ``full_induction`` |
+| ``hid_shape`` | ``1×25`` | ``1×25`` |
+| ``Nh`` | 25 | 25 |
+| ``R_sum`` (post-induction) | **64** | **32** |
+| ``R_nz`` (0-based) | **[230, 457]** | **271** (1-based 272) |
+| ``PDP_G1`` | −64.4 (replay **and** native py) | −32.4 |
+
+**Fixes tried (minimal, induction-only):**
+
+1. ``isempty(hid)`` only — removed ``np.all(hid==0)`` early return (MATLAB
+   ``isempty(hid)`` does **not** treat all-zero matrix as empty). **Necessary;
+   not sufficient** for ``G1``.
+2. ``G`` row assignment — preallocate ``(N+1)×Nh`` and assign ``vec[:ncol]`` without
+   truncating to ``N`` (MATLAB may write row ``N+1``). **No change** to ``R`` / ``G1``.
+
+**Conclusion:** Divergence is inside **full backwards induction** (path mask /
+``p_col``), not ``ih_term``, not marginal ``Qf_max`` / ``Pf_sum``. Python native
+RNG still ``G1≈−64.4`` → not replay-only. Frozen ``entry12_12f_induction_compare.py``
+blocked: toolbox ``spm_induction(B,Q,N,id)`` is 4-arg; entry12 fork is 5-arg local
+function (needs ``entry12_spm_induction.m`` wrapper for engine call).
+
+**Ranked next:** (1) Standalone ``entry12_spm_induction.m`` (copy from dump fork) +
+frozen compare on captured ``B,H,P,N,id``; (2) line diff ``I'*Qf`` / ``Bf`` kron
+vs MATLAB on same inputs; (3) only then minimal production fix in
+``_spm_induction_vb``.
+
+**Files created:** ``entry12_induction_only_probe.m``, ``entry12_12f_induction_compare.py``
+
+**Files modified:** ``spm_MDP_VB_XXX.py``, ``spm_MDP_VB_XXX_entry12_dump.m``,
+``entry12_12f_paired_probe.py``, ``logs/log_0.md``
+
+**Shared files touched:** ``spm_MDP_VB_XXX.py``
+
+---
+
+## Iteration (2026-05-15): frozen induction compare + ``col_idx`` fix
+
+**Blocked on:** ``entry12_12f_induction_inputs.mat`` I/O — ``_cells_column`` used
+``np.asarray(cols, dtype=object)`` which stacked a single ``(485,1)`` vector into
+``(1,485,1)``; ``savemat`` wrote numeric ``485×1`` instead of a ``1×1`` cell. MATLAB
+then failed ``G(j,i)=I'*Qf`` (``64×485``).
+
+**Fix (save):** preallocate ``(n,1)`` object array and assign each cell element.
+
+**Frozen compare** (same ``B,H,Q,N,id`` at parent ``t=1,m=1``):
+
+| | ``R_sum`` | ``R_nz`` |
+|--|-----------|----------|
+| Python (before) | 64 | 230, 457 (0-based) |
+| MATLAB | 32 | 272 (1-based) |
+| Python (after) | 32 | 271 (= MATLAB 272) |
+
+**Root cause:** ``col_idx = max(n_use - 1, 1) - 1`` double-subtracted for 0-based
+``argmax`` row. MATLAB ``P(:,max(n-1,1))`` with 1-based ``n`` → 0-based
+``col_idx = max(int(n_use) - 1, 0)``.
+
+**Paired probe:** ``PDP_G1`` −32.405… Python = MATLAB; ``R_sum=32``, ``spm_dot≈32``.
+
+**Validation 12F:** ``12F.in`` OK; ``out_t1`` / ``out_tT`` still fail on ``O[1]``, ``MDP.F``.
+
+**Files modified:** ``entry12_12f_induction_compare.py``, ``spm_MDP_VB_XXX.py``
+
+**Shared files touched:** yes
+
+---
+
+## 2026-05-15 — Entry 12F compare lane + ``MDP.F`` blocker
+
+**Inspected:** ``12F`` value-assert diag; ``out_tT`` ``MDP.F`` trajectory (``F[0]`` matches MATLAB; ``F[1:]`` Python non-zero vs MATLAB ~0); nested ``MDP.MDP`` policy fields.
+
+**Compare lane (``entry12_matlab_capture.py``):**
+
+- Fixed ``_entry12_strip_nested_mdp_policy_traces`` to descend ``snap → MDP → MDP.MDP`` (was treating parent as child).
+- Strip nested ``R``/``U``/``v``/``w`` on both Python and MATLAB snapshots for value assert; ``skip_template_keys`` on **12F** nested align.
+- ``entry12_12F_mat_snap_for_value_assert`` for Validation 12 / diag mat side.
+
+**Compute probe (``spm_MDP_VB_XXX.py``):**
+
+- ``_vb_o_row_ready_for_model`` now uses ``_tensor_nonempty``; ``_vb_fill_O_empty_from_realized_o`` before forwards (MATLAB ``isempty(O)`` one-hot). Did **not** change ``MDP.F`` drift (``F[1]`` still −0.588 vs MATLAB ~0).
+
+**Results:**
+
+| Capture | Value assert |
+|---------|----------------|
+| ``12F.in`` | OK |
+| ``12F.out_t1`` | OK (after O-flatten + nested strip) |
+| ``12F.out_tT`` | **FAIL** ``MDP.F`` max abs diff ≈ 1.335 (index 13) |
+| **12D / 12E** | Validation 12 OK (regression guard) |
+
+**Next:** bisect ``spm_VBX`` / ``spm_forwards`` scalar ``F`` at ``t≥2`` with frozen ``O,P`` (MATLAB ``F(t)`` ~0 while Python writes VBX ELBO each step).
+
+**Files modified:** ``entry12_matlab_capture.py``, ``spm_MDP_VB_XXX.py``, ``XXX_12_compare_pdp_pkl_to_mat.py``, ``matlab_custom/_diag_12f_value_assert.py``
+
+**Shared files touched:** yes (``spm_MDP_VB_XXX.py``)
+
+---
+
+## 2026-05-15 — Phase 0 baseline + draw audit fix (Entry 12 four-script lane)
+
+**Phase 0 (compare lane):** Reverted ``_entry12_12F_reduce_mdp_F/o/su_to_boundary`` and call sites in ``entry12_align_12F_snap_to_mat`` / ``entry12_12F_mat_snap_for_value_assert``. Kept O-flatten, nested policy strip, ``entry12_12F_mat_snap_for_value_assert``, snap-before-trim in ``spm_MDP_VB_XXX.py``.
+
+**Phase 1 (four-script baseline, ``K=27199``, tag ``rgms_canonical``):**
+
+| Step | Result |
+|------|--------|
+| ``entry12_preflight_vb_rand_k.py`` | OK, ``K=27199`` |
+| ``DEMAtariIII_entry12_dump_all_subentries.m`` | OK, fixtures refreshed |
+| ``test_DEM_AtariIII_XXX_12.py`` (``RGMS_ATARI_RUN_XXX_12=1``) | 1 passed |
+| Validation 12 | **12A–12C, 12D, 12E, 12I** OK; **12F** value assert **FAIL** on ``out_tT`` |
+| ``_diag_12f_value_assert.py`` | ``in`` OK; ``out_t1`` OK; ``out_tT`` **FAIL** ``MDP.F`` max abs diff ≈ 1.335 |
+
+**Artifact bisect (``12F.out_tT``, no new probes):**
+
+- ``PDP.G[0]`` mat = py = **−32.405…** (top-level policy matches).
+- ``MDP.F``: ``F[0]`` matches (−163.367…); mat ``F[1:]`` ≈ 0 (1e−12); py ``F[1]`` ≈ −0.588, ``F[13]`` drives max diff.
+- ``MDP.o`` cols **1–25** match; first mismatch **cols 26–27** (t=26–27).
+- ``out_t1`` parent ``u[0]=5`` matches; ``out_tT`` full ``u`` diverges from index 0 (mat 2 vs py 1) — at ``t=2`` MATLAB **overwrites** ``u(:,1)`` via ``spm_sample(P(:,0))`` (see dump fork ~887), so terminal ``u`` is post-resample, not ``out_t1`` snapshot.
+- **Primary fix target:** ``t=2`` generation lane — ``spm_sample(Pu)`` + ``spm_sample(P{m,f,t-1})`` for ``id.fu`` (draw order / ``P`` prior), then downstream ``F`` / late ``o``.
+
+**Draw audit:** ``entry12_draw_index_audit.py`` — use ``dump_subentries=True``, ``reuse_matlab_draws=True``; patch ``spm_MDP_VB_XXX._VbMatlabRandReplay`` (not outer ``np.random.rand`` shim). After fix: ``total_draws=27199``, ``unused_draws=0``, ``PDP_G1=−32.405…``, parent ``t=1`` forwards ``draw_start=424``.
+
+**Next (Phase 3b):** Bisect first divergent ``spm_sample`` at ``t=2`` (policy ``Pu`` vs control ``P``) using framework artifacts only; minimal fix in ``spm_MDP_VB_XXX.py``; re-run XXX 12 + Validation 12.
+
+**Files modified:** ``entry12_matlab_capture.py``, ``matlab_custom/entry12_draw_index_audit.py``, ``logs/log_0.md``
+
+**Shared files touched:** no (``spm_MDP_VB_XXX.py`` unchanged this iteration)
+
+---
+
+## 2026-05-15 — ``Atari_example.md`` Entry 12 file registry + next steps
+
+**User request:** concise coherent documentation of all relevant Entry 12 files/purposes; conservative file count; consistent approach for **12D**/**12E**/**12F**.
+
+**Updated:** ``Atari_example.md`` § Entry 12 — corrected **12F** status (**``out_t1``** green, **``out_tT``** **``MDP.F``** open); four-script table (**1a/1b/3/4**); **file registry** (authoritative / compare / diagnostics / do-not-use); **12D–12F** mathematical focus; **next steps** (fix **``t=2``** generation in ``spm_MDP_VB_XXX.py`` only).
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-15 — ``Atari_example.md``: **12G** postponed (Atari lane)
+
+**Policy:** Subentry delimitations **12A–12I** unchanged. Band **12G** (**``OPTIONS.B==1``** / ``spm_backwards``) **postponed** for Entry 12 translation and Validation 12 sign-off — ``DEM_AtariIII`` uses ``OPTIONS.B=0``. Code and dump **12G** fixture remain; status **open** kept as non-gating. Phase 1 gate: **12A–12F**, **12H**, final **``PDP``**, **12I**.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-15 — Validation artifact coherence (Entry 12 dump + doc)
+
+**Policy:** All Validation 12 **``.mat``** fixtures must come from **``DEMAtariIII_entry12_dump_all_subentries.m``** (after **1a** preflight) in one **1a→1b→3→4** chain; do not mix dumps from other runners/tags/RNG protocols.
+
+**Updated:** coherence headers in ``DEMAtariIII_entry12_dump_all_subentries.m``, ``spm_MDP_VB_XXX_entry12_dump.m``, ``entry12_preflight_vb_rand_k.py`` docstring; ``Atari_example.md`` § mandatory coherence table + reorganized next steps (Phase A/B/C).
+
+**Files modified:** ``matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m``, ``matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m``, ``tests/oracle/toolbox/DEM/entry12_preflight_vb_rand_k.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Phase B triage: **12G** non-gating + **12F** draw-index root cause at parent **t=2**
+
+**Phase A:** ``XXX_12_compare_pdp_pkl_to_mat.py`` now **skips 12G** with stderr note (postponed / ``OPTIONS.B=0``); no longer sets ``exit_code=1`` on **12G** alone.
+
+**Phase B — Validation 12 (existing paired fixtures, no full chain rerun):**
+
+| Check | Result |
+|-------|--------|
+| **12F.in**, **12F.out_t1** | OK |
+| **12F.out_tT** ``P`` | FAIL — one-hot **swapped** (Python index 1 vs MATLAB index 2; max diff ≈ 1) |
+| **12F.out_tT** ``MDP.F`` | FAIL — max abs diff ≈ **1.335** at index 13 (downstream of **P** / policy row) |
+| **12F.out_tT** ``Q`` | OK |
+
+**Draw replay (``reuse_matlab_draws=True``, ``dump_subentries=True``):**
+
+- Parent **t=2** policy ``spm_sample(Pu)`` uses buffer index **424** → **k=1** (uniform **Np=6**).
+- MATLAB-equivalent policy row needs index **423** → **k=2** (``r≈0.266`` ∈ [1/6, 2/6) vs ``r≈0.154`` at 424).
+- **Extra Python draw** immediately before parent policy: index **423**, **nested child** (``_VB_TIMING_DEPTH==2``), ``_vb_generate_outcomes_if_options_o`` line **2619**, child **``t_idx=1``**, **n=9** likelihood column, ``out=4``.
+- Parent policy at **424** and control at **425** (``n=6`` one-hot **P**) match expected generation order in code.
+
+**Conclusion:** Failure is **not** ``spm_forwards`` at parent **t=1** (audit: zero draws inside forwards at index 424). Fix target is **align nested-child outcome sampling** at child **t=2** with MATLAB so the global ``vb_rand_buf`` index matches before parent **``t=2``** ``spm_sample(Pu)`` — not a compare-lane mask issue.
+
+**Files modified:** ``tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``, ``logs/log_0.md``
+
+**Shared files touched:** no (**``spm_MDP_VB_XXX.py``** unchanged — fix pending)
+
+---
+
+## 2026-05-18 — Entry 12 Phase B: draw-balanced **Pu** + terminal-outcome pairing (12F still open)
+
+**Ran:** draw audit → XXX 12 → Validation 12 → ``_diag_12f_value_assert.py``.
+
+**Draw audit (``K=27199``):** Passes only with paired edits in ``spm_MDP_VB_XXX.py``:
+- ``_vb_prior_QP_paths_states_one_model``: ``Np==0`` → ``spm_sample`` on ``1×1`` ``Pu`` (not skip).
+- ``_vb_generate_outcomes_if_options_o``: nested ``Np==0`` at terminal ``t``, last modality ``g==NG-1`` → MAP (no draw).
+
+Removing either edit breaks replay (exhausted or unused draws). Skipping **two** terminal modalities breaks balance (64 unused).
+
+**Validation 12:** **12A–12E** OK; **12G** skipped (non-gating). **12F:** ``in`` / ``out_t1`` OK; **``out_tT``** still fails — ``P`` one-hot row **1 vs 2** (max diff ≈ 1), ``MDP.F[13]`` ≈ **−1.335** vs ~0. **12H** / final PDP still type-walk noise (unchanged).
+
+**Open:** MAP-at-terminal may preserve **draw count** but not **sampled outcome value** vs MATLAB ``spm_sample``; need settled policy (user) before ``notes/andrew Python Matlab Translation Issues.md``.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``logs/log_0.md``
+
+**Temporary:** ``matlab_custom/_diag_draw_window.py`` (draw-window probe; not required for chain).
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 Phase 0: singular RNG policy documented (`Atari_example.md`)
+
+**User directive:** One mandatory RNG/`spm_sample` policy in the primary ledger; tighten/clarify/test/document **before** resuming Validation **12** / translation debugging; re-verify **12A–12C** (not only **12D–12F**) under consistent replay — do not discard translation work.
+
+**Created/updated:**
+- ``Atari_example.md`` — new § **Phase 1 oracle RNG — mandatory policy** (semantic + four-script oracle + Layer 3 verification gate + subentry re-verify stance + agent forbidden list); **Read this first** pointer; **Next steps** renumbered (**Phase 0** before **A/B/C**); subentry status caveat.
+- ``notes/andrew Python Matlab Translation Issues.md`` — cross-link: sign-off contract lives in ``Atari_example.md``; this file = mechanics only.
+
+**Not done yet (explicit next):** Layer 3 verification run; remove draw-compensation hacks in ``spm_MDP_VB_XXX.py``; fresh **1a→1b→3→4**; refresh subentry green table.
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 Phase 0 executed (faithful RNG path)
+
+**Code hygiene (``spm_MDP_VB_XXX.py``):**
+- Removed terminal MAP/skip in ``_vb_generate_outcomes_if_options_o`` (faithful ``spm_sample`` on all ``GP.A`` outcomes).
+- Nested child: ``child_opts = _default_options_vb()`` (fresh OPTIONS per MATLAB ~1203), not parent ``deepcopy``.
+
+**Layer 3:**
+- Preflight **K=27263** (was 27199; +64 from child ``OPTIONS.O`` fix).
+- MATLAB **1b** refreshed ``vb_rand_buf`` (K=27263).
+- Draw audit: ``total_draws=27263``, ``unused_draws=0``, ``sample_calls_match=true``.
+- XXX 12: passed.
+
+**Validation 12 (fresh ``rgms_canonical`` pair):** **12A–12E**, **12I** OK; **12G** skipped; **12D** partial (``out_tT`` type-only); **12F** value assert **FAIL** on ``out_tT.MDP.F`` (≈1.335 at index 13); **12H**/final **PDP** open. Phase **0** draw gate **passes**; Phase **B** blocker unchanged.
+
+**Also:** ``Atari_example.md`` Phase 0 step order corrected (hygiene before verify).
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 Phase B resumed (12F ``MDP.F`` localization)
+
+**Context:** Hardware interrupt; resumed Phase **B** (Phase **0** draw gate green; no ``vb_rand_buf`` refresh without full **1a→1b→3→4**).
+
+**Diagnostics:** ``12F.out_tT.MDP.F`` still fails (47/64 indices; MATLAB ``F[1:]≈0``, Python non-zero e.g. ``F[1]≈-0.588``). **12E** ``O`` OK; PDP ``o``/``s``/``u`` OK. Snap ``spm_VBX`` at ``t=2`` ≠ stored ``F[1]`` (post-belief ``P`` in snap).
+
+**Code:** ``spm_forwards`` early return ``nk*Ni==1``; env ``RGMS_DEBUG_ENTRY12_F_T2`` → ``matlab_custom/entry12_f_t2_runtime_debug.pkl``.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 capture schema: ``out_t2`` / ``out_t3`` (12D–12F)
+
+**User directive:** Extend authoritative MATLAB dump fork (script **1b**) and Python mirror for **12D/12E/12F** boundaries at **t=2** and **t=3**; no ad-hoc partial VB.
+
+**MATLAB (``spm_MDP_VB_XXX_entry12_dump.m``):** Added ``entry12_assign_t_boundary``; bands **12D/12E/12F** now save ``in``, ``out_t1``, ``out_t2``, ``out_t3``, ``out_tT`` at the same loop semantic points as before.
+
+**Python:** ``_entry12_assign_t_boundary`` in ``spm_MDP_VB_XXX.py``; ``ENTRY12_LEAN_BOUNDARY_KEYS`` in ``entry12_matlab_capture.py``; Validation **4** value asserts extended (**12D**: through ``out_t3``; **12F**: through ``out_tT``).
+
+**Policy cleanup:** Removed ``RGMS_ENTRY12_STOP_AFTER_T``, ``RGMS_DEBUG_ENTRY12_F_T2`` hooks; deleted ``run_entry12_vb_stop_t2_debug.py``, ``_diag_12f_spm_vbx_t2.py``, ``_diag_12f_matlab_vbx_t2.py``, ``_diag_12f_O_P_compare.py``.
+
+**Docs:** ``Atari_example.md`` Phase **A/B** next steps; ``DEMAtariIII_entry12_dump_all_subentries.m`` header (``rng(2)`` RDP lane).
+
+**Not run this iteration:** Full **1a→1b→3→4** (required before trusting Validation **12** on **12D–12F**).
+
+**Files read:** ``spm_MDP_VB_XXX_entry12_dump.m``, ``spm_MDP_VB_XXX.py``, ``entry12_matlab_capture.py``, ``XXX_12_compare_pdp_pkl_to_mat.py``, ``Atari_example.md``, ``DEMAtariIII_entry12_dump_all_subentries.m``
+
+**Files created:** none
+
+**Files modified:** ``matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m``, ``matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m``, ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``python_src/toolbox/DEM/entry12_matlab_capture.py``, ``tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``, ``matlab_custom/_diag_12f_value_assert.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Files deleted:** ``matlab_custom/run_entry12_vb_stop_t2_debug.py``, ``matlab_custom/_diag_12f_spm_vbx_t2.py``, ``matlab_custom/_diag_12f_matlab_vbx_t2.py``, ``matlab_custom/_diag_12f_O_P_compare.py``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Phase A chain (1a→1b→3→4) + MATLAB boundary assign fix
+
+**1a:** ``K=27263`` → ``entry12_vb_rand_K.mat``.
+
+**1b (first pass):** Mats wrote but **12D–12F** had only ``in`` — root cause: ``entry12_assign_t_boundary`` mutated a **copy** (MATLAB pass-by-value). **Fix:** function returns ``ws``; callers ``D12 = entry12_assign_t_boundary(...)`` (same for **E12**, **F12**).
+
+**1b (second pass):** **12F.mat** keys ``in,out_t1,out_t2,out_t3,out_tT`` confirmed.
+
+**Draw audit:** ``total_draws=27263``, ``unused_draws=0``, ``sample_calls_match=true``.
+
+**3:** XXX 12 passed.
+
+**4:** exit **1** — **12A–12C** OK; **12D** value assert crashed on ``out_t2`` (**F/G/Z** type flatten); **12F** (diag): ``in``/``out_t1`` OK; ``out_t2``/``out_t3`` ``MDP.F`` max diff ≈ **0.588**; ``out_tT`` ≈ **1.335** @ index **13**.
+
+**Phase B next:** fix ``spm_MDP_VB_XXX.py`` using **12F.out_t2**; extend **12D** compare-lane for boundary **F/G/Z** shapes.
+
+**Files modified:** ``matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 causal boundary order (12D->12E->12F)
+
+**User constraint:** validate in VB temporal order; earlier failure invalidates later boundaries.
+
+**Framework:** ``ENTRY12_CAUSAL_BOUNDARY_STEPS`` (15 steps); ``entry12_assert_causal_def_boundaries``; ``_diag_entry12_causal_boundaries.py``; Validation **12** runs causal assert when processing **12F** (after align-only **12D/12E**).
+
+**Compare lane:** **12D** ``F/G/Z`` use ``trace_slot=t_idx-1`` (early snap shows prior column); shared ``_entry12_align_boundary_mdp_fgz``.
+
+**Causal result (fresh ``rgms_canonical`` pair):** **OK** through **12F.out_t1**; **first failure** **12D.out_t2.MDP.MDP.R** (``numel py=0 mat=2``) — nested child ``R`` not populated after **t=1** hierarchical VB. **Not** **12F.out_t2** first (downstream).
+
+**Phase B focus:** fix child policy ``R`` / ``Np`` on hierarchical return before **12E.out_t2** or **12F** at **t=2**.
+
+**Files modified:** ``entry12_matlab_capture.py``, ``XXX_12_compare_pdp_pkl_to_mat.py``, ``matlab_custom/_diag_entry12_causal_boundaries.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Document Entry 12 causal boundary order in Atari_example.md
+
+**Added:** ``### Entry 12 — causal boundary validation order (framework)`` (two-axis table, 15-step pattern, rules, implementation pointers, current baseline). Cross-links in status, Phase B, file registry, agent forbidden list.
+
+**Files modified:** ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 framework enforcement (agent memory contract)
+
+**User request:** Entry 12 constraints must be obvious and binding whenever ``Atari_example.md`` / Entry 12 is raised.
+
+**Changes:**
+- ``rules/rgms-rules.mdc``: authoritative docs + § **Entry 12 — Atari_example.md framework (mandatory)** (trigger, read order, pillars A/B/C, forbidden list).
+- ``Atari_example.md``: **AGENT MANDATORY** callout at § Entry 12; strengthened **Read this first** item 8.
+- ``RGMs/.cursor/rules/entry12-atari-framework.mdc``: repo-local always-apply duplicate.
+
+**Files modified:** ``C:\Users\andre\.cursor\rules\rgms-rules.mdc``, ``Atari_example.md``, ``RGMs/.cursor/rules/entry12-atari-framework.mdc``, ``logs/log_0.md``
+
+**Shared files touched:** no (workspace rule path outside RGMs)
+
+---
+
+## 2026-05-18 — Entry 12 Phase B: ``12D.out_t2.MDP.MDP.R`` (Np==0 policy trace)
+
+**Root cause:** When ``Np==0``, MATLAB still writes ``R{m}(:,t)=spm_softmax(G)`` as **1×T** (e.g. child ``R`` **1×2**); Python kept ``R_policy`` as **0×T** and skipped writes.
+
+**Fix (``spm_MDP_VB_XXX.py``):**
+- ``R_policy`` prealloc ``max(1, Np(m))`` rows (matches ``BP``/``IP`` shell).
+- ``_vb_belief_after_forwards``: separate ``G_for_R`` (1-row softmax when ``Np==0``) from ``G_work`` returned for ``MDP.G{t}``.
+- ``_vb_assemble_mdp_results_1691``: when ``V{m}`` is **0×Nf**, keep generative ``MDP.U`` (1×Nf) instead of empty sparse (12D ``out_t2`` ``MDP.MDP.U`` numel).
+
+**Causal chain (``rgms_canonical``, after **3→4** pkl refresh):** **OK** through **12D.out_t2** and **12F.out_t1…out_t3**; **first failure** **12E.out_t2.O[3]** (max abs diff ≈0.44).
+
+**Next:** hierarchical outcome ``O{m,g,t}`` at parent ``t=2`` only (do not debug **12F** at same ``t`` first).
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12: Validation 12 + XXX 12 complementary workflow; ``mdp.Q`` structure
+
+**User constraint:** Validation **12** and **XXX 12** must be used together; intermediate **structure** (``.mat`` ``loadmat`` layout) is mandatory, not pytest numeric spot-checks alone.
+
+**Compare lane (`entry12_matlab_capture.py`):** ``_entry12_align_Q_record_to_mat``, ``_entry12_Q_O_level_to_mat_cells`` — matrix ``Q.O{L}`` ↔ flat cell row; ``Q`` wired into ``_entry12_align_12D_mdp_branch``.
+
+**Compute (`spm_MDP_VB_XXX.py`):** ``_vb_hierarchical_q_field_to_cell_row`` + ``_vb_hierarchical_q_append_level`` — ``O`` stays ``ng×T`` matrix for ``S→O`` ``size(...,2)``; ``Y,j,P,X,s,u`` append as MATLAB-style cell rows (not raw tensor ``q_concat``).
+
+**After XXX 12 refresh:** **12E.out_t2.O[3]** still **maxdiff ≈0.44** (compute open). Causal chain advances past ``Q.O`` / ``Q.Y`` type stops; **first failure** now **``12F.out_t1.MDP.MDP.Q.P[0]: numel py=14 mat=28``** (structure). **``Atari_example.md`:** § **XXX 12 and Validation 12 together** + Phase **B** status.
+
+**Next:** align/append **``Q.P``** / **``Q.X``** (and remaining ``Q.*``) to **`.mat``** cell layout; re-run **Validation 12** full; then **12E.out_t2** value + **S→O** probe at parent **t=2**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``python_src/toolbox/DEM/entry12_matlab_capture.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12: XXX 12 refresh; ``Q.Y`` column-major flatten
+
+**Completed:** Interrupted **XXX 12** regenerate pickles (**``Q.P``** per-factor **hstack** already in tree).
+
+**Compute (`spm_MDP_VB_XXX.py`):** ``_vb_hierarchical_q_ot_grid_to_cell_row`` — ``mdp.Y{o,t}`` / ``mdp.j{g,t}`` → cell row column-major (fix: was only first ``min(T,max_o)`` rows → **4** cells vs **18**).
+
+**After 3→4 (`rgms_canonical`):** **XXX 12** pass; causal **STOP** ``12F.out_t1.MDP.MDP.Q.Y[1]`` (``mdp.Y{2,1}`` predictive wrong); **12E.out_t2.O[3]** maxdiff ≈**0.44** still (direct check).
+
+**Next:** ``_vb_posterior_predictive_Y`` / ``spm_parents`` for nested child ``Y``; causal then **12E.out_t2**.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Validation 12: causal 12D→12E→12F gate runs first
+
+**Change (`XXX_12_compare_pdp_pkl_to_mat.py`):** ``_run_entry12_causal_boundary_gate`` prints **15** step labels and runs ``entry12_assert_causal_def_boundaries`` **before** input **RDP** and the **12A–12I** loop; removed duplicate causal block on subentry **12F**.
+
+**Verified:** full Validation **12** log shows causal **FAIL** at ``12F.out_t1.MDP.MDP.Q.Y[1]`` before RDP/subentry walks.
+
+**Docs:** ``Atari_example.md`` — required loop is XXX 12 → Validation 12 only (causal section at top of output file).
+
+**Files modified:** ``tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``, ``Atari_example.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12: Validation 12 holistic causal report + compare-lane honesty
+
+**Policy (authoritative):** ``Atari_example.md`` § **Entry 12 — Validation 12 and compare-lane honesty (mandatory)** — dump schema table, allowed vs forbidden align, report-all / fix-first workflow. AGENT MANDATORY read order updated (honesty section before RNG). ``rules/rgms-rules.mdc`` Entry 12 read list aligned.
+
+**Code:** ``entry12_matlab_capture.py`` — ``Entry12CompareLaneError``; align no longer ``deepcopy(mat_…)`` on ``Q.O``/``Y``/missing keys/``12E`` leaves; ``entry12_assert_causal_def_boundaries`` returns **list** of all failures (15 steps). ``XXX_12_compare_pdp_pkl_to_mat.py`` prints numbered causal failures + “fix at first red”.
+
+**Next:** run **3→4** on ``rgms_canonical`` pair; use full causal list as XXX work inventory.
+
+**Files modified:** ``Atari_example.md``, ``python_src/toolbox/DEM/entry12_matlab_capture.py``, ``tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``, ``matlab_custom/_diag_entry12_causal_boundaries.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``rules/rgms-rules.mdc``, ``logs/log_0.md``
+
+**Shared files touched:** ``rules/rgms-rules.mdc`` (Entry 12 read order + pillar C one-liner)
+
+---
+
+## 2026-05-18 — Remove interim Python belief guard (skip ``spm_forwards``)
+
+**Salvaged:** ``_vb_fill_O_empty_from_realized_o`` (MATLAB ``isempty(O)`` → ``spm_one_hot`` from realized ``MDP.o``).
+
+**Removed:** ``_vb_placeholder_pu_carry_softmax``, ``_vb_o_row_ready_for_model``, and ``continue`` that skipped ``spm_forwards`` + ``_vb_belief_after_forwards``. MATLAB always calls belief/forwards per model; uniform ``Pu`` placeholder was partial-port debt only.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Salvaged ``O`` fill placed at 12E→12F seam (4-script framework)
+
+**Code:** ``_vb_fill_O_empty_from_realized_o_at_t`` after hierarchical outcomes, before **12E** snap / **12F** belief; removed per-model call inside forwards loop. Primary **12E** path unchanged in ``_vb_generate_outcomes_if_options_o``.
+
+**Docs:** ``Atari_example.md`` — **Script 3 compute contract** under four-script table; **12F** row updated.
+
+**Files modified:** ``python_src/toolbox/DEM/spm_MDP_VB_XXX.py``, ``Atari_example.md``, ``notes/andrew Python Matlab Translation Issues.md``, ``logs/log_0.md``
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Four-script + Atari_example coherence audit (read-through)
+
+**Reviewed:** scripts **1a**–**4** and `Atari_example.md` Entry 12 sections (Phase 1 framework, four scripts, Validation 12 honesty, causal order).
+
+**Fixes:** Validation **12** RDP `.mat` default → `DEMAtariIII_XXX_12_rdp.mat`; subentry/RDP pkl paths honor `RGMS_ENTRY12_CAPTURE_OUT_DIR`; **XXX 12** RDP pickle + docstring; Atari report-all / RDP lane / **12D** status bullets.
+
+**Files modified:** `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_XXX_12.py`, `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12 agent anchor (goal vs means) in existing docs
+
+**Atari_example.md:** § **Read this first** split (Entry 12 quartet first vs Entries 1–11); § **Goal vs means (agent anchor)**; Entry 12 reply rule in § **Agent behavior**; mandatory read order updated; four-script + RNG sections marked instrumentation; subentry / Phase B / causal baselines marked **historical**; living status = Validation **12** output file.
+
+**rules/rgms-rules.mdc:** Entry 12 read order + proof target + response contract; end-of-iteration Entry 12 fields (proof target, scripts run, first causal red).
+
+**matlab_custom/entry12/README_entry12_matlab_capture.md:** goal vs instrumentation banner.
+
+**Files modified:** `Atari_example.md`, `rules/rgms-rules.mdc`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`rules/rgms-rules.mdc`)
+
+---
+
+## 2026-05-19 — Entry 12: refresh XXX 12 + honest causal gate + Validation 12
+
+**Scripts run:** **3** (`pytest test_DEM_AtariIII_XXX_12.py`, `wall_s≈25s`, pkls refreshed) → **4** (`XXX_12_compare_pdp_pkl_to_mat.py`, exit 1).
+
+**Compare-lane fix:** `entry12_assert_causal_def_boundaries` aligned the **full** 12D/12E/12F workspace on every causal step, so e.g. `12D.in` failed when `out_t2` had bad `Q.O`. Now aligns **only** the lean snap under test (`entry12_align_*_snap_to_mat`).
+
+**Validation 12 after fix (8/15 red):** first causal red **`12F.out_t1`** — `Q.O` compare-lane row overflow (py matrix 553×2 vs mat flat 222 cells × 5). **`12E.out_t2.O[3]`** value diff ≈0.44 still listed. Next: **`spm_MDP_VB_XXX.py`** hierarchical `mdp.Q.O{L}` vs MATLAB `[mdp.Q.O{L} mdp.O]` layout (~1271).
+
+**Files modified:** `python_src/toolbox/DEM/entry12_matlab_capture.py`, `logs/log_0.md`
+
+**Temporary:** `matlab_custom/xxx12_rerun_stderr.log` (pytest tee; may delete)
+
+**Shared files touched:** no (capture/compare lane only)
+
+---
+
+## 2026-05-19 — Entry 12 Phase B: Y sizing fix + full 3→4 refresh
+
+**Scripts run:** **3** (`pytest test_DEM_AtariIII_XXX_12.py`, ~49s, pass) → **4** (`XXX_12_compare_pdp_pkl_to_mat.py`, exit 1).
+
+**Compute (`spm_MDP_VB_XXX.py`):** `_vb_posterior_predictive_Y` — allocate `MDP.Y{o,t}` with **`Ng`** outcome modalities (MATLAB index `o`), not `max(No)`.
+
+**Compare-lane (`entry12_matlab_capture.py`):** removed `Q.O` matrix shortcut that returned `ndarray` (masked row-count mismatch with type `ndarray` vs `list`); `Y` flatten uses `_entry12_flatten_O_ng_t_mat`.
+
+**Causal after refresh (8/15 red):** **`Y` 9 vs 222 gone.** First red **`12F.out_t1`** — honest compare-lane `Q.O` row overflow at **g=110** (py rows **553**, mat expects **555** for flat `Q.O` col0). Child `O` at mods **109–111**: py sizes **2, 2, 9** vs mat **5** each; py `A` **(2,2)/(2,2)/(9,9)** at snap. **`12E.out_t2.O[3]`** ≈0.44 still listed (not first).
+
+**Next:** `spm_MDP_VB_XXX.py` — child/parent `O` / `Q.O` row layout for modalities **109–111** (not more compare-lane masking).
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/entry12_matlab_capture.py`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: Q.O flat cell row + GP.A deepcopy (3→4 refresh)
+
+**Scripts run:** **3** (~41s, pass) → **4** (exit 1).
+
+**Compute (`spm_MDP_VB_XXX.py`):**
+- `gpm["A"]` / `GA`/`GB`/`GU` — `copy.deepcopy` at **12B** init (MATLAB `GP(m).A` frozen vs workspace `A{m,g}` updates).
+- `_vb_hierarchical_q_append_level` — append child `mdp.O` as MATLAB flat **`Ng×T`** cell row (not dense `hstack` matrix); `_vb_hierarchical_q_o_field_to_cell_row`, `_vb_hierarchical_q_O_prev_ncols(..., ng=…)`.
+
+**Compare-lane:** overflow message reports `py rows` vs `mat rows` when split fails.
+
+**Causal after refresh (8/15 red):** **`Q.O` row-overflow gone.** First red **`12F.out_t1.MDP.MDP.Q.O[24]: max abs diff=1.0`** (value). **`12E.out_t2.O[3]`** ≈0.44 still listed (not first).
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/entry12_matlab_capture.py`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: ground-truth comments + `O{g,t}` init policy (3→4 refresh)
+
+**Scripts run:** **3** (~60s, pass) → **4** (exit 1).
+
+**Docs/comments (no compare-lane change):**
+- `spm_MDP_VB_XXX.py`: cite `matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m` ~732–752, ~913–985, ~1178–1203, ~1238, ~1759–1764; avoid ``OPTIONS.O`` as shorthand in docstrings.
+- `notes/andrew Python Matlab Translation Issues.md`: § child init ``MDP(m).O{g,t}`` vs dense ``S→O`` (~732–752 / ~1189–1191).
+
+**Compute (prior pass, kept):** `_vb_mdp_O_is_cell_gt_layout` — skip ~732–752 on dense ``mdp.O`` after ``S→O`` (mirror ``catch`` ~747–748).
+
+**Causal after refresh (8/15 red):** first red still **`12F.out_t1.MDP.MDP.Q.O[1]: max abs diff=1.0`**. Next: child ``O{m,g,t}`` ~913–985 / assemble ~1759–1764 for flat index **1** (modality **2**, ``t=1``).
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: pre-compute code read (bands ~732–752, ~913–985, ~1169–1238, ~1759–1764)
+
+**Read (ground truth `matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`):** hierarchical `rmfield`/`S→O`/recurse (~1169–1203); init `MDP.O{g,t}` vs `catch` (~732–752); outcome `for g` / `for o=i` / `GP.A{g}` (~919–967); `Q.O` append + `shiftdim` (~1238, ~1759–1764).
+
+**Validation 12 (3→4):** still **8/15**; first red **`12F.out_t1.MDP.MDP.Q.O[1]`** (flat index **1** = modality **2**, ``t=1``). Aligned probe: py `O`/`Q.O[1]` peak outcome **5**; mat peak **2**; both `o(g,t)=5`; init `GP.A{2}(:,s(j,t))` column peaks **5** for snap `s(8,t)=1`.
+
+**Next compute (one band):** diff `O{m,2,t}` at child **first** `t` inside ~913–967 (not compare-lane); use **12E** snaps / `O_shell` if needed — do not re-litigate init unless `.m` ~732–752 reread says otherwise.
+
+**Files modified:** `spm_MDP_VB_XXX.py` (docstrings only this pass), `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: Validation 12-only inspection policy (no ad-hoc probes)
+
+**User policy (incorporated):** Script **4** is the sole approved object/process inspection on paired **1b/3** artifacts from one **1a→1b→3→4** run. Ad-hoc probes forbidden: (1) may violate singular **`vb_rand_buf`** replay / paired run; (2) tunnel-vision fixes that break other causal steps.
+
+**Docs modified:** `Atari_example.md` (§ What Validation 12 is for; § Why ad-hoc probes are forbidden; agent forbidden list), `rules/rgms-rules.mdc` (Entry 12 read list + inspection contract + forbidden probes).
+
+**Files modified:** `Atari_example.md`, `rules/rgms-rules.mdc`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: Validation 12 full scope (not only 12D–12F)
+
+**Clarification:** Script **4** = causal **12D–12F** (first-red fix queue) + input **RDP** + **12A–12I** (12G non-gating) + **final PDP** on one paired run. Phase **1** exit **0** requires full pass.
+
+**Docs modified:** `Atari_example.md`, `notes/andrew Python Matlab Translation Issues.md`, `rules/rgms-rules.mdc`.
+
+**Files modified:** `Atari_example.md`, `notes/andrew Python Matlab Translation Issues.md`, `rules/rgms-rules.mdc`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: `Q.O` append / cell padding (3→4; first red unchanged)
+
+**Scripts run:** **3** (pass ~50s) → **4** (exit 1).
+
+**`.m` read:** ~913–985 outcome `O{m,o,t}` / `GP.A{g}`; ~1169–1203 hierarchical child; ~1238 `mdp.Q.O{L}=[.. mdp.O]`.
+
+**Compute:** `_vb_o_cell_to_column`; cell-row `Q.O` append kept; matrix-only `hstack` reverted (553 vs 555 overflow).
+
+**Causal:** first red still **`12F.out_t1.MDP.MDP.Q.O[1]: max abs diff=1.0`**.
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: outcome generation band fixes (3→4; first red unchanged)
+
+**Scripts run:** **3** (pass ~61s) → **4** (exit 1). Draw audit: `unused_draws=0`, `sample_calls_match=true`.
+
+**Compute (`spm_MDP_VB_XXX.py` only):**
+- `_vb_gp_A_outcome_column` — explicit ``GP(m).A{g}(:,ind{:})`` for 2-D / ND sparse likelihoods (~961–967).
+- Generation loop: ``ng_loop = min(NG, len(O_shell))``; bound ``o_idx`` on shell + ``mdp.o`` rows (not ``NG`` alone).
+- Init ``mdp.o`` rows ``max(Ng, NG)``; assemble ``mdp.O`` with ``ng_out = max(Ng, NG)`` for ``shiftdim`` (~1764).
+
+**Paired 12F fixture inspection (framework artifacts, not ad-hoc probe):**
+- ``Q.O`` flat **0**: py/mat agree (outcome 3).
+- ``Q.O`` flat **1** (``t=0,g=1``): py one-hot outcome **5**, mat one-hot outcome **2** → first causal red.
+- ``Q.O`` flat **111** (``t=1,g=0``): py outcome **2**, mat outcome **5** (swap-like pair with flat **1**).
+- Child ``o(2,1)`` and ``o(2,2)`` match py/mat (**5**); py ``mdp.O`` consistent with ``Q.O``; mat ``Q.O[1]`` ≠ mat ``o(2,1)``.
+
+**Causal:** first red still **`12F.out_t1.MDP.MDP.Q.O[1]: max abs diff=1.0`**.
+
+**Next compute (same band):** RNG order / path-state seam before ``spm_sample`` on ``GP.A{g}`` between child ``(t=0,g=1)`` and ``(t=1,g=0)`` — not compare-lane, not **12E.out_t2**.
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-19 — Entry 12: create `12DEF.md` core subgoal document; wire into `Atari_example.md`
+
+**User request:** Add **`12DEF.md`** as core required Entry 12 document (full prose findings log); reference project context, **`Atari_example.md`**, four-script framework, incremental-update policy; add to Entry 12 mandatory reading as **current subgoal document**.
+
+**Created:** `12DEF.md` — 12D/12E/12F semantics, GP vs workspace A, O shell and Q.O flat indexing, hierarchical child, RNG/draw audit, paired-fixture Q.O cells 0/1/111/112, living first red, attempted compute edits, next-focus.
+
+**Modified:** `Atari_example.md` — **Read this first** item 6; **AGENT MANDATORY** item 6; **Goal vs means** “Current subgoal document”; **Phase 1 framework** cross-ref; **file registry** row for **`12DEF.md`**.
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-18 — Entry 12: rerun scripts 3 and 4; expand `12DEF.md` from output logs
+
+**Scripts run:** **3** pytest `test_DEM_AtariIII_XXX_12.py` (pass ~61s, wall_s=58.89) → **4** default (exit 1, 11/15 causal red, first `12D.in.MDP.H` unsupported sparse) → **4** `--coerce-sparse-to-dense-for-compare` (exit 1, 8/15 red, first `12F.out_t1.MDP.MDP.Q.O[1]`).
+
+**Synthesized into `12DEF.md`:** script 3 fixture writes; script 4 causal vs full validation order; coerced vs default first-red; full failure inventories; green steps (7/15); band interpretation; input RDP checkX/type-walk OK before sparse `RDP.A[0]` abort on default path.
+
+**Files modified:** `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: expand `12DEF.md` with full `_output.txt` walkthrough
+
+**User feedback:** prior `12DEF.md` synthesis too thin; require thorough line-level documentation of both output logs.
+
+**Action:** Replaced script 3/4 sections with **Authoritative run logs** (~200+ lines): complete script **3** transcript (52 lines); script **4** Sections A–D (causal, RDP probes, 12A–12I walks, PDP). Full **12D**/**12F** type-walk path inventories from completed coerced run (~259k line tee).
+
+**Files modified:** `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: review and restructure `12DEF.md` for document intention
+
+**Review:** Reordered (Living status + semantic findings before appendix); document map, maintenance protocol, artifact relationships; fixed cross-refs/dates; appendix purpose paragraph.
+
+**Files modified:** `12DEF.md`, `logs/log_0.md`
+
+**Temporary:** `misc/_reorder_12def.py` created and deleted for section reorder.
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: `12DEF.md` anti-circle / context pass
+
+**User request:** Keep `12DEF.md` as core subgoal doc; determine updates needed to provide context and avoid debugging circles.
+
+**Action:** Compared living tee (coerced script **4**, first red still `12F.out_t1.MDP.MDP.Q.O[1]`, 8/15 red) to doc. Added **Closed investigation loops**, **First-red chronology**, **Settled non-compute fixes**, **Agent investigation workflow**; clarified work inventory vs fix target **[1]…[8]**; made `--coerce-sparse-to-dense-for-compare` mandatory for status; strengthened maintenance protocol and document map. No new **3→4** run this iteration.
+
+**Files modified:** `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: investigate `12F.out_t1.MDP.MDP.Q.O[1]` (Pu_carry fidelity tweak)
+
+**Workflow:** Read **`12DEF.md`** / closed loops; script **3** pass (`wall_s≈39.7s`); **`_diag_entry12_causal_boundaries.py`**; coerced script **4** causal block (first red unchanged).
+
+**Compute:** **`spm_MDP_VB_XXX.py`** — at **`t_idx>0`** always run policy prior path (MATLAB ~823); fallback **`Pu=ones`** if **`Pu_carry`** unset. No change to first red; draw audit **`sample_calls_match=true`**.
+
+**Conclusion:** Swap at flat **1** / **111** likely **`GP.A(:,ind)`** / **`spm_parents`** / child **`s(j,t)`** at generative sites **`(t=0,g=1)`** and **`(t=1,g=0)`**, not global draw-count drift. Next: per-site state/column audit on paired **12F** nested snap.
+
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: `12DEF.md` further investigation guide for `Q.O[1]`
+
+**User request:** Update appropriate file for investigating `12F.out_t1.MDP.MDP.Q.O[1]` more thoroughly given 2026-05-20 session (draw audit match, Pu tweak failed, GP.A/parents bias).
+
+**Action:** Added **`Further investigation — Q.O[1]` mismatch`** to **`12DEF.md`**: 2×2 flat-index table, hypotheses A/B, ruled-out table, per-site checklist, code map, authorized audit extensions; refined **Living status** leading hypothesis and **RNG** paragraph.
+
+**Files modified:** `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: Q.O A/B via authorized causal diag (removed ad-hoc probe)
+
+**User:** Proceed within four-script framework; no standalone pickle probes.
+
+**Actions:** Deleted `matlab_custom/_diag_entry12_qo_hypotheses_ab.py`. Extended `matlab_custom/_diag_entry12_causal_boundaries.py` with `[causal][qo-ab]` (same loaders as script **4**). Ran causal diag + draw audit (`sample_calls_match=true`).
+
+**Findings:** At flat **1** / **111**, py/mat match `j`, `i`, `s`, `ind`, `o(o,t)`; only `Q.O` peaks swap. Hypothesis A falsified on snap; next compute = `Q.O` recording/flatten. Updated `12DEF.md`.
+
+**Files modified:** `matlab_custom/_diag_entry12_causal_boundaries.py`, `12DEF.md`, `logs/log_0.md`
+
+**Files deleted:** `matlab_custom/_diag_entry12_qo_hypotheses_ab.py`
+
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: shiftdim / `Q.O` flatten investigation (Phase 1 plan)
+
+**Phase 1 (script 4 causal-only, coerced):** Confirmed first red had been **`Q.O[12]`**; **`[qo-ab]`** showed **`o`** match at **`(0,12)`** but py/mat **`Q.O`** differed — mat **`Q.O[12]`** peak aligned with **`o(6,0)`**, not **`o(12,0)`**, under wrong index **`t*Ng+g`**.
+
+**Root cause:** Post-``shiftdim`` **`T×Ng`** ``mdp.O`` must flatten for ``mdp.Q.O`` append in MATLAB ``(:)`` order (**`k = t + g*T`**), not **`t*Ng+g`**. Verified **222/222** peak match on py **`O[t][g]`** vs mat flat **`Q.O`** after reorder.
+
+**Changes:** `spm_MDP_VB_XXX.py` — `_vb_hierarchical_q_o_field_to_cell_row` (removed hybrid swap; **`g`/`t`** loops); `_vb_hierarchical_q_ot_grid_to_cell_row` (**`o+t*Ng`** for **`Q.Y`**). `entry12_matlab_capture.py` — `_entry12_q_o_flat_index_t_shiftdim`, compare lane index fix; qo-ab flat labels.
+
+**3 → 4:** **`Q.O`** causal reds cleared; first red **`12F.out_t1.MDP.MDP.Q.Y[5]`** (8/15 red). **`12DEF.md`** living status + **§ shiftdim → Q.O flatten** updated.
+
+**Files read:** `spm_MDP_VB_XXX.m`, paired **12F** fixtures, script **4** tee  
+**Files modified:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`  
+**Files deleted:** `matlab_custom/_tmp_shiftdim_qo_inv.py` (one-off investigation, removed)  
+**Shared files touched:** yes (`entry12_matlab_capture.py`)
+
+---
+
+## 2026-05-20 — Entry 12: doc sync (`12DEF.md`, `Atari_example.md`)
+
+**Actions:** Minimal doc pass after **`Q.O`** flatten fix — removed obsolete **`Q.O[1]`** / RNG-swap-as-first-cause narrative; pointed workflow to **`Q.Y[5]`**; marked **Further investigation — `Q.O[1]`** and appendix Section A as historical; updated **`Atari_example.md`** historical subentry bullets and baseline pointers.
+
+**Files read:** `12DEF.md`, `Atari_example.md`  
+**Files modified:** `12DEF.md`, `Atari_example.md`, `logs/log_0.md`  
+**Files created:** none  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+## 2026-05-20 — Entry 12: compare-lane `Q.Y` / `Q.s` / `Q.*` ndarray (causal gate advanced)
+
+**Investigation:** Nested **`Q.Y[5]`** matched MATLAB with correct indexing; red was **`uint8`** vs float64 **~1.0** in compare cast. **`Q.s`** needed **`C`**-order reshape of appended column to MATLAB **`(60,2)`** **`ndarray`**.
+
+**Changes (`entry12_matlab_capture.py` only):** Integer-ref float promotion in **`_entry12_cast_leaf_for_compare`**; **`_entry12_unwrap_q_py_level_for_ndarray_compare`**; **`_entry12_cast_q_trajectory_ndarray_for_compare`**.
+
+**3 → 4 (coerced, causal-only):** First red **`12F.out_t1.MDP.MDP.Y[1]`** (compute). **`Q.O[*]`**, **`Q.Y[*]`**, **`Q.s`** greens.
+
+**Files modified:** `python_src/toolbox/DEM/entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`  
+**Shared files touched:** yes (`entry12_matlab_capture.py`)
+
+---
+
+## 2026-05-20 — Entry 12: `[y-ab]` inspection + script 4 (first validation after instrumentation)
+
+**Actions:** Added **`entry12_print_y_ab_diagnostics`** in **`entry12_matlab_capture.py`** (mirror **`qo-ab`**); wired from **`XXX_12_compare_pdp_pkl_to_mat.py`** when first causal red mentions **`MDP.MDP.Y`**. Ran script **4** `--coerce-sparse-to-dense-for-compare --entry12-causal-only` (no compute change; no script **3**).
+
+**Script 4 tee:** Still **8/15** red; first red **`12F.out_t1.MDP.MDP.Y[1]: max abs diff=1.0`**.
+
+**`[y-ab]` at first-red flat[1] (g=2,t=1):** **`Y_peak`** py=5 mat=2; **`j_store`** py=`[[8.]]` mat=1; **`j_from_X`** both `[8.0]`; **`i_store`** py=2 mat=1; py **`pred_peak=5`** matches stored **`Y`**; mat **`pred_peak`** skipped (exported **`A{2}`** too degenerate for **`spm_dot`** in inspection). Pinpoints **stored `j`/`i`/`Y` at VB-fill** vs agree **`spm_parents(X(:,t))`** on both sides.
+
+**Next:** One minimal compute fix in **`spm_MDP_VB_XXX.py`** (`_vb_posterior_predictive_Y` / **`j`/`i` writes**), then **3 → 4**.
+
+**Files read:** `entry12_matlab_capture.py`, `XXX_12_compare_pdp_pkl_to_mat.py`  
+**Files modified:** `entry12_matlab_capture.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `logs/log_0.md`  
+**Files created:** none  
+**Files deleted:** none  
+**Shared files touched:** yes (`entry12_matlab_capture.py` only; script **4** wiring)
+
+---
+
+## 2026-05-20 — Entry 12: y-ab v2 holistic inspection + `_vb_posterior_predictive_Y` pass (first red unchanged)
+
+**Step D (required):** Extended **`entry12_print_y_ab_diagnostics`** — separate flat indices for **`Y`** (`t*Ng+o`) vs **`j`/`i`** (`o*T+t` pair flatten); **`spm_parents` branch** label; **`id.A{g}`** unwrap; likelihood **writers** list; renamed **`j(spm_parents,g)`** (not **`j(X)`**). v1 **`j_store` mat=1** was **mis-indexed** flat (read **`j[1]`** instead of **`j[2]`** for **`o=2,t=1`**).
+
+**Step B (compute):** **`_vb_posterior_predictive_Y`** — **`_vb_ag_for_posterior_predictive`**, **`_vb_q_list_at_mt`**, scalar **`j`/`i`** storage; **`spm_parents.py`** — **`_unwrap_id_a_entry`** on state-independent **`id.A{g}`**.
+
+**3 → 4:** Script **3** pass (~51s). Script **4** causal+coerce: still **8/15** red; first red **`12F.out_t1.MDP.MDP.Y[1]`**. **`[y-ab]` cross-side:** **`Y_peak`** py=5 mat=2 ***; **`j_store`** 8 both sides; **`pred_peak`** py=5 mat=None; single writer **g=2**; py **`A{2}`** `(5,1)` vs mat `(5,)`.
+
+**Next compute focus:** Why mat **`Y{2,1}`** peak **2** while exported **`A{2}`** one-hot peak **5** and py **`spm_dot`** replay gives peak **5** — trace **`A{m,g}`/`Q(m,8,t)`** at VB-fill (not compare flatten).
+
+**Files read:** `Atari_example.md`, `12DEF.md`, `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `spm_parents.py`, `XXX_12_compare_pdp_pkl_to_mat.py`  
+**Files modified:** `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `spm_parents.py`, `12DEF.md`, `logs/log_0.md`  
+**Files created:** none  
+**Files deleted:** none  
+**Shared files touched:** yes (`entry12_matlab_capture.py`, `spm_parents.py`; not `matlab_compat.py`)
+
+---
+
+## 2026-05-20 — Entry 12: MATLAB workspace `A{m,g}` policy + `12DEF` coherence sync
+
+**Hypothesis:** Python mirrored workspace **`A{m,g}`** into **`MDP(m).A{g}`** during active learning; MATLAB updates workspace only; **`OPTIONS.Y`** must use **`bundle['A']`** (workspace), not stale/export **`md['A']`**.
+
+**Compute (`spm_MDP_VB_XXX.py`):** Removed **`md['a']`/`md['A']`** updates from **`_vb_active_learning_in_loop`**; **`_vb_ag_for_posterior_predictive_Y`** reads **`bundle['A']`** only; **`da`** reshape guard (**`numel(term)==numel(qa)`**).
+
+**Docs:** **`12DEF.md`** — fixed **`Y[1]`** indexing (**`o=2,t=1`**, **`g=2`** writer), struck stale **`Q.Y[5]`** first-red refs, compute-attempts rows.
+
+**3 → 4:** First red still **`MDP.MDP.Y[1]`**; **`[y-ab]`** py **`Y_peak=5`**, mat **`Y_peak=2`**.
+
+**Next:** Workspace **`qa`/`A{m,2}`** trajectory at **`spm_cross`** active-learning sites for **`g=2`**, **`t=1`** (not **`md['A']`** export replay).
+
+**Files read:** `12DEF.md`, `spm_MDP_VB_XXX.m` (~1403–1660), `spm_MDP_VB_XXX.py`  
+**Files modified:** `spm_MDP_VB_XXX.py`, `12DEF.md`, `logs/log_0.md`  
+**Shared files touched:** no (`spm_parents.py` unchanged this pass)
+
+---
+
+## 2026-05-21 — Entry 12: broadened Y{2,1} diagnosis (no compute change yet)
+
+**Re-verified (script 4 causal+coerce):** First red still **`12F.out_t1.MDP.MDP.Y[1]`**; **`[y-ab]`** unchanged (**py `Y_peak=5`**, **mat `Y_peak=2`**).
+
+**Holistic checks (avoid active-learning tunnel vision):**
+- Nested child **`a`**: absent py/mat → **`.m` ~1403` active learning skipped**; **`OPTIONS.Y`** uses init workspace **`A{m,g}`** only.
+- **`O{2,1}`**, **`O{2,2}`**: **match** py/mat at **`12F`** (flat index read).
+- Template at **`12D.out_t1`**: **`A{2}`** sparse **5×1**, **`B{8}`** scalar **1** — **agree** py/mat before child VB.
+- **Export vs fill:** mat **`MDP.A{2}`** peak **5** but **`Y{2,1}`** peak **2** → compare **`md.A`** is not the tensor used at **`spm_dot`** on MATLAB at fill time.
+
+**Compare lane:** Extended **`entry12_print_y_ab_diagnostics`** — cross-side **`O{2,t}`** peaks + note on no **`a`**.
+
+**Next compute:** Child VB **`spm_VBX` / `spm_forwards`** trajectory for factor **8** and workspace **`A{m,2}`/`Q{m,8,1}`** at **`OPTIONS.Y`** (not **`spm_cross`** accumulation while **`a`** absent).
+
+**Files read:** `12DEF.md`, `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `spm_MDP_VB_XXX.m`, `XXX_12_compare_pdp_pkl_to_mat_output.txt`, fixtures **12F**  
+**Files modified:** `entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`  
+**Files created:** none  
+**Files deleted:** none  
+**Shared files touched:** yes (`entry12_matlab_capture.py` only)
+
+---
+
+## 2026-05-21 — Entry 12: holistic 1b capture probes (`entry12_Yfill`, `entry12_VBX`)
+
+**Scope:** Expand MATLAB dump fork + Python mirror (additive only). Env **`RGMS_ENTRY12_CAPTURE_Y_PROBE`** default **on**.
+
+**MATLAB (`spm_MDP_VB_XXX_entry12_dump.m`):**
+- **`entry12_Yfill{g,t}`** at **`OPTIONS.Y`** — all **`(g,t,o)`** sites: **`A_ws`**, **`Q_ws`**, **`Y_out`**, **`pred_replay`**, peaks, **`A_export`**, **`qa`**, **`has_a`**.
+- **`entry12_VBX`** after **`spm_VBX`** each **`t`**; flush to **`MDP(m)`** after **`spm_forwards`**.
+- Nested child: **`ds_child.capture_y_probe`** while **`enabled=false`**.
+- **12D `out_t1`:** **`entry12_prechild`**; **12E/12F:** **`nested_y_summary`**.
+- Driver/README/`spm_MDP_VB_XXX.m` resolve spec document env.
+
+**Python:** Same fields on **`mdp`**; **`[y-ab]`** prints **`entry12_Yfill`/`entry12_VBX`** block in **`entry12_matlab_capture.py`**.
+
+**Sign-off:** User must run **1a→1b→3→4** to refresh fixtures before probes appear in paired **`.mat`/`.pkl`**.
+
+**Files modified:** `matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m`, `matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`, `matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`, `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/entry12_matlab_capture.py`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`matlab_src/.../spm_MDP_VB_XXX.m`, `entry12_matlab_capture.py`)
+
+---
+
+## 2026-05-21 — Entry 12: `12DEF` operating-sheet refactor + fresh 3→4
+
+**Plan agreed:** Stop treating `12DEF.md` as historical archive; active doc = one screen of truth; tees = evidence; class **A/B/C** failures from script **4**.
+
+**Runs:** Script **3** PASSED (`RGMS_ATARI_RUN_XXX_12=1`, ~42 s). Script **4** causal-only coerced exit **1** — first red unchanged `12F.out_t1.MDP.MDP.Y[1]`; `[y-ab]` py Y_peak=5 mat=2; no `entry12_Yfill` site g=2 t=1 o=2.
+
+**Docs:** Replaced `12DEF.md` with slim operating sheet (Living status, **Structural blockers**, failure classes, dual `_output.txt` ritual, compute table). Prior long doc copied to `12DEF-archive.md` with archive banner.
+
+**Next:** Address class **B** on `12F` (`entry12_Yfill` 111 vs 222, missing `F/R/U/v/w` on py nested child) **or** one class **A** VB experiment — not both same iteration.
+
+**Files read:** `12DEF.md`, `XXX_12_compare_pdp_pkl_to_mat_output.txt` (grep), script 3/4 outputs  
+**Files created:** `12DEF-archive.md` (copy of prior `12DEF.md`)  
+**Files modified:** `12DEF.md`, `logs/log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no
+
+---
+
+## 2026-05-21 — Entry 12 Track B (capture parity / compare inventory)
+
+**Goal:** Class **B** only — no **`spm_MDP_VB_XXX.py`** compute (Track **A** deferred).
+
+**Findings:** Script **3** pickles already had nested child **`F/R/v/w`**, **`entry12_Yfill` 111×2**, **`nested_y_summary`**, **`entry12_prechild`**. Script **4** “missing in Python” / **111 vs 222** were artifacts: (1) type walk compared **align-stripped** py to **raw** mat; (2) `mat_nested_to_py` flattened **`cell(Ng,T)`** to length **`Ng×T`**.
+
+**Changes:**
+- `entry12_loadmat_convert.py`: preserve **2D** `dtype=object` arrays as nested lists (fixes **`entry12_Yfill`** grid vs mat).
+- `XXX_12_compare_pdp_pkl_to_mat.py`: **12D/12E/12F** type walk on **raw** capture-shaped dumps (removed one-sided align before walk).
+- `test_entry12_canonical_mats_oracle.py`: unit test for 2D cell grid.
+- `12DEF.md`: **Structural blockers** refreshed; next **B** = `nested_y_summary.yfill_g2t1.*` subfields.
+
+**Runs:** `test_mat_nested_to_py_preserves_2d_object_cell_grid` pass; script **4** `--report-type-mismatches-only --coerce-sparse-to-dense-for-compare` exit **0**. Causal-only still exit **1** (first listed red `ss.D` shape).
+
+**Files read:** fresh **12F.pkl**, `12DEF.md`, compare tee (grep)  
+**Files created:** none  
+**Files modified:** `entry12_loadmat_convert.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `test_entry12_canonical_mats_oracle.py`, `12DEF.md`, `logs/log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no (`python_src` VB untouched)
+
+**Stop:** regroup; user resumes **B** rollup subfields or **A** when directed.
+
+---
+
+## 2026-05-21 — Entry 12 Track B (capture parity / compare inventory)
+
+**Goal:** Class **B** only — no **`spm_MDP_VB_XXX.py`** compute (Track **A** deferred).
+
+**Findings:** Script **3** pickles already had nested child **`F/R/v/w`**, **`entry12_Yfill` 111×2**, **`nested_y_summary`**, **`entry12_prechild`**. Script **4** “missing in Python” / **111 vs 222** were artifacts: (1) type walk compared **align-stripped** py to **raw** mat; (2) `mat_nested_to_py` flattened **`cell(Ng,T)`** to length **`Ng×T`**.
+
+**Changes:**
+- `entry12_loadmat_convert.py`: preserve **2D** `dtype=object` arrays as nested lists (fixes **`entry12_Yfill`** grid vs mat).
+- `XXX_12_compare_pdp_pkl_to_mat.py`: **12D/12E/12F** type walk on **raw** capture-shaped dumps (removed one-sided align before walk).
+- `test_entry12_canonical_mats_oracle.py`: unit test for 2D cell grid.
+- `12DEF.md`: **Structural blockers** refreshed; next **B** = `nested_y_summary.yfill_g2t1.*` subfields.
+
+**Runs:** `test_mat_nested_to_py_preserves_2d_object_cell_grid` pass; script **4** `--report-type-mismatches-only --coerce-sparse-to-dense-for-compare` exit **0** (no `missing in Python` on **12F** child policy keys; no **111 vs 222** on **Yfill**). Causal-only still exit **1** (first listed red `ss.D` shape — pre-existing inventory noise vs **`Y[1]`** intent).
+
+**Files read:** fresh **12F.pkl**, `12DEF.md`, compare tee (grep)  
+**Files created:** none  
+**Files modified:** `entry12_loadmat_convert.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `test_entry12_canonical_mats_oracle.py`, `12DEF.md`, `logs/log_0.md`  
+**Files deleted:** none  
+**Shared files touched:** no (`python_src` VB untouched)
+
+**Stop:** regroup; user resumes **B** rollup subfields or **A** when directed.
+
+---
+
+## 2026-05-21 — Entry 12: symmetric `ss.*` compare contract (one loop)
+
+**Iteration:** Class **B** — `entry12_canonicalize_saved_structures_for_compare` + row-major `ss.{D,E,ID,IE}` on both py/mat before causal assert. Andrew notes § Entry 12 saved-structure. Test `test_entry12_ss_D_canonicalize_matches_py_flat16`.
+
+**Run:** Causal-only coerced **7/15** red (was **10/15**). **First red:** `12F.out_t1.MDP.MDP.O: list len py=2 mat=111`. **`ss.D`** steps green.
+
+**Files modified:** `entry12_matlab_capture.py`, `notes/andrew Python Matlab Translation Issues.md`, `test_entry12_canonical_mats_oracle.py`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`)
+
+---
+
+## 2026-05-21 — Entry 12: canonical `MDP.MDP.O` + `Q.Y` (class B)
+
+**Investigation:** Prior **`shiftdim`** fix cleared **`Q.O`** flatten (`t+g*T`); nested **`MDP.MDP.O`** and **`Q.Y`** still failed list-length on causal gate. Empirical: **222/222** `(g,t)` cells match (`py O[t][g]` vs `mat O[g,t]`); **`Q.Y`** flat **222** cells → **`Ng×T`** with index **`o+t*Ng`**. **`_norm_leaf`** unwraps `Q.Y=[[flat]]` to len-222 vs mat-111 — fixed by nested canonicalize before assert.
+
+**Changes:** `entry12_matlab_capture.py` — `_entry12_canonicalize_O_nested_block`, `_entry12_canonicalize_Q_Y_levels`, wired in `entry12_canonicalize_saved_structures_for_compare`. Tests + andrew notes § saved-structure.
+
+**Run:** script **4** causal-only coerced **7/15** red; **first red** `12F.out_t1.MDP.MDP.Q.Y[0][1]` peak py **5** mat **2** (class **A**). **`O`** / **`Q.Y`** shape reds cleared.
+
+**Files modified:** `entry12_matlab_capture.py`, `test_entry12_canonical_mats_oracle.py`, `notes/andrew Python Matlab Translation Issues.md`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py` only)
+
+---
+
+## 2026-05-21 — Entry 12: `Q.Y` append order + compare lane (coherent proceed)
+
+**Step 1 peak table:** Live **`mdp.Y{2,1}`** py/mat peak **5/5**; **`Q.Y`** py **2** mat **5** (permuted). Tee **[1]** was **`Q.Y[0][1]`** (walk order), not **`Y{2,1}`**.
+
+**Class A:** `_vb_hierarchical_q_ot_grid_to_cell_row` — loop **`t` then `o`** (`spm_MDP_VB_XXX.py`). Oracle `test_entry12_q_y_flatten_order.py`.
+
+**Class B:** `_entry12_canonicalize_Q_ot_grid_levels` for **`Q.{Y,j,i,o}`**; nested **`mdp.Y`** align; strip **`entry12_Yfill`/`entry12_VBX`** from causal nested MDP.
+
+**Runs:** script **3** (~35s) + script **4** causal coerced: **10/15** green, **5/15** red; first red **`12F.out_t2.MDP.F`**.
+
+**Files modified:** `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `test_entry12_q_y_flatten_order.py`, `test_entry12_canonical_mats_oracle.py`, `12DEF.md`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): Entry 12 — `12F.out_t2.MDP.F` cross-lane + revert policy-`P` restore
+
+**Goal:** Continue Phase B at first causal red **`12F.out_t2.MDP.F`** (class **A**), scripts **3→4** only.
+
+**Inspected:** `entry12_12f_vbx_F_probe.json`; lean **12F** `out_t2` py/mat `Q`/`P`/`MDP.F`; `spm_forwards` call site (second arg is workspace **`Q`**, not policy **`P`**); trial `_vb_policy_P_slot_before_forwards` (reverted — parent **t=2** `P` already 6-dim uniform; no causal change).
+
+**Cross-lane:** `matlab_custom/entry12_12f_vbx_t2_from_mat.m` + `entry12_12f_vbx_t2_inputs.mat` → MATLAB `spm_VBX F = -0.5877866649034389` (= Python). Canonical mat lean `F[1]≈0` ⇒ **1b** full run had different pre-VBX state than Python capture at **t=2**, not a VBX translation bug on matched inputs.
+
+**Causal (script 4, coerced):** still **5/15** red; first **`12F.out_t2.MDP.F`** (same 0.58778666 diff); **12E.out_t2** not in failure list (O green at **t=2**).
+
+**Files modified:** `matlab_custom/entry12_12f_vbx_t2_from_mat.m` (addpath for Atari SPM deps); `12DEF.md`; `logs/log_0.md`
+
+**Files reverted:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py` (removed ineffective `_vb_policy_P_slot_before_forwards`)
+
+**Shared files touched:** no (revert restores prior `spm_MDP_VB_XXX.py`)
+
+**Next:** Diff parent **`Q(:,2)`** immediately after **`_vb_generation_paths_states`** at **t=2** (and **Pu→P(:,1)** one-hot) vs **1b** MATLAB at same hook; do not treat post-belief lean **P** as VBX input.
+
+---
+
+## Iteration (2026-05-21): Entry 12 — expanded forwards/generation capture (1a→1b→3→4)
+
+**User directive:** Dump **more** on official **1b/3/4** paths only; no ad-hoc probes.
+
+**Capture added (both sides):**
+- `entry12_forwards` on lean **12F** snaps: `Q_pre_fwd_f`, `Q_post_fwd_f`, `policy_P_at_t`, `F_after_fwd`, `F_mdp_slot`, `O_peaks`, …
+- `entry12_generation`: `Q_after_gen_f`, `policy_P_after_gen`, `k_policy`, `Pu`
+- MATLAB hooks in `spm_MDP_VB_XXX_entry12_dump.m`; Python mirrors in `spm_MDP_VB_XXX.py`; script **4** `entry12_print_forwards_diagnostics` on **`MDP.F`** failure
+
+**MATLAB fix:** Nested child VB re-inited `ENTRY12_CAPTURE_CTX` and wiped parent accumulators — preserve ctx when `dumpSpec.enabled=false`; attach capture to `snapF` via `entry12_attach_fwd_gen_to_snap_`; fix `entry12_o_peaks_at_mt_` to use `O{m,g,t}`.
+
+**Runs (tag `rgms_canonical`):** **1a** `K=27263` → **1b** (~16s) → **3** (~71s) → **4** causal coerced; draw audit `unused_draws=0`.
+
+**Causal:** still **5/15** red; first **`12F.out_t2.MDP.F`** (`max|diff|≈0.5878`).
+
+**Framework diagnostics (`12F.out_t2`, snap `entry12_forwards`):**
+| Field | Python | MATLAB |
+|--------|--------|--------|
+| `F_after_fwd` / `MDP.F[1]` | −0.5877866649 | ≈0 |
+| `k_policy` (gen) | 2 | 2 |
+| `Q_pre_fwd_f` / `Q_after_gen_f` f=1 | peak **272**, sum≈1 | peak **1**, max **0** (all zero factors in mat capture) |
+| `policy_P_at_t` f=1 sum | **1.0** | **0.1667** |
+
+**Decision tree:** `Q_pre_fwd` / generation disagree at **t=2** before `spm_forwards` → next fix **`_vb_prior_QP_paths_states_one_model` / generation** (not VBX-first); mat `F≈0` is consistent with near-zero `Q` into forwards in capture.
+
+**Files modified:** `matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m`, `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/entry12_matlab_capture.py`, `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`, `logs/log_0.md`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): Entry 12 — unified ``entry12_phase_log`` (coherent framework)
+
+**Contract:** One inspection-only timeline per ``(m,t)`` on **12E/12F** snaps; supersedes parallel ``entry12_forwards`` / ``entry12_generation``; causal **15** unchanged; script **4** ``[phase-log]`` walk (compute fix still at **first causal red**).
+
+**Phases (fixed order):** ``post_generation`` → ``post_share`` → ``post_hierarchical`` → ``pre_forwards`` → ``pre_vbx`` → ``post_vbx`` → ``post_forwards`` → ``post_mdp_F``.
+
+**Runs:** **1a→1b→3→4** causal coerced. **5/15** red; first **`12F.out_t2.MDP.F`**.
+
+**Phase-log tee:** ``k_policy`` matches at **t=2**; **F** diverges at ``post_vbx``; **Q_f{f=1}** py **485×1** vs mat **1×1** from ``post_generation`` on — points to **generation / Q propagation**, not VBX-only.
+
+**Files modified:** `Atari_example.md`, `matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m`, `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `logs/log_0.md`
+
+**Shared files touched:** yes
+
+---
+
+## Iteration (2026-05-21): Phase-log adjudication + inspection fix + 3→4
+
+**Ritual:** Re-read causal tee; paired **12B**/**12E**/**12F** fixtures; no **1b** re-run.
+
+**12B:** `Ns=485`, `Nu=6`, `MDP.A` py/mat **maxdiff=0** (setup honest).
+
+**Phase-log (parent 485-vector filter, not generation-first):**
+
+| Phase @ `12F.out_t2` | `Q_f{f=1}` | `F_vbx` |
+|----------------------|------------|---------|
+| `post_generation` → `pre_vbx` | **match** (≈7.9e−31) | — |
+| `post_vbx` | **match** (peak 272) | py **−0.588** / mat **≈0** |
+
+**12E `out_t2`:** aligned `O` **maxdiff=0**.
+
+**Inspection bug fixed:** `entry12_print_phase_log_diagnostics` treated MATLAB `Q_f` **ndarray** as empty → spurious **shape py=(485,) mat=(1,)**. **`_entry12_phase_log_model_entries`** now accepts scipy-flattened **`model_logs`** `{m,t,entries}`; parent map skips nested-child short **`Q_f`** rows.
+
+**Cross-check:** `entry12_12f_vbx_t2_inputs.mat` + MATLAB `spm_VBX` → **F = −0.5877866649** (matches Python). Canonical **1b** tee **`F_vbx≈0`** with matched **`Q`** ⇒ **trajectory / workspace assembly at `spm_forwards`**, not bare **`spm_VBX`** kernel on exported slice.
+
+**3→4:** script **3** pass (~77s); causal **5/15** red unchanged; first red still **`12F.out_t2.MDP.F`**.
+
+**Next:** superseded by witness-discipline iteration below — do **not** use “**`MDP.A` match ⇒ `A` paired**” planning.
+
+**Files modified:** `entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py` only)
+
+---
+
+## Iteration (2026-05-21): Witness discipline — core documentation
+
+**Trigger:** User required consolidation of workflow failures: treating **`MDP.A`** on **12F** snaps as proof **`A`** was paired for **`spm_VBX`** while causal **[1]** is **`MDP.F`**; non-holistic / downstream fixation despite repeated forward-order and coherent-next-steps requests.
+
+**Code fact (MATLAB `spm_MDP_VB_XXX.m` / fork):** In-loop active learning updates workspace **`A{m,g}`**, not **`MDP(m).A{g}`** on the struct; **`spm_VBX`** uses workspace **`A`**. Python **`_vb_active_learning_in_loop`** documents the same split.
+
+**Paired fixture fact (`rgms_canonical`, last chain):** **`MDP.A`** peaks match mat/py; **`A_peaks` @ `pre_vbx`** differ; **`Q_f` @ `pre_vbx`** matches; **`MDP.F[1]`** red.
+
+**Docs:** **`12DEF.md`** § **Witness discipline** + **Living status** rewrite; **`Atari_example.md`** § **Entry 12 — witness discipline** + prereq list.
+
+**No compute or ritual re-run this iteration.**
+
+**Files read:** `spm_MDP_VB_XXX.m` (grep), fork (grep)
+
+**Files modified:** `12DEF.md`, `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## Iteration (2026-05-21): Validation 12 — causal payloads (compare right witnesses)
+
+**Goal:** Script **4** causal **15** steps compare mat vs py on loop-correct fields only.
+
+**Code (`entry12_matlab_capture.py`):** `entry12_causal_payload_12d` / `_12e` / `_12f`; `entry12_assert_causal_def_boundaries` asserts payloads. **12F** adds **`A_peaks_pre_vbx`** and **`A_peaks_pre_forwards`**; excludes parent **`MDP.A`**. **12D** excludes parent **`MDP.A`**, **`MDP.O`**, **`MDP.o`**.
+
+**Docs:** **`12DEF.md`** § **Validation 12 — causal payload**; **`Atari_example.md`**; **`XXX_12_compare_pdp_pkl_to_mat.py`** docstring.
+
+**Next:** **3 → 4** on paired **`tag`**; refresh **Living status** from tee.
+
+**Files modified:** `entry12_matlab_capture.py`, `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`, `12DEF.md`, `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): Validation 12 — causal payloads (compare right witnesses)
+
+**Goal:** Script **4** causal **15** steps compare mat vs py on loop-correct fields only.
+
+**Code (`entry12_matlab_capture.py`):** `entry12_causal_payload_12d` / `_12e` / `_12f`; `entry12_assert_causal_def_boundaries` asserts payloads. **12F** adds **`A_peaks_pre_vbx`** and **`A_peaks_pre_forwards`**; excludes parent **`MDP.A`**. **12D** excludes parent **`MDP.A`**, **`MDP.O`**, **`MDP.o`**.
+
+**Docs:** **`12DEF.md`** § **Validation 12 — causal payload**; **`Atari_example.md`**; **`XXX_12_compare_pdp_pkl_to_mat.py`** docstring.
+
+**Next:** **3 → 4** on paired **`tag`**; refresh **Living status** from tee.
+
+**Files modified:** `entry12_matlab_capture.py`, `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`, `12DEF.md`, `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): Validation 12 re-run + compare-lane fixes
+
+**Fixes:** A_peaks peak-index normalization; parent phase-log row; no A_peaks_* on 12F at t=0.
+
+**Causal-only:** 6/15 red. [1] 12F.out_t1.A_peaks_pre_forwards[0] py=1 mat=2.
+
+**Next:** spm_MDP_VB_XXX.py at [1]; then 3 -> 4.
+
+**Files modified:** entry12_matlab_capture.py, 12DEF.md
+
+**Shared files touched:** yes
+
+---
+
+## Iteration (2026-05-21): Validation 12 — A_peaks compare bug + spm_norm in-place
+
+**Compare-lane (script 4):** `_entry12_normalize_a_peaks_list` treated Python `A_peaks` list-of-scalars as per-modality vectors and `argmax`’d each → all **1**s (false reds). Fixed scalar-peak detection; phase-log inspection uses same normalizer.
+
+**Compute (`spm_MDP_VB_XXX.py`):** MATLAB `spm_norm` mutates `qa` in place; `A{m,g}` aliases `qa`. Python now `_spm_norm_inplace` + shared `pa`/`qa`/`A` at init and active learning; writes normalized `md["a"]` when present.
+
+**Validation 12 causal-only (stale mat 2:11 PM, fresh py 12F 4:45 PM):** 6/15 red unchanged. [1] **12F.out_t1.A_peaks_pre_forwards[0]** py=**4** mat=**2** (true witness diff after normalize). Inspection shows multi-modality A_peaks gaps; **12D.out_t3/out_tT MDP.F** trace-slot ELBO (~0.59 / ~1.34).
+
+**Script 4 audit:** Causal gate uses payloads only (not lean `MDP.A`). **12D–12F** full subentries are type-walk only. **PDP**/`RDP` use 511/485 ledger prefixes — separate from workspace `A_peaks_*`.
+
+**Next:** Paired **1b → 3 → 4** on one `tag` before trusting [1]; then fix first causal red in `spm_MDP_VB_XXX.py` if still py=4 vs mat=2.
+
+**Files modified:** `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`)
+
+---
+
+## Iteration (2026-05-21): Causal [1] cleared — Fortran `A_peaks` indexing
+
+**Root cause (class A, witness honesty):** `_entry12_vec_peak` used C-order `ravel()`; MATLAB `entry12_vec_peak_` uses `v(:)` (column-major). On 2D workspace `A` (e.g. `(41,485)`), py logged peaks disagreed with mat while F-order argmax on the same 12C tensors matched mat phase-log peaks.
+
+**Fix:** `_entry12_vec_peak` → `ravel(order='F')`; compare-lane `_entry12_normalize_a_peaks_list` argmax paths aligned. Recorded in `notes/andrew Python Matlab Translation Issues.md` § Entry 12 workspace `A{m,g}` peak index.
+
+**Runs:** Script **3** pytest OK (~57s). Script **4** causal-only: **5/15** red (was 6/15). **All `A_peaks_*` green**; inspection `pre_forwards`/`pre_vbx` A_peaks diff=0 for first 8 modalities at `out_t2+`.
+
+**New first red [1]:** `12F.out_t2.MDP.F` max abs diff **0.588** (py ≈ −0.588, mat ≈ 0). Phase log: `Q_f` ~1e-30 match; `F_vbx` / `MDP.F[1]` diverge at `t=2` only (`out_t1` causal green).
+
+**Next:** `spm_VBX` / `spm_forwards` ELBO `F` at parent `t=2` (not `MDP.A` / not `A_peaks`).
+
+**Files modified:** `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): First red → `12E.out_t2.O[3]` (witness honesty)
+
+**Investigation (`12F.out_t2.MDP.F` ~0.588):** Live **`spm_VBX`** on py replay inputs → **F ≈ −0.588**; mat phase-log **`F_vbx ≈ 0`** on paired **1b** fixtures. **`Q`/`P`/`A_peaks`** causal payloads match; **`Q_f`** ~1e-30 at **`pre_forwards`**. Raw **`12E`** compare: **`O[3]`** py diffuse vs mat one-hot (**0.444** max diff) — was **hidden** by **12E** align (flat mat **`Ng`** vs nested py **`[[Ng]]`**).
+
+**Compare-lane:** `_entry12_normalize_12E_O_layout`; **`entry12_mat_snap_for_value_assert`** wraps flat mat **`O`**; causal **[1]** now **`12E.out_t2.O[3]`** (honest).
+
+**Compute (partial):** Hierarchical **`O`** from child **`P`/`X`** via **`_vb_o_cell_to_column`**; **`_entry12_O_at_t`** ndarray **`.copy()`** on snap. Trace: multiple **generate → hierarchical** passes per parent **`t`** touch **`O[0][3][t]`**; last pass leaves diffuse **10-vector** (VBX **F** follows).
+
+**Runs:** Script **3** pass (~39s). Causal script **4**: **6/15** red — **[1]** **`12E.out_t2.O[3]`**; **[2–6]** **`MDP.F`** echoes.
+
+**Next:** Fix workspace **`O{m,g,t}`** at parent **`t=2`**, modality **g=4** (generation / hierarchical order), then **3 → 4**.
+
+**Files modified:** `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`
+
+**Temporary (diagnostics):** `matlab_custom/_tmp_vbx_fixture_parity.py`, `matlab_custom/_tmp_vbx_phase_q_parity.py`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): Hierarchical `Q.O` column count (`_vb_hierarchical_q_O_prev_ncols`)
+
+**Root cause (class B, child `Q` bookkeeping):** `_vb_hierarchical_q_O_prev_ncols` treated a flat `mdp.Q.O{L}` cell row of length `Ng×T` as **ncol = len(list)** (e.g. 222) instead of **len // Ng** (2). That broke `S→O` segment offset when `mdp.Q` is present (MATLAB `seg = (1:T) + size(mdp.Q.O{L},2)`).
+
+**Fix (kept):** In `_vb_hierarchical_q_O_prev_ncols`, if `ng > 0` and `len(ol) % ng == 0`, return `len(ol) // ng` before falling back to `len(ol)`.
+
+**Reverted (same iteration):** Matrix-only `Q.O` append (`np.hstack` on dense blocks) — restored flat cell-row append to match MATLAB `mdp.Q.O{L}` serialization and avoid compare-lane `ncol`/`n_leaf` mismatches.
+
+**Diagnostics:** `matlab_custom/_diag_O_g4_timeline.py` — hierarchical still maps `child P{2}(:,end)` onto parent `O[3]` after generate one-hot. `out_t2`: nested child **`E`/`D`/`u`/`s` mat≡py** (0 diff) but **`P{2}`** max diff **0.444** → wrong path posterior inside second child VB, not empirical-prior inputs.
+
+**Runs:** Script **3** pass (~45s). Script **4** causal-only: **6/15** red — **[1]** `12E.out_t2.O[3]` unchanged; **[2–6]** `MDP.F` downstream.
+
+**Next:** Child **`P{f=2}`** at end of second hierarchical `spm_MDP_VB_XXX(mdp)` (internal child `t=2` forwards / path update), not parent `spm_VBX` first.
+
+**Files modified:** `spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Temporary (diagnostics):** `matlab_custom/_diag_O_g4_timeline.py`, `_diag_12E_O3_fixtures.py`, `_diag_child_QO_width.py`, `_diag_child_before_t2.py`, `_diag_child_ED_out_t1.py`, `_diag_child_us_out_t2.py`, `_tmp_child_before_t2.pkl`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`)
+
+---
+
+## Iteration (2026-05-21): MATLAB posterior reorganise before assemble (`S←P`, `X←Q`)
+
+**Hypothesis:** Python exported `mdp.P` from stale `bundle.S` (tiled from `E` at init) while workspace `bundle.P` was updated in the belief loop (MATLAB ~1668–1672, ~1758 `MDP.P = S` after `S(:,t)=P(:,t)`).
+
+**Fix (kept):** In `_vb_assemble_mdp_results_1691`, stack per-`t` columns from `bundle.P` into `bundle.S` and from `bundle.Q` into `bundle.X` (Fortran `hstack`) before writing `md["P"]` / `md["X"]`.
+
+**Runs:** Script **3** pass (~37s). Script **4** causal: **11/15** red (new `MDP.H` scipy class-name noise on **12D/12F** `in`/`out_t1`/`out_t2`); value **[1]** still **`12E.out_t2.O[3]`** max diff **0.444**; **[2–6]** `MDP.F` unchanged.
+
+**Diagnostics:** `_diag_child_hier_pre_vb_t2.py` — pre second hier child `P{2}` one-hot both cols; post child VB both cols diffuse (~5/9). `_diag_12E_O3_fixtures.py` — mat child `P{2}` one-hot at `out_t2`, py diffuse; `out_t1`/`out_t3` green. Mat and py child `U` both `(1,60)` sparse **nnz=0** — not a `U`-controllability export gap.
+
+**Conclusion:** Reorganise fix is required and faithful but **insufficient**; first red remains **child path posterior inside second hierarchical `spm_MDP_VB_XXX`**, likely belief-loop `P` update (`Nu>1` path smoothing / `Q` at child `t=2`), not assemble export alone.
+
+**Next:** Diff child workspace `P{2}`/`Q{2}` across child internal `t` (second hier call) vs MATLAB **1b** child record; fix first failing belief step before parent forwards.
+
+**Files modified:** `spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`)
+
+---
+
+## Iteration (2026-05-21): Causal 15/15 — `spm_dot` cell form + compare `v`/`w` align
+
+**Compute (class B, child path posterior):** When `Nu>1` and `size(B{m,f})` matches `numel(P{m,f,t})` on multiple axes (Atari `ns=nu=10`), plain `spm_dot(B, P)` contracts the **state** axis; MATLAB `spm_dot(B,P)` with vector `P` uses **cell** `{P}` to contract the **last** matching dimension (`spm_dot.m`). Diffuse child `P{2}` at second hierarchical VB → diffuse parent `O[3]` / wrong `MDP.F`.
+
+**Fix (kept):** `_vb_prior_QP_paths_states_one_model` and `_vb_fill_BP_IP_at_t`: `spm_dot(Bmf, [P_prev])` / `spm_dot(Bmf, [Pmf_t])`, `spm_dot(Imf, [Pmf_t])` for uncontrollable factors. Hierarchical `D` update already used `[pu]`.
+
+**Compare-lane (witness hygiene):** `test_spm_mdp2rdp.py` sparse class parity; causal MDP strip `Q` and drop `F,G,Z`; `R` column width align; **`_entry12_align_12F_Rvw_at_t`**: when mat `v`/`w` is length-`t` prefix and py is list wrapping padded 1-D trajectory, slice `arr.ravel()[:marr.size]` (same pattern as `R`).
+
+**Runs:** Script **3** pass (~38s). Script **4** causal **12D→12E→12F**: **OK 15/15** (was 2/15 on `12F.out_t2/out_t3.v` numel). Full script **4** still exits non-zero on broad PDP `j` type lane (out of causal sign-off scope).
+
+**Sign-off:** Entry 12 Phase 1 causal value gate **green** on tag **`rgms_canonical`**.
+
+**Files modified:** `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `test_spm_mdp2rdp.py`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `test_spm_mdp2rdp.py`)
+
+---
+
+## Iteration (2026-05-21): Step 0 + Step 1 — draw audit + **12C** compare-lane (Phase C)
+
+**Step 0 (RNG / ritual):** Branch **`andrew`**. **`entry12_draw_index_audit.py`**: **`K=27263`**, **`unused_draws=0`**, **`sample_calls_match=true`** (audit re-ran VB + refreshed canonical **12A–12I** `.pkl` dumps). Causal block on paired fixtures still **OK 15/15**.
+
+**Step 1 (12C — class B):** Value assert failed **`12C.O[0][0]: numel py=64 mat=0`**. Root cause: Python **`bundle["O"]`** is **`cell(1,Ng,T)`** with **`None`** pre-loop slots; MATLAB **12C** saves **`cell(Nm,Ng,T)`** as **`O[g][t]`** with empty **`[]`** cells. Not a VB compute bug.
+
+**Fix (compare lane):** **`_entry12_peel_nm_one_model_shell`**, **`_entry12_align_12c_O_preloop`**; **`entry12_align_12C_workspace_to_mat`** peels **`A`/`BP`/`IP`** before flatten.
+
+**Runs:** Script **4** full (coerced): **`OK: subentry 12C`**; causal **15/15**; **12A/12B/12I** OK; **12H** still open (5054 type-walk lines, **`MDP.B[*]`** `ndarray` vs `int`); final **PDP** still blocked.
+
+**Next:** Step **2** — **12H** assemble value assert (scalar **`B{f}`** / align) per **`12DEF.md`**.
+
+**Files modified:** `entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`)
+
+---
+
+## Iteration (2026-05-21): `Atari_example.md` — final-stage checklist (non-`spm_MDP_VB_XXX.py` fixes)
+
+**Doc only:** New § **Entry 12 — Final-stage review: real fixes not in `spm_MDP_VB_XXX.py`** (one paragraph per real example: causal payloads, **12C**/**12F** align, loaders, **`test_spm_mdp2rdp`**, scripts **3**/**4**, RNG audit, MATLAB fork, open **12H**/**PDP**). Agent mandatory read item **4b**.
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Shared files touched:** no
+
+---
+
+## Iteration (2026-05-21): Step 2 — **12H** + Validation **12** exit **0** (`rgms_canonical`)
+
+**Scripts:** **`test_DEM_AtariIII_XXX_12.py`** pass (~66s, refreshed canonical `.pkl`); **`XXX_12_compare_pdp_pkl_to_mat.py --coerce-sparse-to-dense-for-compare`** exit **0**.
+
+**Tee:** causal **15/15**; **OK: subentry 12A, 12B, 12C, 12H, 12I**; **OK: final PDP**; **`OK: Validation 12 passed`**.
+
+**12H / PDP compare-lane (`entry12_matlab_capture.py`):** **`_entry12_align_Q_record_to_mat`** on assembled **`MDP.Q`**; **`_entry12_align_mdp_O_ng_t_cells`**; top-level **`PDP.O`/`Q`/`Pa`/`id`** align; **`entry12_mat_pdp_for_value_assert`** / **`entry12_mat_mdp_for_subentry_value_assert`**.
+
+**Compute (`spm_MDP_VB_XXX.py`):** hierarchical **`Q.s`/`Q.u`** append uses MATLAB-style matrix **`hstack`**.
+
+**Files modified:** `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `12DEF.md`, `logs/log_0.md`
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `XXX_12_compare_pdp_pkl_to_mat.py`)
+
+---

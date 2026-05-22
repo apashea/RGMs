@@ -1,5 +1,17 @@
 {
   "python": {
+    "ind_branch": "full_induction",
+    "hid_shape": [
+      1,
+      25
+    ],
+    "hid_all_zero": 0.0,
+    "Nh": 25.0,
+    "D_is_scalar": 1.0,
+    "D_nnz": 485.0,
+    "R_nnz_ind": 1.0,
+    "R_sum_post_induction": 32.0,
+    "R_nz_post_induction": 271.0,
     "G_before_iH": 0.0,
     "ih_term": 31.999999999999016,
     "G_after_iH": -31.999999999999016,
@@ -8,26 +20,54 @@
       485
     ],
     "R_max": 32.0,
-    "R_sum": 64.0,
-    "dot_manual_RQ": 0.0,
-    "R_nz_idx": [
-      230,
-      457
-    ],
-    "Q_at_R_nz": [
-      0.0,
-      0.0
-    ],
-    "spm_dot_R_Q": 0.0,
+    "R_sum": 32.0,
+    "r_factors": 1.0,
+    "R_nz_idx": 271.0,
+    "Q_at_R_nz": 0.9999999999999754,
+    "dot_manual_RQ": 31.99999999999921,
+    "Qf_len_f1": 485.0,
+    "Qf_max_f1": 0.9999999999999754,
+    "Pf_sum_f1": 0.9999999999999999,
+    "spm_dot_R_Q": 31.99999999999921,
     "G_after_dot": -31.999999999999016,
-    "PDP_G1": -64.40546510810269
+    "done": 1.0,
+    "PDP_G1": -32.4054651081035,
+    "lane": "python replay dump_subentries=False"
   },
   "matlab": {
     "PDP_G1": -32.4054651081035,
-    "G_before_iH": 0.0,
+    "lane": "matlab entry12_dump native RNG",
+    "G_before_iH": NaN,
     "ih_term": 31.999999999999016,
     "G_after_iH": -31.999999999999016,
     "spm_dot_R_Q": 31.99999999999921,
-    "G_after_dot": 1.9539925233402755e-13
+    "G_after_dot": 1.9539925233402755e-13,
+    "dot_manual_RQ": 31.99999999999921,
+    "R_max": 32.0,
+    "R_sum": 32.0,
+    "ind_branch": "full_induction",
+    "hid_all_zero": 0.0,
+    "D_is_scalar": 1.0,
+    "D_nnz": 1.0,
+    "Nh": 25.0,
+    "R_nnz_ind": 1.0,
+    "R_shape": [
+      [
+        1.0,
+        485.0
+      ]
+    ],
+    "r_factors": 1.0,
+    "Q_at_R_nz": 0.9999999999999754,
+    "hid_shape": [
+      [
+        1.0,
+        25.0
+      ]
+    ],
+    "R_nz_idx": 272.0,
+    "Qf_len_f1": 485.0,
+    "Qf_max_f1": 0.9999999999999754,
+    "Pf_sum_f1": 0.9999999999999999
   }
 }

@@ -1,69 +1,69 @@
 {
-  "K": 27199,
+  "K": 27263,
   "buf_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf.mat",
   "replay": {
-    "draw_start": 424,
+    "draw_start": 425,
     "P_argmax_1b": 1,
     "P_top_mass": 0.002061855670103093,
-    "draw_after_forwards": 424,
-    "G00": -62.613705638874634,
-    "total_draws": 27199,
+    "draw_after_forwards": 425,
+    "G00": -30.613705638875444,
+    "total_draws": 27263,
     "unused_draws": 0,
-    "PDP_G1": -64.40546510810269,
-    "spm_sample_calls": 27199,
+    "PDP_G1": -32.4054651081035,
+    "spm_sample_calls": 27263,
     "spm_sample_last8": [
       {
-        "draw_start": 27191,
-        "draw_end": 27192,
+        "draw_start": 27255,
+        "draw_end": 27256,
         "kind": "numeric",
         "k": 0,
         "out": 5
       },
       {
-        "draw_start": 27192,
-        "draw_end": 27193,
+        "draw_start": 27256,
+        "draw_end": 27257,
         "kind": "numeric",
         "k": 0,
         "out": 5
       },
       {
-        "draw_start": 27193,
-        "draw_end": 27194,
+        "draw_start": 27257,
+        "draw_end": 27258,
         "kind": "numeric",
         "k": 0,
         "out": 5
       },
       {
-        "draw_start": 27194,
-        "draw_end": 27195,
+        "draw_start": 27258,
+        "draw_end": 27259,
         "kind": "numeric",
         "k": 0,
         "out": 5
       },
       {
-        "draw_start": 27195,
-        "draw_end": 27196,
+        "draw_start": 27259,
+        "draw_end": 27260,
         "kind": "numeric",
         "k": 0,
         "out": 5
       },
       {
-        "draw_start": 27196,
-        "draw_end": 27197,
+        "draw_start": 27260,
+        "draw_end": 27261,
         "kind": "numeric",
         "k": 0,
         "out": 1
       },
       {
-        "draw_start": 27197,
-        "draw_end": 27198,
+        "draw_start": 27261,
+        "draw_end": 27262,
         "kind": "numeric",
         "k": 0,
         "out": 1
       },
       {
-        "draw_start": 27198,
-        "draw_end": 27199,
+        "draw_start": 27262,
+        "draw_end": 27263,
         "kind": "numeric",
         "k": 0,
         "out": 4
@@ -71,21 +71,21 @@
     ],
     "draw_window": [
       [
-        424,
-        0.1536567175913066
-      ],
-      [
         425,
         0.2810053025338709
       ],
       [
         426,
         0.44008513900172086
+      ],
+      [
+        427,
+        0.5271427417606522
       ]
     ]
   },
   "native": {
-    "native_spm_sample_calls": 27199
+    "native_spm_sample_calls": 27263
   },
   "coherence": {
     "protocol": "entry12_v5_preamble_rewind (buf from MATLAB post-rewind rand(K,1))",

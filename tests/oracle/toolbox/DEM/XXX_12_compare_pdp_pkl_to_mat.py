@@ -4,6 +4,14 @@
 Compares input ``RDP``, subentry checkpoints **12A**–**12I**, and final ``PDP`` produced by
 ``spm_MDP_VB_XXX(..., dump_subentries=True)`` on the MATLAB and Python sides.
 
+Runs **causal 12D→12E→12F** boundary value asserts (**15** steps, **all** failures reported)
+**before** input **RDP** and per-subentry type walks (``entry12_assert_causal_def_boundaries``).
+
+Causal payloads (``entry12_matlab_capture.py``): **12D** ``t``/``Mrow``/``MDP`` without parent
+``A``/``O``/``o``; **12E** ``t``/workspace ``O``; **12F** ``Q``/``P``/``R``/``v``/``w``,
+``MDP`` without parent ``A``, plus ``A_peaks_pre_vbx`` and ``A_peaks_pre_forwards`` (workspace
+``A{m,g}`` from ``entry12_phase_log``). Struct ``MDP.A`` is not a causal gate.
+
 Default fixtures under ``tests/oracle/toolbox/DEM/fixtures/`` (override paths via env; see
 ``Atari_example.md`` § Entry 12). Uses ``mat_nested_to_py``, nested type-walk, and
 ``_assert_nested_rdp_equal`` (511 vs 485 ledger policy on ``RDP`` / ``PDP`` tensor paths).
@@ -32,14 +40,17 @@ if str(_ROOT) not in sys.path:
 
 from python_src.toolbox.DEM.entry12_matlab_capture import (
     ENTRY12_CANONICAL_RUN_TAG,
+    ENTRY12_CAUSAL_BOUNDARY_STEPS,
     entry12_align_12C_workspace_to_mat,
-    entry12_align_12D_workspace_to_mat,
-    entry12_align_12E_workspace_to_mat,
-    entry12_align_12F_snap_to_mat,
-    entry12_align_12F_workspace_to_mat,
     entry12_align_entry12_workspace_to_mat,
     entry12_align_mdp_to_mat_workspace,
+    entry12_mat_mdp_for_subentry_value_assert,
+    entry12_mat_pdp_for_value_assert,
     entry12_align_py_rdp_to_validation_lane,
+    entry12_assert_causal_def_boundaries,
+    entry12_print_phase_log_diagnostics,
+    entry12_print_qo_ab_diagnostics,
+    entry12_print_y_ab_diagnostics,
     entry12_rdp_for_validation_from_mat_nested,
     entry12_subentry_mat_path,
     load_entry12_subentry_mat,
@@ -141,21 +152,107 @@ def _default_rdp_pkl_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_RDP_PKL_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return _fixtures_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
+    return _entry12_out_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
 
 
 def _default_rdp_mat_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_RDP_MAT_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    from tests.oracle.toolbox.DEM.fsl_1_11_compare_ctx_pkl_to_mat import _fsl_1_11_mat_path
-
-    return _fsl_1_11_mat_path()
+    return _entry12_out_dir() / "DEMAtariIII_XXX_12_rdp.mat"
 
 
 def _subentry_pkl_path(code: str) -> Path:
     tag = _entry12_run_tag()
-    return _fixtures_dir() / f"DEMAtariIII_entry12_{tag}_{code}.pkl"
+    return _entry12_out_dir() / f"DEMAtariIII_entry12_{tag}_{code}.pkl"
+
+
+_ENTRY12_CAUSAL_BANDS: tuple[str, ...] = ("12D", "12E", "12F")
+
+
+def _load_entry12_causal_band_workspaces(
+    tag: str,
+    out_dir: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]] | None:
+    """Load paired **12D** / **12E** / **12F** workspaces for the causal boundary gate."""
+    py_def: dict[str, dict[str, Any]] = {}
+    mat_def: dict[str, dict[str, Any]] = {}
+    for band in _ENTRY12_CAUSAL_BANDS:
+        mat_p = entry12_subentry_mat_path(tag, band, out_dir=out_dir)
+        pkl_p = _subentry_pkl_path(band)
+        if not mat_p.is_file() or not pkl_p.is_file():
+            print(
+                f"[XXX 12 validation] skip causal gate (missing {band}: "
+                f"mat={mat_p.is_file()}, pkl={pkl_p.is_file()})",
+                file=sys.stderr,
+            )
+            return None
+        py_def[band] = _entry12_workspace_payload(_load_subentry_pkl(pkl_p), band)
+        mat_def[band] = _entry12_workspace_payload(
+            _mat_blob_to_py(load_entry12_subentry_mat(mat_p)),
+            band,
+        )
+    return py_def, mat_def
+
+
+def _run_entry12_causal_boundary_gate(
+    tag: str,
+    out_dir: Path,
+    *,
+    report_only: bool,
+    coerce_sparse: bool,
+) -> bool | None:
+    """
+    Print the 15-step causal plan and run value asserts (12D→12E→12F per boundary).
+
+    Returns ``True`` if any causal step failed, ``False`` if all pass, ``None`` if skipped.
+    """
+    print(
+        "[XXX 12 validation] --- causal 12D→12E→12F boundaries (first in run) ---",
+        file=sys.stderr,
+    )
+    for code, sub in ENTRY12_CAUSAL_BOUNDARY_STEPS:
+        print(f"  {code}.{sub}", file=sys.stderr)
+    loaded = _load_entry12_causal_band_workspaces(tag, out_dir)
+    if loaded is None:
+        return None
+    py_def, mat_def = loaded
+    if report_only:
+        print(
+            "[XXX 12 validation] skip causal value assert (--report-type-mismatches-only)",
+            file=sys.stderr,
+        )
+        return None
+    failures = entry12_assert_causal_def_boundaries(
+        py_def,
+        mat_def,
+        densify=_densify_sparse_leaves if coerce_sparse else None,
+    )
+    if failures:
+        print(
+            f"[XXX 12 validation] FAIL: causal 12D→12E→12F boundaries "
+            f"({len(failures)}/{len(ENTRY12_CAUSAL_BOUNDARY_STEPS)} steps red)",
+            file=sys.stderr,
+        )
+        for i, msg in enumerate(failures, start=1):
+            print(f"  [{i}] {msg}", file=sys.stderr)
+        print(
+            f"[XXX 12 validation] fix compute at first red: {failures[0]}",
+            file=sys.stderr,
+        )
+        if "Q.O" in failures[0]:
+            entry12_print_qo_ab_diagnostics(py_def, mat_def, stream=sys.stderr)
+        elif "MDP.MDP.Y" in failures[0] or "MDP.Y" in failures[0] or "Q.Y" in failures[0]:
+            entry12_print_y_ab_diagnostics(py_def, mat_def, stream=sys.stderr)
+        elif "MDP.F" in failures[0] or "12F." in failures[0]:
+            entry12_print_phase_log_diagnostics(py_def, mat_def, stream=sys.stderr)
+        return True
+    print(
+        "[XXX 12 validation] OK: causal 12D→12E→12F boundaries "
+        f"({len(ENTRY12_CAUSAL_BOUNDARY_STEPS)} steps)",
+        file=sys.stderr,
+    )
+    return False
 
 
 _MATLAB_LOADMAT_META = frozenset({"__header__", "__version__", "__globals__"})
@@ -263,7 +360,7 @@ def _normalize_lean_boundary_payload(payload: Any, *, code: str = "") -> Any:
     if not isinstance(payload, dict):
         return payload
     out = dict(payload)
-    for key in ("in", "out_t1", "out_tT"):
+    for key in ("in", "out_t1", "out_t2", "out_t3", "out_tT"):
         if key in out:
             out[key] = _collapse_matlab_struct_broadcast(out[key], code=code)
     return out
@@ -383,13 +480,32 @@ def _build_argument_parser() -> ArgumentParser:
         action="store_true",
         help="Emit inventory, key diff, and type walk only; exit 0 without nested assert.",
     )
+    p.add_argument(
+        "--entry12-causal-only",
+        action="store_true",
+        help=(
+            "Run only the 15-step causal 12D→12E→12F gate (+ inspection blocks on failure); "
+            "skip RDP, 12A–12I, and PDP. Fast iteration; full sign-off still requires full script 4."
+        ),
+    )
     return p
 
 
 def _execute_validation(args: Namespace) -> int:
     report_only = bool(args.report_type_mismatches_only)
     coerce = bool(args.coerce_sparse_to_dense_for_compare)
+    causal_only = bool(getattr(args, "entry12_causal_only", False))
     exit_code = 0
+
+    tag = _entry12_run_tag()
+    out_dir = _entry12_out_dir()
+    if _run_entry12_causal_boundary_gate(
+        tag, out_dir, report_only=report_only, coerce_sparse=coerce
+    ):
+        exit_code = 1
+
+    if causal_only:
+        return exit_code
 
     rdp_pkl = _default_rdp_pkl_path().resolve()
     rdp_mat = _default_rdp_mat_path().resolve()
@@ -424,8 +540,6 @@ def _execute_validation(args: Namespace) -> int:
             file=sys.stderr,
         )
 
-    tag = _entry12_run_tag()
-    out_dir = _entry12_out_dir()
     for code in _ENTRY12_SUBENTRY_CODES:
         mat_p = entry12_subentry_mat_path(tag, code, out_dir=out_dir)
         pkl_p = _subentry_pkl_path(code)
@@ -442,53 +556,29 @@ def _execute_validation(args: Namespace) -> int:
         mat_ws = _entry12_workspace_payload(mat_blob, code)
         if code == "12A" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
             py_ws = entry12_align_mdp_to_mat_workspace(py_ws, mat_ws)
+            mat_ws = entry12_mat_mdp_for_subentry_value_assert(py_ws, mat_ws)
         elif code == "12B" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
             py_ws = entry12_align_entry12_workspace_to_mat(py_ws, mat_ws)
         elif code == "12C" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
             py_ws = entry12_align_12C_workspace_to_mat(py_ws, mat_ws)
-        elif code == "12D" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
-            py_ws = entry12_align_12D_workspace_to_mat(py_ws, mat_ws)
-            print(f"[XXX 12 validation] --- subentry {code} ---", file=sys.stderr)
+        elif code == "12H" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
+            py_ws = entry12_align_mdp_to_mat_workspace(py_ws, mat_ws)
+            mat_ws = entry12_mat_pdp_for_value_assert(mat_ws)
+        elif code in ("12D", "12E", "12F") and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
+            # Capture-shaped inventory: raw paired dumps (causal gate aligns separately).
+            print(
+                f"[XXX 12 validation] --- subentry {code} (capture-shaped type walk) ---",
+                file=sys.stderr,
+            )
             _emit_nested_compare(f"subentry {code}", py_ws, mat_ws, code)
-            if report_only:
-                continue
-            from tests.oracle.toolbox.DEM.test_spm_mdp2rdp import _assert_nested_rdp_equal
-
-            try:
-                for sub in ("in", "out_t1"):
-                    py_cmp = _densify_sparse_leaves(copy.deepcopy(py_ws[sub]))
-                    mat_cmp = _densify_sparse_leaves(copy.deepcopy(mat_ws[sub]))
-                    _assert_nested_rdp_equal(py_cmp, mat_cmp, f"{code}.{sub}")
-                print(
-                    "[XXX 12 validation] OK: subentry 12D "
-                    "(value assert on in, out_t1; out_tT type-aligned only)",
-                    file=sys.stderr,
-                )
-            except AssertionError:
-                exit_code = 1
             continue
-        elif code == "12E" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
-            py_ws = entry12_align_12E_workspace_to_mat(py_ws, mat_ws)
-        elif code == "12F" and isinstance(py_ws, dict) and isinstance(mat_ws, dict):
-            py_ws = entry12_align_12F_workspace_to_mat(py_ws, mat_ws)
-            print(f"[XXX 12 validation] --- subentry {code} ---", file=sys.stderr)
-            _emit_nested_compare(f"subentry {code}", py_ws, mat_ws, code)
-            if report_only:
-                continue
-            from tests.oracle.toolbox.DEM.test_spm_mdp2rdp import _assert_nested_rdp_equal
-
-            try:
-                for sub in ("in", "out_t1", "out_tT"):
-                    py_cmp = _densify_sparse_leaves(copy.deepcopy(py_ws[sub]))
-                    mat_cmp = _densify_sparse_leaves(copy.deepcopy(mat_ws[sub]))
-                    _assert_nested_rdp_equal(py_cmp, mat_cmp, f"{code}.{sub}")
-                print(
-                    "[XXX 12 validation] OK: subentry 12F "
-                    "(value assert on in, out_t1, out_tT)",
-                    file=sys.stderr,
-                )
-            except AssertionError:
-                exit_code = 1
+        elif code == "12G":
+            # Atari lane: OPTIONS.B=0 — spm_backwards never runs; 12G is informational only.
+            print(
+                "[XXX 12 validation] skip subentry 12G "
+                "(postponed / non-gating for DEM_AtariIII; OPTIONS.B=0)",
+                file=sys.stderr,
+            )
             continue
         try:
             _compare_pair(
@@ -499,7 +589,8 @@ def _execute_validation(args: Namespace) -> int:
                 report_only=report_only,
                 coerce_sparse=coerce,
             )
-        except AssertionError:
+        except AssertionError as exc:
+            print(f"[XXX 12 validation] subentry {code} value assert: {exc}", file=sys.stderr)
             exit_code = 1
 
     pkl_path = (args.pkl or _default_pkl_path()).resolve()
@@ -532,8 +623,21 @@ def _execute_validation(args: Namespace) -> int:
         return exit_code
 
     try:
-        _compare_pair("final PDP", py_pdp, mat_pdp, "PDP", report_only=False, coerce_sparse=coerce)
-    except AssertionError:
+        py_pdp_cmp = py_pdp
+        mat_pdp_cmp = mat_pdp
+        if isinstance(py_pdp, dict) and isinstance(mat_pdp, dict):
+            py_pdp_cmp = entry12_align_mdp_to_mat_workspace(py_pdp, mat_pdp)
+            mat_pdp_cmp = entry12_mat_pdp_for_value_assert(mat_pdp)
+        _compare_pair(
+            "final PDP",
+            py_pdp_cmp,
+            mat_pdp_cmp,
+            "PDP",
+            report_only=False,
+            coerce_sparse=coerce,
+        )
+    except AssertionError as exc:
+        print(f"[XXX 12 validation] final PDP value assert: {exc}", file=sys.stderr)
         exit_code = 1
 
     if exit_code == 0:

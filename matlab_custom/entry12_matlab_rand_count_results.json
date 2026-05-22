@@ -1,0 +1,10 @@
+{
+  "K_preflight": 27199,
+  "matlab_dump_true_rand_calls": 27263,
+  "matlab_dump_false_rand_calls": 27263,
+  "delta_dump_minus_src": 0,
+  "delta_dump_minus_K": 64,
+  "delta_src_minus_K": 64,
+  "G1_dump_true": -32.4054651081035,
+  "G1_dump_false": -48.8542045117681
+}

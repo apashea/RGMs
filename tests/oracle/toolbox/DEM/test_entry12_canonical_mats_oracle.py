@@ -93,6 +93,73 @@ def test_entry12_subentry_mat_loads_when_present(code: str) -> None:
         assert "PDP" in blob
 
 
+def test_entry12_Q_Y_flat_level_canonicalize_to_ng_t() -> None:
+    """``Q.Y{L}`` flat ``Ng×T`` row → nested ``[o][t]`` (index ``o + t*Ng``)."""
+    from python_src.toolbox.DEM.entry12_matlab_capture import _entry12_canonicalize_Q_ot_grid_levels
+
+    ng, t_count = 3, 2
+    flat = [f"o{o}t{t}" for t in range(t_count) for o in range(ng)]
+    nested = [[f"o{o}t{t}" for t in range(t_count)] for o in range(ng)]
+    assert _entry12_canonicalize_Q_ot_grid_levels([flat]) == [nested]
+    assert _entry12_canonicalize_Q_ot_grid_levels(nested) == nested
+
+
+def test_entry12_O_nested_canonicalize_tg_to_gt() -> None:
+    """``MDP.MDP.O``: post-``shiftdim`` ``O[t][g]`` → ``O[g][t]`` for paired ``.mat`` compare."""
+    import numpy as np
+
+    from python_src.toolbox.DEM.entry12_matlab_capture import (
+        _entry12_canonicalize_O_nested_block,
+        _entry12_transpose_O_tg_to_gt,
+    )
+
+    tg = [[f"t{t}g{g}" for g in range(3)] for t in range(2)]
+    gt = _entry12_transpose_O_tg_to_gt(tg)
+    assert len(gt) == 3 and len(gt[0]) == 2
+    assert gt[1][0] == "t0g1"
+    assert _entry12_canonicalize_O_nested_block(tg) == gt
+    mat_nested = [[f"t{t}g{g}" for t in range(2)] for g in range(3)]
+    assert _entry12_canonicalize_O_nested_block(mat_nested) == mat_nested
+    arr = np.empty((3, 2), dtype=object)
+    for g in range(3):
+        for t in range(2):
+            arr[g, t] = f"t{t}g{g}"
+    assert _entry12_canonicalize_O_nested_block(arr) == mat_nested
+
+
+def test_entry12_ss_D_canonicalize_matches_py_flat16() -> None:
+    """``ss.D``: symmetric flatten of mat ``4×4`` nested matches py length-16 dump."""
+    import numpy as np
+
+    from python_src.toolbox.DEM.entry12_matlab_capture import (
+        _entry12_canonicalize_ss_cell_block,
+    )
+
+    nested = [[{"i": i, "j": j} for j in range(4)] for i in range(4)]
+    flat = [{"i": i, "j": j} for i in range(4) for j in range(4)]
+    assert len(_entry12_canonicalize_ss_cell_block(nested)) == 16
+    assert len(_entry12_canonicalize_ss_cell_block(flat)) == 16
+    cell = np.empty((4, 4), dtype=object)
+    for i in range(4):
+        for j in range(4):
+            cell[i, j] = {"i": i, "j": j}
+    assert len(_entry12_canonicalize_ss_cell_block(cell)) == 16
+
+
+def test_mat_nested_to_py_preserves_2d_object_cell_grid() -> None:
+    """MATLAB ``cell(Ng,T)`` must not flatten to ``Ng*T`` (e.g. ``entry12_Yfill``)."""
+    import numpy as np
+
+    cell = np.empty((2, 3), dtype=object)
+    for i in range(2):
+        for j in range(3):
+            cell[i, j] = {"g": i, "t": j}
+    out = mat_nested_to_py(cell)
+    assert isinstance(out, list) and len(out) == 2
+    assert all(isinstance(row, list) and len(row) == 3 for row in out)
+    assert out[1][2] == {"g": 1, "t": 2}
+
+
 def test_entry12_canonical_paths_documented() -> None:
     """Sanity: canonical tag resolves (no I/O)."""
     assert ENTRY12_CANONICAL_RUN_TAG

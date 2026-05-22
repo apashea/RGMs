@@ -3058,5 +3058,11 @@ tag = getenv('RGMS_ENTRY12_CAPTURE_RUN_TAG');
 if isempty(tag)
     tag = 'rgms_canonical';
 end
-dumpSpec = struct('enabled', true, 'outDir', outDir, 'runTag', tag);
+vprobe = getenv('RGMS_ENTRY12_CAPTURE_Y_PROBE');
+if isempty(vprobe)
+    capture_y_probe = true;
+else
+    capture_y_probe = ~(strcmpi(vprobe,'0') || strcmpi(vprobe,'false') || strcmpi(vprobe,'no'));
+end
+dumpSpec = struct('enabled', true, 'outDir', outDir, 'runTag', tag, 'capture_y_probe', capture_y_probe);
 

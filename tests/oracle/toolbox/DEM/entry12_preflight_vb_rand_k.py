@@ -2,11 +2,17 @@
 """Preflight: count scalar ``numpy.random.rand()`` draws for Entry 12 VB oracle.
 
 Writes ``fixtures/entry12_vb_rand_K.mat`` (variable ``K``) for
-``DEMAtariIII_entry12_dump_all_subentries.m``. Count uses the same VB flags as
-Phase 1 oracle: ``OPTIONS={}``, ``monitoring=False``, ``dump_subentries=True``,
-``reuse_matlab_draws=False``.
+``DEMAtariIII_entry12_dump_all_subentries.m`` (script 1a of the four-script lane).
 
-Run from repo root with ``conda activate rgms`` before refreshing the MATLAB dump.
+**Validation coherence:** ``K`` and ``vb_rand_buf`` are only meaningful when the full
+chain runs together: **1a** (this script) → **1b** (MATLAB dump driver + fork) → **3**
+(XXX 12) → **4** (Validation 12). Do not pair ``K`` from one preflight with ``.mat``/``.pkl``
+from another run, tag, or capture script.
+
+Count uses the same VB flags as Phase 1 oracle: ``OPTIONS={}``, ``monitoring=False``,
+``dump_subentries=True``, ``reuse_matlab_draws=False``.
+
+Run from repo root with ``conda activate rgms`` before script **1b**.
 """
 
 from __future__ import annotations

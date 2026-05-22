@@ -72,6 +72,24 @@ def _assert_nested_rdp_equal(py: Any, mat: Any, path: str) -> None:
         pa = np.asarray([float(x) for x in _flatten_list_int_float(py)], dtype=np.float64).ravel()
         if pa.size == ma.size and (pa.size == 0 or np.allclose(pa, ma, rtol=0.0, atol=1e-10)):
             return
+    try:
+        from scipy import sparse as sp
+
+        if sp.issparse(py) or sp.issparse(mat):
+            pa = np.asarray(
+                py.toarray() if sp.issparse(py) else py, dtype=np.float64
+            ).ravel(order="F")
+            ma = np.asarray(
+                mat.toarray() if sp.issparse(mat) else mat, dtype=np.float64
+            ).ravel(order="F")
+            if pa.size != ma.size:
+                raise AssertionError(f"{path}: sparse numel py={pa.size} mat={ma.size}")
+            if not np.allclose(pa, ma, rtol=0.0, atol=1e-10):
+                d = float(np.max(np.abs(pa - ma))) if pa.size else 0.0
+                raise AssertionError(f"{path}: sparse max abs diff={d}")
+            return
+    except ImportError:
+        pass
     if type(py) is not type(mat):
         raise AssertionError(f"{path}: type py={type(py)} mat={type(mat)}")
     if isinstance(py, dict):

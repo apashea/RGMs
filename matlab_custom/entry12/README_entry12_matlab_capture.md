@@ -1,5 +1,9 @@
 # Entry 12 MATLAB subentry `.mat` capture
 
+**Goal (project):** Prove Python **`spm_MDP_VB_XXX.py`** matches MATLAB VB on the Atari FSL **`RDP`**. Sign-off is script **4** (**`XXX_12_compare_pdp_pkl_to_mat.py`**) exit **0** on paired **1b**/**3** fixtures — see **`Atari_example.md`** § **Entry 12 — Goal vs means (agent anchor)**.
+
+**This folder is instrumentation only** — capture fork and driver for **`.mat`** fixtures, not the translation target.
+
 This folder implements the Entry 12 plan in `Atari_example.md`: **one** MATLAB driver run loads the canonical nested **`RDP`**, performs **`spm_MDP_checkX`**, and walks the instrumented variational-BP fork so that **all** spine checkpoints **`DEMAtariIII_entry12_<runTag>_12A.mat` … `_12I.mat`** are written under a single output directory in **one** execution.
 
 ## Prerequisites
@@ -44,14 +48,14 @@ If you keep MATLAB’s default tag **`default`**, set **`RGMS_ENTRY12_CAPTURE_RU
 | `_12A.mat` | **`MDP`** after `spm_MDP_checkX`, **`OPTIONS`**, **`meta`**. |
 | `_12B.mat` | Post-setup workspace bundle (`process`, `GP`, `id`, counts, …). |
 | `_12C.mat` | Pre-`for t` tensors (`M`, `O`, priors, `BP`/`IP`, …). |
-| `_12D.mat` | **`per_t`** cell vector — early within-`t` band (see fork). |
-| `_12E.mat` | **`per_t`** — outcomes / hierarchical segment. |
-| `_12F.mat` | **`per_t`** — belief-update segment (`Q`, `P`, `R`, …). |
+| `_12D.mat` | Lean boundaries **`in`**, **`out_t1`**, **`out_t2`**, **`out_t3`**, **`out_tT`**; **`out_t1`** may include **`entry12_prechild`**. |
+| `_12E.mat` | Same boundary keys; **`O`** at **`t`** plus optional **`nested_y_summary`**. |
+| `_12F.mat` | Same boundary keys; parent **`Q`**, **`P`**, **`R`**, **`v`**, **`w`**, **`MDP`**, optional **`nested_y_summary`**, inspection-only **`entry12_phase_log`** (ordered VB phases at this ``t``). |
 | `_12G.mat` | After the main time loop, before Dirichlet accumulation assembly. |
 | `_12H.mat` | **`PDP`** = assembled output (same logical role as uninstrumented `spm_MDP_VB_XXX`). |
 | `_12I.mat` | **`spine`** metadata (`T`, `Nm`, …) for bookkeeping / tooling. |
 
-Nested **child** calls to `spm_MDP_VB_XXX_entry12_dump` do **not** re-emit these files (dumping is disabled on recursion so top-level tags are not overwritten).
+Nested **child** calls to `spm_MDP_VB_XXX_entry12_dump` do **not** re-emit these files (dumping is disabled on recursion so top-level tags are not overwritten). With **`RGMS_ENTRY12_CAPTURE_Y_PROBE=1`** (default), child VB still records **`entry12_Yfill`** and **`entry12_VBX`** on the nested **`MDP.MDP`** struct inside parent snaps.
 
 ## Python loading
 

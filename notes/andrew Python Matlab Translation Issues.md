@@ -824,10 +824,10 @@ MATLAB sets **`Pu = spm_softmax(G, alpha)`** after **`spm_forwards`** builds **`
 (`spm_MDP_VB_XXX.m` ~1326, with **`G`** from ~1261).
 
 **Current Python (`spm_MDP_VB_XXX.py`, `_vb_run_partial_t_loop`):** each **`t`**: generation, then
-**`if OPTIONS.O`** **`_vb_generate_outcomes_if_options_o`** (**~873–949**), **`_vb_shared_probabilistic_outcomes`**
-(**~952–969**, uses **`_vb_Fm_neg_t_o_m`** from **`n<0`**), then **`BP`/`IP`**. If **`O{m,:,t}`** is still not ready,
-**`Pu_carry`** uses **`spm_softmax(0, alpha)`**.
-Otherwise **`spm_forwards`** (**`spm_VBX`**) and **`_vb_belief_after_forwards`** (**~1264–1346**).
+**`if OPTIONS.O`** outcome blocks, then **`BP`/`IP`**, then **`spm_forwards`** (**`spm_VBX`**) and
+**`_vb_belief_after_forwards`** (**~1264–1346**) for every model in **`M(t,:)`** — **no skip** when **`O`**
+is empty (removed interim **`_vb_placeholder_pu_carry_softmax`** / **`_vb_o_row_ready_for_model`** guard, 2026-05-18).
+**`isempty(O)` one-hot (`.m` ~977–978):** **`_vb_generate_outcomes_if_options_o`** (12E) + **`_vb_fill_O_empty_from_realized_o_at_t`** at 12E→12F seam before belief — authoritative policy in **`Atari_example.md`** § **Entry 12 workflow — four scripts** / **Script 3 compute contract**.
 **`run_dem_atariiii(entry_stop=12)`** calls **`spm_MDP_VB_XXX(RDP)`** in **full mode** (no `_rgms_partial_ok`) and returns an
 assembled **`PDP`**. Optional **`_rgms_partial_ok`** remains for staged isolation only (not the driver acceptance path).
 Full level-0 **`F`** vs MATLAB on the Entry-12 artifact lane is gated by **`test_entry12_python_full_F_vector_parity_from_artifact`**
@@ -886,6 +886,23 @@ without ``GV`` still raise ``NotImplementedError``.
 the recursive call. ``Q.O{mdp.L}`` is approximated as the list index ``L-1`` of the child’s ``Q['O']`` cell (width =
 last axis of that array). If no column index is valid, ``O`` is **n×0** (not omitted), matching ``S(:,seg(j))`` with
 all-false ``j``.
+
+## Child init: ``MDP(m).O{g,t}`` vs dense ``mdp.O`` from ``S`` (~732–752, Entry 12 **12F**)
+
+**Ground truth:** ``matlab_src/toolbox/DEM/spm_MDP_VB_XXX.m`` ~732–752 (band **12B**).
+
+After hierarchical ``mdp.S→O`` (~1189–1191), ``mdp.O`` is a **dense matrix** (stacked stimulus columns), **not**
+a ``Ng×T`` cell array. Init only loads outcomes via curly indexing ``MDP(m).O{g,t}`` (~741). That fails for the
+matrix → ``catch`` (~747–748) sets ``O{m,g,t} = []`` (~748); outcome generation ~913–985 then fills ``O{m,g,t}``
+(e.g. ``GP(m).A{g}`` when ``n==0``, ~961–967).
+
+**Python policy (2026-05-19):** ``_vb_mdp_O_is_cell_gt_layout`` gates the ~732–752 mirror in
+``_vb_init_QXSP_outcomes_and_process``. Do **not** read ``mdp.O[g,:]`` as modality ``g`` on a numeric matrix (that
+disabled generation and broke ``12F.out_t1.MDP.MDP.Q.O[*]`` vs MATLAB). Code comments cite ``.m`` line ranges, not
+``OPTIONS.O`` toggles as the story.
+
+**Validation 12:** first red for this class was ``12F.out_t1.MDP.MDP.Q.O[1]`` (living list in
+``matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt`` after **3→4**).
 
 ## Hierarchical `mdp.Q` record append (`try/catch`) (~1180–1209)
 
@@ -954,6 +971,26 @@ field is shorter, use ``find`` semantics on the raveled vector and assign into
 caused nested child VB to re-``spm_sample`` ``s`` at ``t=1`` and broke Entry **12E**
 ``O{m,g,1}`` from child ``X{f}(:,1)`` for large factors (e.g. ``ns=41``).
 
+## Entry 12 — `GP(m).A` frozen at init; workspace `A{m,g}` updates online
+
+**MATLAB** (`spm_MDP_VB_XXX.m` ~368, ~964–967, ~1424): at setup, `GP(m).A = MDP(m).A` (or `GA` for process models). The loop updates workspace `A{m,g} = spm_norm(qa{m,g})` but does **not** write back into `GP(m).A{g}`. The `n(o,t)==0` outcome branch samples from **`GP(m).A{g}(:,ind{:})`** (initial likelihood shape / `No`).
+
+**Python bug (fixed 2026-05-19):** `gpm["A"] = md["A"]` aliased the same list/objects as `md["A"]`, so active-learning updates shrank `GP` tensors (e.g. modalities **109–111** became **2×2** / **9×9**). That collapsed `O` / nested `Q.O` row stacks (**553** vs **555** rows) and triggered Validation **12** `Q.O` compare-lane overflow at **g=110**.
+
+**Policy:** `copy.deepcopy` generative-process `GP(m).A/B/D/E/U` (and `GA/GB/GU`) at **12B** init; keep updating `bundle["A"]` / `md["A"]` for online `A{m,g}` only.
+
+## Entry 12 — `MDP.Y{o,t}` first index is `Ng`, not `max(No)`
+
+**MATLAB** (`spm_MDP_VB_XXX.m` ~1644–1659): posterior predictive `MDP(m).Y{o,t}` uses outcome modality index **`o`** from `spm_parents` (1..`Ng(m)`), same as `O{m,o,t}` indexing.
+
+**Python bug (fixed 2026-05-19):** `_vb_posterior_predictive_Y` allocated `md["Y"]` with `max(No)` rows, producing 9×`T` cells instead of 111×`T` and Validation **12** compare-lane `Y` flatten **9 ≠ 222**.
+
+**Policy:** size `Y` (and bounds on `o`) with **`Ng`**, not `max(No)`.
+
+## Entry 12 — Validation 12 and compare-lane honesty (pointer)
+
+**Authoritative policy:** **`Atari_example.md`** § **Entry 12 — Validation 12 and compare-lane honesty (mandatory)**. Validation **12** (script **4**) is the **full** Phase **1** sign-off oracle: causal **12D–12F** lean snaps (**15** steps, fix at **first** red), input **`RDP`**, subentries **12A–12I** (gating: **12A–12F**, **12H**, **12I**; **12G** excluded), and **final `PDP`** — one paired **1b/3** run. Compare lane (`entry12_matlab_capture.py`) may reshape for representation only — it must **not** substitute MATLAB values on layout failure (`Entry12CompareLaneError`).
+
 ## Entry 12 — Phase 1 oracle lane and Validation 12 lean boundaries
 
 **XXX 12 default input (Phase 1):** `test_DEM_AtariIII_XXX_12.py` loads
@@ -973,6 +1010,8 @@ then align container types (e.g. ``csc_array`` on ``A{g}``, ``id.g`` as ``(1, ng
 **`spm_MDP_checkX` — ``C{g}`` 1-D from ``loadmat(..., simplify_cells=True)`:** FSL oracle load
 can yield ``C{g}`` shape ``(n,)`` instead of ``(n, 1)``; reshape to column before
 ``spm_dir_norm`` so normalization matches MATLAB column vectors.
+
+**Authoritative sign-off contract:** **`Atari_example.md`** § **Phase 1 oracle RNG — mandatory policy** (four-script lane, forbidden draw hacks, Phase **0** gate). This file holds **`spm_sample`** mechanics only.
 
 **VB RNG replay (Phase 1):** `spm_MDP_VB_XXX(..., reuse_matlab_draws=False)` (default)
 uses native `numpy.random.rand` in file-local `_spm_sample`. With
@@ -1025,6 +1064,20 @@ on **12I** `spine` is environment metadata — stripped on both sides before com
 
 **Fix:** `_id_g_cell_partitions` in `spm_MDP_checkX.py` iterates **cells** (partitions), not modality scalars inside one row.
 
+## Entry 12 — `_spm_induction_vb` path column (`P(:,max(n-1,1))`)
+
+**MATLAB:** After `[d,n] = max(G,[],1)` and `[n,i] = min(n)`, `n` is the **1-based row**
+index of the maximum score in `G` (time / backwards column). The path mask is
+`P = P{i}(:, max(n - 1, 1))` (1-based column into `P{i}`).
+
+**Python:** `nmx = np.argmax(G, axis=0)` is **0-based**. The matching column index is
+`col_idx = max(int(n_use) - 1, 0)`, **not** `max(n_use - 1, 1) - 1` (that applies an
+extra `-1` and picked the wrong backwards column, yielding `R_sum=64` with two
+nonzeros vs MATLAB `R_sum=32` with one).
+
+**Frozen oracle:** `matlab_custom/entry12_12f_induction_compare.py` on captured
+`B,H,Q,N,id` at parent `t=1,m=1`.
+
 ## Entry 12 — `.mat` capture oracles (canonical tag)
 
 **Sources:** **`matlab_custom/saved_rdp_DEM_AtariIII.mat`** (`RDP`) and **`DEMAtariIII_entry12_<runTag>_12A.mat`** (`MDP` after MATLAB **`spm_MDP_checkX`**), produced by **`DEMAtariIII_entry12_dump_all_subentries.m`**.
@@ -1032,6 +1085,32 @@ on **12I** `spine` is environment metadata — stripped on both sides before com
 **Python:** Tests convert **`loadmat`** payloads with **`tests/oracle/toolbox/DEM/entry12_loadmat_convert.py`** (`mat_nested_to_py`) before **`spm_MDP_checkX`** / compares. Parity vs **`_12A.mat`** uses **`_assert_nested_rdp_equal`** from **`test_spm_mdp2rdp`** (same nested-float tolerance policy).
 
 **Run-tag alignment:** Python constant **`ENTRY12_CANONICAL_RUN_TAG`** (default **`rgms_canonical`**, env **`RGMS_ENTRY12_CANONICAL_RUN_TAG`**) should match **`RGMS_ENTRY12_CAPTURE_RUN_TAG`** used in MATLAB when generating files, or set **`RGMS_ENTRY12_CAPTURE_RUN_TAG`** in the pytest environment to match whatever tag was used (e.g. **`default`**).
+
+## Entry 12 — saved-structure compare contract (Validation 12 causal gate)
+
+**Policy:** Paired **1b** / **3** compares must use **symmetric** canonicalization — not “reshape Python to mat list length” per tee line. One documented rule per MATLAB storage class; apply the **same** transform to py and mat before `_assert_nested_rdp_equal`.
+
+**`ss.{D,E,ID,IE}` (checkX / structure-learning on nested MDP):** MATLAB saves each block as **`cell(4,4)`** (``loadmat`` → ``4×4`` object array). Script **3** pickle stores a **flat length-16** list in **row-major** order (**`k = i*4 + j`**); paired compare must flatten``.mat`` nested **`[i][j]`** the same way (not MATLAB ``(:)`` column-major unless Python compute is changed to match). Validation **12** calls **`entry12_canonicalize_saved_structures_for_compare`** on **both** aligned py and mat snapshots before causal asserts.
+
+**`mdp.Q.{Y,j,i,o}{L}` append row:** Python must flatten child ``Ng×T`` nested grids with MATLAB ``(:)`` index **`o + t*Ng`** (loop **`t` then `o`** in ``_vb_hierarchical_q_ot_grid_to_cell_row``). Wrong order **`o*T+t`** permutes cells vs live ``mdp.Y{o,t}`` while live ``Y`` can still match. Compare: ``_entry12_canonicalize_Q_ot_grid_levels`` on paired snaps.
+
+**Nested `mdp.O` / `MDP.MDP.O` (post-``shiftdim`` vs ``.mat`` load):** After child VB, MATLAB ``shiftdim(O,1)`` yields **`O{t,g}`** (**T×Ng**); Python mirrors as **`O[t][g]`** in script **3** dumps. Paired **1b** ``loadmat`` still exposes workspace-style **`cell(Ng,T)`** as **`O[g][t]`** (e.g. **111×2** object array → length-**111** list of length-**2** rows). Same **222** outcome cells; transposed nesting only. Compare lane: **`entry12_canonicalize_saved_structures_for_compare`** maps both sides to **`O[g][t]`** via **`_entry12_canonicalize_O_nested_block`** (not a VB change). Flat **`Q.O{L}`** rows still use **`_entry12_q_o_flat_index_t_shiftdim`** (**`t + g*T`**) — separate surface from full nested **`MDP.MDP.O`**.
+
+**`entry12_Yfill`:** MATLAB **`cell(Ng,T)`** (e.g. **111×2**). Preserve as nested **`[g][t]`** in **`mat_nested_to_py`** (do not flatten to **`Ng×T`**). Distinct from **`4×4`** **`ss`** blocks — shape heuristics must not treat all 2D object arrays alike.
+
+## Entry 12 — `spm_dot(B, P)` path axis when `Nu>1`
+
+**MATLAB:** For vector `P` with `numel(P)` matching multiple `size(B)` entries, `spm_dot(B,P)` wraps `P` as a **cell** `{P}` so contraction uses the **last** matching dimension (path / `Nu` axis), not the first (state / `Ns`).
+
+**Python:** `spm_dot(B, P)` with a plain 1-D array can contract the **state** axis when `ns == nu` (e.g. Atari `10×10` `B` and length-10 `P`), corrupting `Q{m,f,t} = spm_dot(B,P)*Q` and leaving diffuse path posteriors after hierarchical child VB.
+
+**Fix:** Use **`spm_dot(B, [P])`** (cell/list-of-one-vector form) anywhere MATLAB passes a path belief vector into `spm_dot` for forwards / `prior_QP` / uncontrollable `BP`/`IP` fills. Frozen on Entry 12: child `P{2}(:,end)` one-hot at `out_t2`, causal **`12E.out_t2.O[3]`**, **`MDP.F`**.
+
+## Entry 12 — workspace ``A{m,g}`` peak index (`A_peaks_*`)
+
+**MATLAB:** ``entry12_vec_peak_`` uses ``v(:)`` (column-major linearization) then ``max(v)`` (1-based index).
+
+**Python:** ``_entry12_vec_peak`` in ``spm_MDP_VB_XXX.py`` must use ``np.asarray(...).ravel(order='F')`` before ``argmax``, not default C-order ``ravel()``. On 2D workspace ``A`` (e.g. ``(41,485)``), C-order peak indices disagree with MATLAB while F-order peaks match paired phase logs. Compare-lane ``_entry12_normalize_a_peaks_list`` must use the same rule when re-``argmax``ing array payloads.
 
 ## FSL 1–11 — MATLAB capture vs stock `dump_rdp_DEM_AtariIII.m`
 

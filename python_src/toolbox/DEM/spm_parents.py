@@ -33,6 +33,13 @@ def _s_from_q_numeric(id_ff, Q) -> list:
     return [int(x) for x in sub.ravel().tolist()]
 
 
+def _unwrap_id_a_entry(id_a_g: Any) -> Any:
+    """MATLAB ``id.A{g}`` may be wrapped ``{1}`` in Python."""
+    if isinstance(id_a_g, (list, tuple)) and len(id_a_g) == 1:
+        return id_a_g[0]
+    return id_a_g
+
+
 def _cell_multi_get(cur, indices_1based: list):
     """MATLAB id.fg{g}{s{:}} / id.gg{g}{s{:}} with 1-based indices in s."""
     if len(indices_1based) == 1:
@@ -68,7 +75,7 @@ def spm_parents(id: dict, g: int, Q):
             else:
                 j = _cell_multi_get(fg[g - 1], s)
         else:
-            j = id["A"][g - 1]
+            j = _unwrap_id_a_entry(id["A"][g - 1])
 
         if "gg" in id:
             gg = id["gg"]
@@ -82,6 +89,6 @@ def spm_parents(id: dict, g: int, Q):
 
         return j, i
 
-    j = id["A"][g - 1]
+    j = _unwrap_id_a_entry(id["A"][g - 1])
     i = g
     return j, i

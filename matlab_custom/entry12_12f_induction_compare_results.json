@@ -1,0 +1,30 @@
+{
+  "python_on_py_inputs": {
+    "R_shape": [
+      485,
+      1
+    ],
+    "R_sum": 32.0,
+    "R_nz": [
+      271
+    ],
+    "R_max": 32.0,
+    "hif": [
+      1
+    ]
+  },
+  "matlab_on_py_inputs": {
+    "R_shape": [
+      485,
+      1
+    ],
+    "R_sum": 32.0,
+    "R_nz": [
+      272
+    ],
+    "R_max": 32.0,
+    "hif": [
+      1
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "t1_pre": {
+    "P_sizes": [
+      485
+    ]
+  },
+  "t1": {
+    "n_factors_shell": 1,
+    "P_sizes": [
+      485
+    ],
+    "F_forwards": -163.3670326522516,
+    "F_traj_slot": NaN
+  },
+  "t2_pre": {
+    "P_sizes": [
+      485
+    ]
+  },
+  "t2": {
+    "n_factors_shell": 1,
+    "P_sizes": [
+      485
+    ],
+    "F_forwards": -0.5877866649034389,
+    "F_traj_slot": NaN
+  },
+  "t3_pre": {
+    "P_sizes": [
+      485
+    ]
+  },
+  "t3": {
+    "n_factors_shell": 1,
+    "P_sizes": [
+      485
+    ],
+    "F_forwards": -1.2763123891092484e-12,
+    "F_traj_slot": NaN
+  }
+}

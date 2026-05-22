@@ -26,12 +26,22 @@ def mat_nested_to_py(obj: Any, *, _depth: int = 0) -> Any:
             return {str(n): mat_nested_to_py(obj[n][()], _depth=_depth + 1) for n in obj.dtype.names}
 
         if obj.dtype == object:
+            if obj.ndim == 2 and obj.shape[0] >= 1 and obj.shape[1] >= 1:
+                if obj.shape[0] == 1 and obj.shape[1] >= 1:
+                    flat = [mat_nested_to_py(obj.flat[i], _depth=_depth + 1) for i in range(obj.size)]
+                    return flat if len(flat) > 1 else flat[0]
+                if obj.shape[1] == 1 and obj.shape[0] >= 1:
+                    flat = [mat_nested_to_py(obj.flat[i], _depth=_depth + 1) for i in range(obj.size)]
+                    return flat[0] if len(flat) == 1 else flat
+                if obj.shape[0] > 1 and obj.shape[1] > 1:
+                    return [
+                        [
+                            mat_nested_to_py(obj[i, j], _depth=_depth + 1)
+                            for j in range(obj.shape[1])
+                        ]
+                        for i in range(obj.shape[0])
+                    ]
             flat = [mat_nested_to_py(obj.flat[i], _depth=_depth + 1) for i in range(obj.size)]
-            if obj.ndim == 2 and obj.shape[0] == 1 and obj.shape[1] >= 1:
-                # MATLAB 1×N horizontal struct/cell row → Python list of models
-                return flat if len(flat) > 1 else flat[0]
-            if obj.ndim == 2 and obj.shape[1] == 1 and obj.shape[0] >= 1:
-                return flat[0] if len(flat) == 1 else flat
             if len(flat) == 1:
                 return flat[0]
             return flat

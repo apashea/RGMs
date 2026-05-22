@@ -29,10 +29,9 @@ FSL 1-11), stderr includes harness ``[XXX 12 run trace]`` at load/save and VB ba
 ``[spm_MDP_VB_XXX 12X] total_s=…`` per band inside ``spm_MDP_VB_XXX.py`` (12E/12F summed). Total VB wall time:
 ``[XXX 12] spm_MDP_VB_XXX wall_s=...``.
 
-**Validation:** after a successful run and a MATLAB ``DEMAtariIII_XXX_12_pdp.mat`` from
-``matlab_custom/dump_pdp_DEM_AtariIII_XXX_12_from_fsl_rdp.m``, run
-``python tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py``. See
-``Atari_example.md`` § **Entry 12** (XXX 12 / Validation 12 table).
+**Validation:** after **1a → 1b → 3**, run
+``python tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`` (script **4**).
+See ``Atari_example.md`` § **Entry 12 workflow — four scripts**.
 
 --- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\test_DEM_AtariIII_XXX_12_output.txt ---
 [XXX 12] RDP source: FSL RDP mat
@@ -48,5 +47,5 @@ FSL 1-11), stderr includes harness ``[XXX 12 run trace]`` at load/save and VB ba
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12G.pkl
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12H.pkl
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12I.pkl
-[XXX 12] spm_MDP_VB_XXX wall_s=9.268055
+[XXX 12] spm_MDP_VB_XXX wall_s=64.322672
 [XXX 12] wrote PDP pickle: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_pdp.pkl
