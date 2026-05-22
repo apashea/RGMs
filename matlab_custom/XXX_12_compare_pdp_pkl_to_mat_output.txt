@@ -473,7 +473,7 @@ OK: nested RDP parity (XXX 12 validation)
 [XXX 12 validation] subentry 12C type walk: 0 mismatch line(s)
 [XXX 12 validation] OK: subentry 12C
 [XXX 12 validation] --- subentry 12D (capture-shaped type walk) ---
-[XXX 12 validation] subentry 12D type walk: 3428 mismatch line(s)
+[XXX 12 validation] subentry 12D type walk: 3431 mismatch line(s)
 12D.in.MDP.U: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
@@ -1065,9 +1065,12 @@ OK: nested RDP parity (XXX 12 validation)
 12D.out_t2.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12D.out_t2.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12D.out_t2.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12D.out_t2.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12D.out_t2.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -3966,9 +3969,12 @@ OK: nested RDP parity (XXX 12 validation)
 12D.out_t3.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12D.out_t3.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12D.out_t3.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12D.out_t3.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12D.out_t3.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -7587,9 +7593,12 @@ OK: nested RDP parity (XXX 12 validation)
 12D.out_tT.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12D.out_tT.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12D.out_tT.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12D.out_tT.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12D.out_tT.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -11226,7 +11235,7 @@ OK: nested RDP parity (XXX 12 validation)
   [mismatch detail] PKL=<missing>
   [mismatch detail] MAT scalar repr=512
 [XXX 12 validation] --- subentry 12F (capture-shaped type walk) ---
-[XXX 12 validation] subentry 12F type walk: 4803 mismatch line(s)
+[XXX 12 validation] subentry 12F type walk: 4807 mismatch line(s)
 12F.in.MDP.U: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
@@ -11755,9 +11764,12 @@ OK: nested RDP parity (XXX 12 validation)
 12F.out_t1.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12F.out_t1.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12F.out_t1.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12F.out_t1.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12F.out_t1.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -14761,9 +14773,12 @@ OK: nested RDP parity (XXX 12 validation)
 12F.out_t2.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12F.out_t2.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12F.out_t2.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12F.out_t2.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12F.out_t2.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -18484,9 +18499,12 @@ OK: nested RDP parity (XXX 12 validation)
 12F.out_t3.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12F.out_t3.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12F.out_t3.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12F.out_t3.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12F.out_t3.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -22285,9 +22303,12 @@ OK: nested RDP parity (XXX 12 validation)
 12F.out_tT.MDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-12F.out_tT.MDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+12F.out_tT.MDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+12F.out_tT.MDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 12F.out_tT.MDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list
@@ -26040,7 +26061,7 @@ OK: nested RDP parity (XXX 12 validation)
 [FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field D=list(len=60,elem=ndarray(41, 1))
 [FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field E=list(len=60,elem=ndarray(14, 1))
 [FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field F=ndarray(2,)
-[FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field G=list(len=2,elem=ndarray(0, 1))
+[FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field G=list(len=4,elem=ndarray(1, 1))
 [FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field L=int
 [FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field O=list(len=2,elem=list)
 [FSL 1-11 validation] MDP chain (PKL PDP) path=PDP.MDP field P=list(len=60,elem=ndarray(14, 2))
@@ -26194,7 +26215,7 @@ OK: nested RDP parity (XXX 12 validation)
 [FSL 1-11 validation] MDP chain (MATLAB PDP) path=PDP field v=ndarray(64,)
 [FSL 1-11 validation] MDP chain (MATLAB PDP) path=PDP field w=ndarray(64,)
 [XXX 12 validation] PDP top-level key diff: only_in_PKL=entry12_VBX=dict(len=13); only_in_MATLAB=(none)
-[XXX 12 validation] type walk: 5050 mismatch line(s)
+[XXX 12 validation] type walk: 5051 mismatch line(s)
 PDP.MDP.B[7]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
@@ -26645,9 +26666,12 @@ PDP.MDP.E[55]: type py=ndarray mat=int
 PDP.MDP.E[56]: type py=ndarray mat=int
   [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[1.]
   [mismatch detail] MAT scalar repr=1
-PDP.MDP.G: list len py=2 mat=4
-  [mismatch detail] PKL list(len=2) elem0_unwrap_type=ndarray
-  [mismatch detail] MAT list(len=4) elem0_unwrap_type=int
+PDP.MDP.G[0]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
+PDP.MDP.G[1]: type py=ndarray mat=int
+  [mismatch detail] PKL ndarray shape=(1, 1) dtype=float64 preview_ravel[:8]=[0.]
+  [mismatch detail] MAT scalar repr=0
 PDP.MDP.O: list len py=2 mat=111
   [mismatch detail] PKL list(len=2) elem0_unwrap_type=list
   [mismatch detail] MAT list(len=111) elem0_unwrap_type=list

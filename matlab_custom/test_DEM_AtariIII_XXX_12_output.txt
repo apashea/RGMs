@@ -47,5 +47,5 @@ See ``Atari_example.md`` § **Entry 12 workflow — four scripts**.
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12G.pkl
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12H.pkl
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12I.pkl
-[XXX 12] spm_MDP_VB_XXX wall_s=64.322672
+[XXX 12] spm_MDP_VB_XXX wall_s=63.060879
 [XXX 12] wrote PDP pickle: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_pdp.pkl

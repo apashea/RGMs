@@ -2597,8 +2597,12 @@ def _vb_fill_O_empty_from_realized_o_at_t(
 def _vb_ensure_per_t_traces(models: list[dict[str, Any]], mi: int, t_int: int) -> None:
     """Preallocate MATLAB-like ``MDP(m).F(t)``, ``G{t}``, ``Z(t)`` slots (length ``T``)."""
     md = models[mi]
-    if md.get("G") is None or (not isinstance(md["G"], list)) or (len(md["G"]) != t_int):
+    gg = md.get("G")
+    if gg is None or not isinstance(gg, list):
         md["G"] = [None] * t_int
+    elif len(gg) < t_int:
+        md["G"] = list(gg) + [None] * (t_int - len(gg))
+    # Do not shrink ``G`` when checkX left a longer structural cell row (MATLAB keeps ``1×4`` with ``T=2``).
     ff = md.get("F")
     if ff is None or (not isinstance(ff, np.ndarray)) or (int(ff.size) != t_int):
         md["F"] = np.zeros((t_int,), dtype=np.float64)
@@ -2921,7 +2925,14 @@ def _vb_belief_after_forwards(
             if t_m > 1:
                 P_all[mi][f_idx][t_idx] = copy.deepcopy(P_all[mi][f_idx][t_idx - 1])
 
-    return np.asarray(G_work, dtype=np.float64).copy(), float(Z_acc)
+    # MATLAB ~1464: ``MDP(m).G{t} = G`` — full forwards policy vector (same ``G`` as ``spm_softmax(G)``).
+    if npp > 0:
+        gw_out = np.asarray(G_work, dtype=np.float64).copy()
+    elif G_flat.size >= 1:
+        gw_out = np.asarray(G_flat, dtype=np.float64).copy().reshape(-1, 1)
+    else:
+        gw_out = np.asarray(G_for_R, dtype=np.float64).reshape(-1, 1).copy()
+    return gw_out, float(Z_acc)
 
 
 def _vb_generate_outcomes_if_options_o(
@@ -4123,7 +4134,10 @@ def _vb_run_partial_t_loop(
                 _entry12_record_phase(
                     mi, t_m, "post_mdp_F", bundle, extra={"F_mdp_slot": float(F_elbo)}
                 )
-            models[mi]["G"][t_idx] = np.asarray(Gw, dtype=np.float64).copy()
+            if isinstance(Gw, (int, float)):
+                models[mi]["G"][t_idx] = float(Gw)
+            else:
+                models[mi]["G"][t_idx] = np.asarray(Gw, dtype=np.float64).copy()
             models[mi]["Z"][t_idx] = float(Zt)
             models[mi]["Pa"] = copy.deepcopy(Pa_step)
             _vb_in_loop_id_ig_and_sn(mi, bundle, t_idx)

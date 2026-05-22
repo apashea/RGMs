@@ -337,18 +337,27 @@ def _entry12_align_nested_lists_for_compare(py_val: Any, mat_val: Any) -> Any:
 
 
 def _entry12_drop_pdp_mdp_trace_keys_for_value_assert(mdp: dict[str, Any]) -> None:
-    """
-    Drop ``MDP.G`` on **12H** / final **PDP** value assert when ``loadmat`` layout ≠ Python assemble.
+    """Reserved hook; parity requires ``MDP.G`` and ``Q.E`` stay in compare trees (no drops)."""
+    del mdp  # no-op
 
-    MATLAB **12H** often exposes ``G`` as a short scalar list; Python keeps ``G{t}`` as ``(0,1)`` or
-    length-``T`` cells — not comparable without a dedicated witness table (see ``Atari_example.md``
-    final-stage review).
-    """
-    if isinstance(mdp, dict):
-        mdp.pop("G", None)
-        q = mdp.get("Q")
-        if isinstance(q, dict):
-            q.pop("E", None)
+
+def _entry12_flatten_Q_E_nested_for_compare(val: Any) -> Any:
+    """``mdp.Q.E{L}``: nested list cells with ``(2,1)`` blocks → one MATLAB flat vector."""
+    import numpy as np
+
+    scalars: list[float] = []
+
+    def walk(v: Any) -> None:
+        if isinstance(v, list):
+            for item in v:
+                walk(item)
+        elif isinstance(v, np.ndarray):
+            scalars.extend(np.asarray(v, dtype=np.float64).ravel().tolist())
+        elif isinstance(v, (int, float, np.integer, np.floating)):
+            scalars.append(float(v))
+
+    walk(val)
+    return np.asarray(scalars, dtype=np.float64)
 
 
 def entry12_mat_mdp_for_subentry_value_assert(
@@ -385,9 +394,6 @@ def entry12_mat_pdp_for_value_assert(mat_pdp: dict[str, Any]) -> dict[str, Any]:
         pa = mdp.get("Pa")
         if pa == [] or pa is None:
             mdp.pop("Pa", None)
-        q = mdp.get("Q")
-        if isinstance(q, dict):
-            q.pop("E", None)
     return out
 
 
@@ -429,7 +435,10 @@ def _entry12_align_mdp_Q_for_12h(py_q: dict[str, Any], mat_q: dict[str, Any]) ->
             continue
         pq = py_q[qk]
         if isinstance(mq, np.ndarray) and isinstance(pq, list):
-            flat = _entry12_flatten_nested_lists_to_ravel(pq)
+            if qk == "E":
+                flat = _entry12_flatten_Q_E_nested_for_compare(pq)
+            else:
+                flat = _entry12_flatten_nested_lists_to_ravel(pq)
             arr = np.asarray(flat, dtype=np.float64).ravel(order="F")
             if arr.size == int(np.asarray(mq).size):
                 py_q[qk] = arr.reshape(np.asarray(mq).shape, order="F")
@@ -856,10 +865,23 @@ def _entry12_align_Q_record_to_mat(py_q: Any, mat_q: Any) -> Any:
         py_levels = out[key] if isinstance(out[key], list) else [out[key]]
         mat_ref = mat_q[key]
         if isinstance(mat_ref, np.ndarray):
-            out[key] = _entry12_cast_q_trajectory_ndarray_for_compare(
-                _entry12_unwrap_q_py_level_for_ndarray_compare(py_levels),
-                mat_ref,
-            )
+            if key == "E":
+                flat = _entry12_flatten_Q_E_nested_for_compare(py_levels)
+                ref_a = np.asarray(mat_ref, dtype=np.float64)
+                if int(flat.size) != int(ref_a.size):
+                    _entry12_compare_lane_fail(
+                        "_entry12_align_Q_record_to_mat E",
+                        f"flattened len {flat.size} != mat len {ref_a.size}",
+                    )
+                out[key] = _entry12_cast_leaf_for_compare(
+                    flat.reshape(ref_a.shape, order="F"),
+                    mat_ref,
+                )
+            else:
+                out[key] = _entry12_cast_q_trajectory_ndarray_for_compare(
+                    _entry12_unwrap_q_py_level_for_ndarray_compare(py_levels),
+                    mat_ref,
+                )
             continue
         if not isinstance(mat_ref, list):
             continue
@@ -1150,11 +1172,26 @@ def _entry12_align_boundary_mdp_fgz(
     import numpy as np
 
     slot = t_idx if trace_slot is None else trace_slot
-    if "G" in mat_mdp and "G" in out and not isinstance(mat_mdp["G"], list):
+    if "G" in mat_mdp and "G" in out:
         py_g = py_mdp.get("G")
-        if isinstance(py_g, list) and 0 <= slot < len(py_g) and py_g[slot] is not None:
-            g_slice = np.asarray(py_g[slot], dtype=np.float64).ravel()
-            out["G"] = _entry12_cast_leaf_for_compare(g_slice, mat_mdp["G"])
+        mat_g = mat_mdp["G"]
+        if isinstance(mat_g, list) and isinstance(py_g, list):
+            n = len(mat_g)
+            out["G"] = [
+                _entry12_cast_leaf_for_compare(
+                    np.asarray(py_g[i] if i < len(py_g) else py_g[-1], dtype=np.float64).ravel(),
+                    mat_g[i],
+                )
+                for i in range(n)
+            ]
+        elif not isinstance(mat_g, list):
+            if isinstance(py_g, list) and 0 <= slot < len(py_g) and py_g[slot] is not None:
+                g_slice = np.asarray(py_g[slot], dtype=np.float64).ravel()
+                out["G"] = _entry12_cast_leaf_for_compare(g_slice, mat_g)
+            elif py_g is not None:
+                out["G"] = _entry12_cast_leaf_for_compare(
+                    np.asarray(py_g, dtype=np.float64).ravel(), mat_g
+                )
     if "F" in mat_mdp and "F" in out:
         pf = np.asarray(py_mdp.get("F"), dtype=np.float64).ravel()
         mf = np.asarray(mat_mdp["F"], dtype=np.float64).ravel()
@@ -1309,15 +1346,24 @@ def entry12_align_mdp_to_mat_workspace(
     from python_src.toolbox.DEM.spm_MDP_checkX import _spm_MDP_checkX_transform_align
 
     out = copy.deepcopy(py_mdp)
+    orig_inner_q = None
+    if isinstance(py_mdp.get("MDP"), dict) and isinstance(py_mdp["MDP"].get("Q"), dict):
+        orig_inner_q = copy.deepcopy(py_mdp["MDP"]["Q"])
     _entry12_align_pdp_assemble_shell(out, mat_mdp)
-    # **12H** assembled ``PDP``: ``MDP.G`` / policy traces differ in ``loadmat`` layout; shell align only.
+    # **12H** assembled ``PDP``: hierarchical shell; align nested ``MDP.G`` (checkX ``1×4`` row).
     if "L" in mat_mdp and isinstance(mat_mdp.get("MDP"), dict):
         py_inner = out.get("MDP")
         mat_inner = mat_mdp["MDP"]
         if isinstance(py_inner, dict) and isinstance(mat_inner, dict):
-            py_q, mat_q = py_inner.get("Q"), mat_inner.get("Q")
-            if isinstance(py_q, dict) and isinstance(mat_q, dict):
-                py_inner["Q"] = _entry12_align_Q_record_to_mat(py_q, mat_q)
+            mat_q = mat_inner.get("Q")
+            if isinstance(orig_inner_q, dict) and isinstance(mat_q, dict):
+                py_inner["Q"] = _entry12_align_Q_record_to_mat(orig_inner_q, mat_q)
+            pg, mg = py_inner.get("G"), mat_inner.get("G")
+            if isinstance(pg, list) and isinstance(mg, list) and mg:
+                py_inner["G"] = [
+                    _entry12_cast_leaf_for_compare(pg[i] if i < len(pg) else pg[-1], mg[i])
+                    for i in range(len(mg))
+                ]
         _entry12_strip_pdp_inspection_probes(out)
         return out
     _spm_MDP_checkX_transform_align(out, mat_mdp)
@@ -1609,7 +1655,7 @@ def entry12_mat_snap_for_value_assert(code: str, mat_snap: dict[str, Any]) -> di
 
 # Keys on parent ``MDP`` excluded from causal value assert (wrong instant or wrong storage).
 _ENTRY12_CAUSAL_12D_MDP_DROP: tuple[str, ...] = ("A", "O", "o", "F", "G", "Z")
-_ENTRY12_CAUSAL_12F_MDP_DROP: tuple[str, ...] = ("A", "F", "G", "Z")
+_ENTRY12_CAUSAL_12F_MDP_DROP: tuple[str, ...] = ("A", "F", "Z")
 
 
 def _entry12_mdp_drop_top_level_keys(md: Any, drop_keys: tuple[str, ...]) -> Any:

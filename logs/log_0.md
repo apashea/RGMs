@@ -10279,3 +10279,62 @@ Removing either edit breaks replay (exhausted or unused draws). Skipping **two**
 **Shared files touched:** yes (`entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `XXX_12_compare_pdp_pkl_to_mat.py`)
 
 ---
+
+## Iteration (2026-05-18): `MDP.G` — end compare drop; fix nested witness
+
+**User policy:** dropping `MDP.G` on compare is **not** acceptable; resolve **G** before **Q.E** / **PDP.O** decisions.
+
+**MATLAB truth (`matlab_custom/diag_entry12_G_12H.m` on `rgms_canonical` 12H):**
+- **Top** `PDP.G`: `1×64` policy columns (`G{1}` ≈ `−32.405…`, `6×1`); matches Python top `G` (maxdiff 0 on sample).
+- **Nested** `PDP.MDP.G`: **`1×4`** checkX row (`0`, `0`, `{110}`, `{111}`) with **`T=2`** — **not** empty `(0,1)` traces. `mat_nested_to_py` maps cells `{110}`/`{111}` → ints.
+
+**Why `G` was dropped:** `_entry12_drop_pdp_mdp_trace_keys_for_value_assert` popped nested **`MDP.G`** when compare saw py `(0,1)` vs mat `[0,0,110,111]` — masked **two bugs**: (1) `_vb_ensure_per_t_traces` resized child `G` from 4→2; (2) `_vb_belief_after_forwards` stored `(0,1)` when `Np==0`.
+
+**Other drops on same path (still present):** nested **`Q.E`** (temporary); inspection probes (`entry12_Yfill`, `entry12_VBX`, …); empty **`Pa`**; **12A** mat **`G`** when py omits it; causal lean strips (**12D–12F** only).
+
+**Fixes:** removed **`G`** from drop; preserve/extend child **`G`** list length; store scalar/column from forwards when `Np==0`; nested **`G`** align in **`entry12_align_mdp_to_mat_workspace`**; **`translation_framework_1to12.md`** §6.2 split rows + notes for deferred **Q.E** / **PDP.O**.
+
+**Scripts:** **`test_DEM_AtariIII_XXX_12.py`** pass (~72s); **`XXX_12_compare_pdp_pkl_to_mat.py --coerce-sparse-to-dense-for-compare`** exit **0**. Post-fix nested **`MDP.G`**: `[0, 0, 110, 111]` both sides after align.
+
+**Files modified:** `translation_framework_1to12.md`, `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `logs/log_0.md`
+
+**Files created:** `matlab_custom/diag_entry12_G_12H.m`, `matlab_custom/diag_entry12_G_id.m` (MATLAB inspection only)
+
+**Shared files touched:** yes (`entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`)
+
+---
+
+## Iteration (2026-05-21): G + Q.E parity — compute + compare (no drops)
+
+**Compute:** `_vb_belief_after_forwards` stores full forwards **`G`** for `MDP.G{t}`; preserve nested **`G`** **`1×4`** length.
+
+**Compare:** no **`G`**/**`Q.E`** drops; `_entry12_flatten_Q_E_nested_for_compare`; inner **`MDP.Q`** aligned from pre-shell copy; **12F** causal includes **`MDP.G`**.
+
+**Scripts:** XXX **12** pass; Validation **12** exit **0** (causal **15/15**, inner **`Q.E`** ~**2.7×10⁻¹⁵**).
+
+**Files modified:** `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `translation_framework_1to12.md`, `logs/log_0.md`
+
+---
+
+## Iteration (2026-05-21): `PDP.O` — verified dimensions + index map (class B closed)
+
+**User request:** verify true **`PDP.O`** dimensions (MATLAB vs Python), respect column-major / **`shiftdim`** / **`12DEF`** indexing; full grid (not first-20-only samples).
+
+**MATLAB (`verify_pdp_O_dimensions.m` on `rgms_canonical` 12H):**
+- **`PDP.O`:** `20×64` cell, **`numel=1280`**, **`O{g,t}`** column vectors (e.g. g=1 → 41×1, g=20 → 3×1).
+- **`PDP.n`:** `20×64`; **`PDP.T=64`**; **`id.g`** visible modalities **1:20**.
+- **`PDP.MDP.O`:** `111×2` (nested child; separate align case).
+
+**`shiftdim` note:** workspace slice **`O(m,:,:)`** is **`1×20×64`**; **`shiftdim(...,1)`** → **`20×64`** in the saved **`.mat`** (confirmed in MATLAB: `shiftdim(cell(1,20,64),1)` → `[20 64]`).
+
+**Python pickle:** **`O[t][g]`** with **T=64**, **Ng=20** (time-outer post-**`_vb_shiftdim_o_ng_t_cells`**).
+
+**Parity:** **`_entry12_align_mdp_O_ng_t_cells`** transpose; **1280/1280** cells, worst maxdiff **~4.4×10⁻¹⁶**. §6.2 row updated (not truncation). **`12DEF.md`** Phase C line corrected.
+
+**Diagnostics (read-only, not sign-off):** `matlab_custom/verify_pdp_O_dimensions.m`, `matlab_custom/verify_pdp_O_dimensions.py`
+
+**Files modified:** `translation_framework_1to12.md`, `12DEF.md`, `logs/log_0.md`
+
+**Files created:** `matlab_custom/verify_pdp_O_dimensions.m`, `matlab_custom/verify_pdp_O_dimensions.py`
+
+---
