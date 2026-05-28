@@ -1,0 +1,1275 @@
+{
+  "tag": "rgms_atari_call2",
+  "Ng": 111,
+  "GA": [
+    {
+      "g": 1,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 2,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 3,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 4,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 5,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 6,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 7,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 8,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 9,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 10,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 11,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 12,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 13,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 14,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 15,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 16,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 17,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 18,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 19,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 20,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 21,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 22,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 23,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 24,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 25,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 26,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 27,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 28,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 29,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 30,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 31,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 32,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 33,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 34,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 35,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 36,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 37,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 38,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 39,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 40,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 41,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 42,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 43,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 44,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 45,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 46,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 47,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 48,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 49,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 50,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 51,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 52,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 53,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 54,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 55,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 56,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 57,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 58,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 59,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 60,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 61,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 62,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 63,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 64,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 65,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 66,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 67,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 68,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 69,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 70,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 71,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 72,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 73,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 74,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 75,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 76,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 77,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 78,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 79,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 80,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 81,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 82,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 83,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 84,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 85,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 86,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 87,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 88,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 89,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 90,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 91,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 92,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 93,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 94,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 95,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 96,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 97,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 98,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 99,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 100,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 101,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 102,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 103,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 104,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 105,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 106,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 107,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 108,
+      "matlab_class": "logical",
+      "size": [
+        5,
+        176,
+        9
+      ],
+      "No": 5,
+      "islogical": true
+    },
+    {
+      "g": 109,
+      "matlab_class": "logical",
+      "size": [
+        2,
+        176,
+        9
+      ],
+      "No": 2,
+      "islogical": true
+    },
+    {
+      "g": 110,
+      "matlab_class": "logical",
+      "size": [
+        2,
+        176,
+        9
+      ],
+      "No": 2,
+      "islogical": true
+    },
+    {
+      "g": 111,
+      "matlab_class": "double",
+      "size": [
+        9,
+        9
+      ],
+      "No": 9,
+      "islogical": false
+    }
+  ],
+  "GB": [
+    {
+      "g": 1,
+      "matlab_class": "double",
+      "size": [
+        176,
+        176
+      ],
+      "islogical": false
+    },
+    {
+      "g": 2,
+      "matlab_class": "double",
+      "size": [
+        9,
+        9,
+        3
+      ],
+      "islogical": false
+    }
+  ],
+  "GU": {
+    "matlab_class": "double",
+    "size": [
+      1,
+      2
+    ],
+    "islogical": false
+  },
+  "GD": [
+    {
+      "g": 1,
+      "matlab_class": "double",
+      "size": [
+        176,
+        1
+      ],
+      "islogical": false
+    },
+    {
+      "g": 2,
+      "matlab_class": "double",
+      "size": [
+        9,
+        1
+      ],
+      "islogical": false
+    }
+  ]
+}

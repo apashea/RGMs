@@ -1,0 +1,198 @@
+{
+  "K": 32256,
+  "total_draws": 0,
+  "policy_hits_t2_len6": [
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 6,
+      "out": 4,
+      "t_gen": 2,
+      "Pu_max": 0.16666666666666666,
+      "Pu_min": 0.16666666666666666,
+      "r_at_start": 0.8147236863931789,
+      "r_at_start_plus1": 0.9057919370756192,
+      "k_from_buf_start": 5,
+      "k_from_buf_start_plus1": 6
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 6,
+      "out": 4,
+      "t_gen": 2,
+      "Pu_max": 1.0,
+      "Pu_min": 0.0,
+      "r_at_start": 0.8147236863931789,
+      "r_at_start_plus1": 0.9057919370756192,
+      "k_from_buf_start": 4,
+      "k_from_buf_start_plus1": 4
+    }
+  ],
+  "mat_k_policy_t2": 2,
+  "sample_count": 32256,
+  "last_20_samples": [
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 5,
+      "out": 5,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 2,
+      "out": 1,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 2,
+      "out": 1,
+      "t_gen": 2
+    },
+    {
+      "draw_start": 0,
+      "draw_end": 0,
+      "kind": "numeric",
+      "k": 9,
+      "out": 6,
+      "t_gen": 2
+    }
+  ]
+}

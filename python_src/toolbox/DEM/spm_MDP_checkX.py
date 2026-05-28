@@ -251,7 +251,14 @@ def _spm_MDP_checkX_single(MDP: dict) -> None:
         ag = A[g]
         if _isnumeric_like(ag):
             ag = _to_dense_double(ag)
-            A[g] = np.asarray(spm_dir_norm(ag), dtype=np.float64)
+            # ``loadmat`` may yield peaked ``(No,)`` vectors; ``spm_dir_norm`` / ``as_matlab_array``
+            # treat 1-D as ``(1,No)`` and uniformizes (Call 2 child ``A{g}`` witness).
+            if ag.ndim == 1 and ag.size > 1:
+                ag = ag.reshape(-1, 1, order="F")
+            ag = np.asarray(spm_dir_norm(ag), dtype=np.float64)
+            if ag.ndim == 2 and ag.shape[1] == 1 and ag.shape[0] > 1:
+                ag = ag.reshape(-1, order="F")
+            A[g] = ag
     _setfield(MDP, "A", A)
 
     B = _getfield(MDP, "B")

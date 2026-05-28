@@ -1,95 +1,3600 @@
 {
-  "K": 27263,
-  "buf_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf.mat",
+  "tag": "rgms_atari_call4",
+  "K": 4096,
+  "buf_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call4.mat",
+  "trace_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\entry12_sample_trace_rgms_atari_call4.json",
   "replay": {
-    "draw_start": 425,
-    "P_argmax_1b": 1,
-    "P_top_mass": 0.002061855670103093,
-    "draw_after_forwards": 425,
-    "G00": -30.613705638875444,
-    "total_draws": 27263,
+    "total_draws": 4096,
     "unused_draws": 0,
-    "PDP_G1": -32.4054651081035,
-    "spm_sample_calls": 27263,
-    "spm_sample_last8": [
-      {
-        "draw_start": 27255,
-        "draw_end": 27256,
-        "kind": "numeric",
-        "k": 0,
-        "out": 5
-      },
-      {
-        "draw_start": 27256,
-        "draw_end": 27257,
-        "kind": "numeric",
-        "k": 0,
-        "out": 5
-      },
-      {
-        "draw_start": 27257,
-        "draw_end": 27258,
-        "kind": "numeric",
-        "k": 0,
-        "out": 5
-      },
-      {
-        "draw_start": 27258,
-        "draw_end": 27259,
-        "kind": "numeric",
-        "k": 0,
-        "out": 5
-      },
-      {
-        "draw_start": 27259,
-        "draw_end": 27260,
-        "kind": "numeric",
-        "k": 0,
-        "out": 5
-      },
-      {
-        "draw_start": 27260,
-        "draw_end": 27261,
-        "kind": "numeric",
-        "k": 0,
-        "out": 1
-      },
-      {
-        "draw_start": 27261,
-        "draw_end": 27262,
-        "kind": "numeric",
-        "k": 0,
-        "out": 1
-      },
-      {
-        "draw_start": 27262,
-        "draw_end": 27263,
-        "kind": "numeric",
-        "k": 0,
-        "out": 4
-      }
-    ],
-    "draw_window": [
-      [
-        425,
-        0.2810053025338709
-      ],
-      [
-        426,
-        0.44008513900172086
-      ],
-      [
-        427,
-        0.5271427417606522
-      ]
-    ]
+    "spm_sample_calls": 32256,
+    "PDP_G1": -27.768493503286354
   },
   "native": {
-    "native_spm_sample_calls": 27263
+    "native_spm_sample_calls": 32256
+  },
+  "trace_summary": {
+    "by_site": {
+      "child_sample_column": 2814,
+      "child_spm_action": 127,
+      "control_P": 127,
+      "gp_path_E": 1,
+      "nested_child_sample_column": 28416,
+      "nested_child_spm_action": 128,
+      "nested_gp_path_E": 2,
+      "nested_policy": 128,
+      "nested_state_ps": 258,
+      "policy": 127,
+      "state_ps": 128
+    },
+    "by_pattern": {
+      "L0": 28160,
+      "N1": 4096
+    },
+    "pattern_draw_mismatch_count": 0,
+    "pattern_draw_mismatch_first10": [],
+    "policy_row_count": 127,
+    "policy_multi_pu_count": 127,
+    "first_policy_uniform_multi": {
+      "seq": 252,
+      "t_gen": 2,
+      "draw_start": 32,
+      "draw_end": 33,
+      "n_draws": 1,
+      "out": 1,
+      "pu_len": 4,
+      "r_at_draw_start": 0.43342922372263404,
+      "r_at_draw_start_plus_1": 0.5858087920600851,
+      "k_from_buf_at_start": 2,
+      "k_from_buf_at_start_plus_1": 3,
+      "mat_k_policy_t2_expected": 2
+    },
+    "pre_policy_draw_window": [
+      {
+        "seq": 20,
+        "site": "child_sample_column",
+        "pattern": "N1",
+        "draw_start": 20,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          9,
+          1
+        ],
+        "out": 8
+      },
+      {
+        "seq": 21,
+        "site": "child_sample_column",
+        "pattern": "N1",
+        "draw_start": 21,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          3,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 22,
+        "site": "nested_gp_path_E",
+        "pattern": "N1",
+        "draw_start": 22,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          1,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 23,
+        "site": "nested_gp_path_E",
+        "pattern": "N1",
+        "draw_start": 23,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 3,
+        "shape": [
+          3,
+          1
+        ],
+        "out": 2
+      },
+      {
+        "seq": 24,
+        "site": "nested_state_ps",
+        "pattern": "N1",
+        "draw_start": 24,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 4,
+        "shape": [
+          176,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 25,
+        "site": "nested_state_ps",
+        "pattern": "N1",
+        "draw_start": 25,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 4,
+        "shape": [
+          9,
+          1
+        ],
+        "out": 2
+      },
+      {
+        "seq": 26,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 2
+      },
+      {
+        "seq": 27,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 28,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 29,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 30,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 31,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 32,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 33,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 34,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 35,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 36,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 37,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 38,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 39,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 40,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 41,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 42,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 43,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 44,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 45,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 46,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 47,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 48,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 49,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 50,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 4
+      },
+      {
+        "seq": 51,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 52,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 53,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 54,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 55,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 56,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 57,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 58,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 59,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 60,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 61,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 62,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 63,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 64,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 65,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 66,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 67,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 68,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 69,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 70,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 71,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 72,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 73,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 74,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 75,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 76,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 77,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 78,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 79,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 80,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 81,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 82,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 83,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 84,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 85,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 86,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 87,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 88,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 89,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 90,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 91,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 92,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 93,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 94,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 95,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 96,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 97,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 98,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 99,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 100,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 101,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 102,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 103,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 104,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 105,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 106,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 107,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 108,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 109,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 110,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 111,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 112,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 113,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 114,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 115,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 116,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 117,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 118,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 119,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 120,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 121,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 122,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 123,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 124,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 125,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 126,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 127,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 128,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 129,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 130,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 131,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 132,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 133,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 134,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          2,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 135,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 26,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          2,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 136,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 26,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 1,
+        "nz": 1,
+        "shape": [
+          9,
+          1
+        ],
+        "out": 2
+      },
+      {
+        "seq": 137,
+        "site": "nested_policy",
+        "pattern": "N1",
+        "draw_start": 27,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          1,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 138,
+        "site": "nested_child_spm_action",
+        "pattern": "N1",
+        "draw_start": 28,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          3,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 139,
+        "site": "nested_state_ps",
+        "pattern": "N1",
+        "draw_start": 29,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          176,
+          1
+        ],
+        "out": 4
+      },
+      {
+        "seq": 140,
+        "site": "nested_state_ps",
+        "pattern": "N1",
+        "draw_start": 30,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          9,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 141,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 142,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 143,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 144,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 145,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 146,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 147,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 148,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 149,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 150,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 151,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 152,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 153,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 2
+      },
+      {
+        "seq": 154,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 155,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 156,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 157,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 158,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 159,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 160,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 161,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 162,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 163,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 164,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 165,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 166,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 167,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 168,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 169,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 170,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 171,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 172,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 173,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 174,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 175,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 176,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 177,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 4
+      },
+      {
+        "seq": 178,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 179,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 180,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 181,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 182,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 183,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 184,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 185,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 186,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 187,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 188,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 189,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 190,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 191,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 192,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 193,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 194,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 195,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 196,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 197,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 198,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 199,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 200,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 201,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 202,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 203,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 204,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 205,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 206,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 207,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 208,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 209,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 210,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 211,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 212,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 213,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 214,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 215,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 216,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 217,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 218,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 219,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 220,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 221,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 222,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 223,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 224,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 225,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 226,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 227,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 228,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 229,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 230,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 231,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 232,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 233,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 234,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 235,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 236,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 237,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 238,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 239,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 240,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 241,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 242,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 243,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 244,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 245,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 246,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 247,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 248,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 249,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          2,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 250,
+        "site": "nested_child_sample_column",
+        "pattern": "L0",
+        "draw_start": 31,
+        "n_draws": 0,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          2,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 251,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 31,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          9,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 252,
+        "site": "policy",
+        "pattern": "N1",
+        "draw_start": 32,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 4,
+        "shape": [
+          4,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 253,
+        "site": "control_P",
+        "pattern": "N1",
+        "draw_start": 33,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          4,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 254,
+        "site": "state_ps",
+        "pattern": "N1",
+        "draw_start": 34,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 169,
+        "shape": [
+          169,
+          1
+        ],
+        "out": 19
+      },
+      {
+        "seq": 255,
+        "site": "child_sample_column",
+        "pattern": "N1",
+        "draw_start": 35,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          10,
+          1
+        ],
+        "out": 8
+      }
+    ]
   },
   "coherence": {
     "protocol": "entry12_v5_preamble_rewind (buf from MATLAB post-rewind rand(K,1))",
-    "note": "Replay injects MATLAB scalars; NumPy twister seed is NOT used. Twister/seed parity applies only to native rand() vs MATLAB rand(), not replay.",
-    "sample_calls_match": true
+    "note": "Replay injects MATLAB scalars through np.random.rand in _spm_sample. Fix site class (pattern/dtype/skip), not buffer index, when skew appears.",
+    "sample_calls_match": true,
+    "unused_draws_ok": true
   }
 }

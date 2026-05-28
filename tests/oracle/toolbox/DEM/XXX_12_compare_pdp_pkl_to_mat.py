@@ -7,6 +7,11 @@ Compares input ``RDP``, subentry checkpoints **12A**–**12I**, and final ``PDP`
 Runs **causal 12D→12E→12F** boundary value asserts (**15** steps, **all** failures reported)
 **before** input **RDP** and per-subentry type walks (``entry12_assert_causal_def_boundaries``).
 
+RNG imperative (Entry 12): causal/value failures are actionable for compute only when
+the paired replay lane is coherent on the same ``tag`` (scripts **1a→1b→3** with
+matching ``K``/``vb_rand_buf`` contract). If RNG coherence is broken, fix that first;
+do not tune ``spm_MDP_VB_XXX.py`` to force parity across different trajectories.
+
 Causal payloads (``entry12_matlab_capture.py``): **12D** ``t``/``Mrow``/``MDP`` without parent
 ``A``/``O``/``o``; **12E** ``t``/workspace ``O``; **12F** ``Q``/``P``/``R``/``v``/``w``,
 ``MDP`` without parent ``A``, plus ``A_peaks_pre_vbx`` and ``A_peaks_pre_forwards`` (workspace
@@ -125,14 +130,18 @@ def _default_pkl_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_PDP_PKL_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return Path(__file__).resolve().parent / "fixtures" / "DEMAtariIII_XXX_12_pdp.pkl"
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
+
+    return entry12_signoff_artifact_paths(_entry12_run_tag())["pdp_pkl"]
 
 
 def _default_mat_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_PDP_MAT_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return Path(__file__).resolve().parent / "fixtures" / "DEMAtariIII_XXX_12_pdp.mat"
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
+
+    return entry12_signoff_artifact_paths(_entry12_run_tag())["pdp_mat"]
 
 
 def _fixtures_dir() -> Path:
@@ -152,14 +161,18 @@ def _default_rdp_pkl_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_RDP_PKL_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return _entry12_out_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
+
+    return entry12_signoff_artifact_paths(_entry12_run_tag())["rdp_pkl"]
 
 
 def _default_rdp_mat_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_RDP_MAT_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return _entry12_out_dir() / "DEMAtariIII_XXX_12_rdp.mat"
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
+
+    return entry12_signoff_artifact_paths(_entry12_run_tag())["rdp_mat"]
 
 
 def _subentry_pkl_path(code: str) -> Path:
@@ -499,6 +512,22 @@ def _execute_validation(args: Namespace) -> int:
 
     tag = _entry12_run_tag()
     out_dir = _entry12_out_dir()
+
+    from python_src.toolbox.DEM.entry12_atari_calls import (
+        entry12_assert_buf_k_coherent,
+        entry12_assert_signoff_chain_ready,
+        entry12_log_signoff_chain,
+    )
+
+    if tag != ENTRY12_CANONICAL_RUN_TAG or str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip():
+        try:
+            entry12_assert_signoff_chain_ready(tag, require_rand_buf=False)
+            entry12_assert_buf_k_coherent(tag)
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"[XXX 12 validation] error: {exc}", file=sys.stderr)
+            return 2
+    entry12_log_signoff_chain(tag, stream=sys.stderr)
+
     if _run_entry12_causal_boundary_gate(
         tag, out_dir, report_only=report_only, coerce_sparse=coerce
     ):
@@ -617,7 +646,18 @@ def _execute_validation(args: Namespace) -> int:
     _emit_pdp_top_level_inventory("MATLAB PDP", mat_pdp)
     _emit_mdp_chain_field_inventory("MATLAB PDP", mat_pdp, "PDP")
     _emit_pdp_top_level_key_diff(py_pdp, mat_pdp)
-    _emit_nested_type_walk_pdp(py_pdp, mat_pdp)
+    if isinstance(py_pdp, dict) and isinstance(mat_pdp, dict):
+        import copy
+
+        py_tw = entry12_align_mdp_to_mat_workspace(copy.deepcopy(py_pdp), mat_pdp)
+        mat_tw = entry12_mat_pdp_for_value_assert(mat_pdp)
+        print(
+            "[XXX 12 validation] PDP type walk uses compare-aligned trees (same as final value assert)",
+            file=sys.stderr,
+        )
+        _emit_nested_type_walk_pdp(py_tw, mat_tw)
+    else:
+        _emit_nested_type_walk_pdp(py_pdp, mat_pdp)
 
     if report_only:
         return exit_code

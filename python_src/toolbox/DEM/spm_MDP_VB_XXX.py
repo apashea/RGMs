@@ -44,7 +44,7 @@ from python_src.toolbox.DEM.spm_MDP_checkX import spm_MDP_checkX
 from python_src.toolbox.DEM.spm_index import spm_index
 from python_src.toolbox.DEM.spm_MDP_size import spm_MDP_size
 from python_src.toolbox.DEM.spm_parents import spm_parents
-from python_src.toolbox.DEM.spm_VBX import spm_VBX
+from python_src.toolbox.DEM.spm_VBX import _a_colon_s_coerce_likelihood_, spm_VBX
 
 _VB_TIMING_DEPTH = 0
 _VB_TIMING_LOOP_12E = 0.0
@@ -54,30 +54,32 @@ _VB_TIMING_BAND_WALL: dict[str, float] = {}
 _VB_RAND_REPLAY_ITER: Any = None
 _VB_RAND_REPLAY_ORIG_RAND: Any = None
 _PROBE_12F_PARENT: dict[str, Any] | None = None
+_ENTRY12_PROBE_CHILD_F_NPZ_DONE: bool = False
 
 
 def _vb_default_matlab_rand_buf_path() -> Path:
-    from python_src.toolbox.DEM.entry12_matlab_capture import (
-        default_entry12_vb_matlab_rand_buf_mat_path,
-    )
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
 
-    return default_entry12_vb_matlab_rand_buf_mat_path()
+    return entry12_signoff_artifact_paths()["rand_buf"]
 
 
 def _vb_load_matlab_rand_buf(path: Path | None = None) -> np.ndarray:
-    p = path if path is not None else _vb_default_matlab_rand_buf_path()
-    if not p.is_file():
-        raise FileNotFoundError(
-            f"MATLAB VB rand buffer not found: {p}\n"
-            "Run Entry 12 MATLAB dump (after entry12_preflight_vb_rand_k.py) to create it."
-        )
-    from scipy.io import loadmat
+    if path is not None:
+        from scipy.io import loadmat
 
-    raw = loadmat(str(p))
-    if "vb_rand_buf" not in raw:
-        keys = sorted(k for k in raw if not k.startswith("__"))
-        raise KeyError(f"expected vb_rand_buf in {p}, got keys={keys}")
-    return np.asarray(raw["vb_rand_buf"], dtype=np.float64).ravel(order="F")
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"MATLAB VB rand buffer not found: {path}\n"
+                "Run Entry 12 MATLAB dump (after entry12_preflight_vb_rand_k.py) to create it."
+            )
+        raw = loadmat(str(path))
+        if "vb_rand_buf" not in raw:
+            keys = sorted(k for k in raw if not k.startswith("__"))
+            raise KeyError(f"expected vb_rand_buf in {path}, got keys={keys}")
+        return np.asarray(raw["vb_rand_buf"], dtype=np.float64).ravel(order="F")
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_load_vb_rand_buf_for_tag
+
+    return entry12_load_vb_rand_buf_for_tag()
 
 
 class _VbMatlabRandReplay:
@@ -730,14 +732,16 @@ def _spm_sample(p: Any) -> int:
         if k == 0:
             raise ValueError("spm_sample: empty logical mask")
         if k == 1:
-            return int(flat[0] + 1)
-        r1 = float(np.random.rand())
-        if k <= 4:
-            float(np.random.rand())
-        pos = int(np.floor(r1 * k))
-        if pos >= k:
-            pos = k - 1
-        return int(flat[pos] + 1)
+            out = int(flat[0] + 1)
+        else:
+            r1 = float(np.random.rand())
+            if k <= 4:
+                float(np.random.rand())
+            pos = int(np.floor(r1 * k))
+            if pos >= k:
+                pos = k - 1
+            out = int(flat[pos] + 1)
+        return out
     pv = np.asarray(p, dtype=np.float64).ravel(order="F")
     total = float(np.sum(pv))
     if (not np.isfinite(total)) or total <= 0.0 or (not np.all(np.isfinite(pv))):
@@ -753,7 +757,32 @@ def _spm_sample(p: Any) -> int:
         idx = int(pv.size) - 1
     else:
         idx = int(hit[0])
-    return idx + 1
+    out = idx + 1
+    return out
+
+
+def _vb_sample_column_for_spm_sample(p: Any) -> np.ndarray:
+    """Column for ``_spm_sample`` preserving source dtype semantics."""
+    pv = np.asarray(p)
+    if pv.dtype == bool:
+        return np.asarray(pv, dtype=bool).reshape(-1, 1, order="F")
+    return np.asarray(p, dtype=np.float64).reshape(-1, 1, order="F")
+
+
+def _vb_spm_sample_column(p: Any) -> int:
+    """Sample from a column vector; preserve logical dtype for ``randperm`` replay."""
+    return _spm_sample(_vb_sample_column_for_spm_sample(p))
+
+
+def _vb_gp_outcome_sample_index(col: np.ndarray) -> int:
+    """``spm_sample`` for ``GP(m).A{g}(:,ind)`` outcome columns (12E / generation)."""
+    if isinstance(col, np.ndarray) and col.dtype == bool:
+        sample_col = col
+    elif sparse.issparse(col):
+        sample_col = col
+    else:
+        sample_col = np.asarray(col)
+    return _vb_spm_sample_column(sample_col)
 
 
 def spm_children(id_dict: dict[str, Any]) -> np.ndarray:
@@ -1079,8 +1108,45 @@ def spm_forwards(
             P_row,
             extra={"A_peaks": _entry12_a_peaks_for_model(A, mi)},
         )
+    if os.getenv("RGMS_ENTRY12_PROBE_CHILD_F") and int(t) == 1 and len(O[mi]) >= 100:
+        import sys as _sys_child_f
+
+        global _ENTRY12_PROBE_CHILD_F_NPZ_DONE
+        if not _ENTRY12_PROBE_CHILD_F_NPZ_DONE:
+            import copy as _copy_probe
+            import pickle as _pickle_probe
+
+            import numpy as _np_probe
+
+            _ENTRY12_PROBE_CHILD_F_NPZ_DONE = True  # noqa: PLW0603
+            _O_copy = [_np_probe.array(x, dtype=_np_probe.float64).copy() for x in O_row]
+            _P_copy = [_np_probe.array(x, dtype=_np_probe.float64).copy() for x in P_row]
+            _A_copy = [_np_probe.array(a, dtype=_np_probe.float64).copy() for a in A_row]
+            _A0 = _np_probe.asarray(_A_copy[0], dtype=_np_probe.float64).ravel()
+            _np_probe.savez(
+                "matlab_custom/probe_child_vbx_t1.npz",
+                O_row=_np_probe.array(_O_copy, dtype=object),
+                P_row=_np_probe.array(_P_copy, dtype=object),
+                A_row=_np_probe.array(_A_copy, dtype=object),
+                A0_peak=int(_np_probe.argmax(_A0)) + 1,
+                id_snapshot=_pickle_probe.dumps(_copy_probe.deepcopy(idm)),
+                allow_pickle=True,
+            )
+        print(
+            f"[entry12 child-F pre-vbx] m={m} t={t} len_O_mi={len(O[mi])} len_A={len(A_row)}",
+            file=_sys_child_f.stderr,
+            flush=True,
+        )
     Q_upd, F = spm_VBX(O_row, P_row, A_row, idm)
     F_vbx_here = float(F)
+    if os.getenv("RGMS_ENTRY12_PROBE_CHILD_F") and int(t) == 1 and len(O[mi]) >= 100:
+        import sys as _sys_child_f
+
+        print(
+            f"[entry12 child-F] m={m} t={t} F_vbx={F_vbx_here}",
+            file=_sys_child_f.stderr,
+            flush=True,
+        )
     if _vb_dump_active():
         _entry12_record_phase_belief_rows(
             mi, t, "post_vbx", O, P, Q_upd, extra={"F_vbx": F_vbx_here}
@@ -1635,6 +1701,29 @@ def _spm_multiply(p: Any, q: Any) -> np.ndarray:
     return np.asarray(spm_softmax(lp + lq), dtype=np.float64)
 
 
+def _gb_predicted_state_qs(Gb: Any, s_ft: int, u_f: int) -> np.ndarray:
+    """MATLAB ``MDP.GB{f}(:, MDP.s(f,t), MDP.u(f))`` — ``Gb`` may be 2-D or 3-D."""
+    arr = _vb_as_float64_array(Gb)
+    if arr.ndim >= 3:
+        return np.asarray(arr[:, s_ft - 1, u_f - 1], dtype=np.float64).reshape(-1, 1)
+    if arr.ndim == 2:
+        return np.asarray(arr[:, s_ft - 1], dtype=np.float64).reshape(-1, 1)
+    return np.asarray(arr, dtype=np.float64).reshape(-1, 1)
+
+
+def _id_control_g_indices(id_upper: dict[str, Any], n_a: int) -> list[int]:
+    """``ID.control`` may be ``1:Ng`` vector or a scalar index from generative-process ``GDP.id``."""
+    ctrl = id_upper.get("control")
+    if ctrl is None:
+        return [i + 1 for i in range(int(n_a))]
+    if isinstance(ctrl, (int, np.integer)):
+        return [int(ctrl)]
+    arr = np.asarray(ctrl, dtype=np.int64).ravel(order="F")
+    if arr.size == 0:
+        return [i + 1 for i in range(int(n_a))]
+    return [int(x) for x in arr.tolist()]
+
+
 def _spm_action(
     MDP: dict[str, Any],
     A: list[Any] | Any,
@@ -1660,10 +1749,11 @@ def _spm_action(
         id_upper = {}
         MDP["ID"] = id_upper
 
+    a_sizes = id_m.get("A", [])
+    n_a = len(a_sizes) if isinstance(a_sizes, (list, tuple)) else int(np.size(np.asarray(a_sizes)))
     if "control" not in id_upper:
-        a_sizes = id_m.get("A", [])
-        n_a = len(a_sizes) if isinstance(a_sizes, (list, tuple)) else int(np.size(np.asarray(a_sizes)))
         id_upper["control"] = [i + 1 for i in range(int(n_a))]
+    control_g = _id_control_g_indices(id_upper, int(n_a))
 
     if "chi" not in MDP:
         MDP["chi"] = 512.0
@@ -1678,7 +1768,7 @@ def _spm_action(
         Q_list = [Q_in]
 
     qo: dict[int, np.ndarray] = {}
-    for g in id_upper["control"]:
+    for g in control_g:
         g_i = int(g)
         j_par, _ = spm_parents(id_m, g_i, Q_list)
         jv = np.atleast_1d(np.asarray(j_par)).ravel().astype(np.int64)
@@ -1686,7 +1776,7 @@ def _spm_action(
         qo[g_i] = np.asarray(spm_dot(A_list[g_i - 1], q_cells), dtype=np.float64).reshape(-1, 1)
 
     GB = MDP["GB"]
-    GV = np.asarray(MDP["GV"], dtype=np.float64)
+    GV = _vb_as_float64_array(MDP["GV"])
     if GV.ndim == 1:
         GV = GV.reshape(-1, 1)
     Na = int(GV.shape[0])
@@ -1717,21 +1807,19 @@ def _spm_action(
             f0 = int(f) - 1
             s_ft = int(round(float(s_mat[f0, t_col])))
             u_f = int(round(float(u_work[f0])))
-            Gb = np.asarray(GB[f0], dtype=np.float64)
-            qs_list[f0] = Gb[:, s_ft - 1, u_f - 1].reshape(-1, 1)
+            qs_list[f0] = _gb_predicted_state_qs(GB[f0], s_ft, u_f)
 
         F[k, 0] = 0.0
-        for g in id_upper["control"]:
+        for g in control_g:
             g_i = int(g)
-            # MATLAB ~2753 uses ``spm_parents(MDP.ID, ...)``; likelihood indices live on ``id``.
-            j_inner, _ = spm_parents(id_m, g_i, qs_list)
+            # MATLAB ~2819: ``spm_parents(MDP.ID, g, qs)`` (domain struct, not ``mdp.id``).
+            j_inner, _ = spm_parents(id_upper, g_i, qs_list)
             jv2 = np.atleast_1d(np.asarray(j_inner)).ravel().astype(np.int64)
             for f in jv2.tolist():
                 f0 = int(f) - 1
                 s_ft = int(round(float(s_mat[f0, t_col])))
                 u_f = int(round(float(u_work[f0])))
-                Gb = np.asarray(GB[f0], dtype=np.float64)
-                qs_list[f0] = Gb[:, s_ft - 1, u_f - 1].reshape(-1, 1)
+                qs_list[f0] = _gb_predicted_state_qs(GB[f0], s_ft, u_f)
             q_dot = [qs_list[int(jj) - 1] for jj in jv2.tolist()]
             GA_g = np.asarray(MDP["GA"][g_i - 1], dtype=np.float64)
             po = np.asarray(spm_dot(GA_g, q_dot), dtype=np.float64).reshape(-1, 1)
@@ -2061,6 +2149,39 @@ def _vb_id_and_policy_blocks(
     }
 
 
+def _vb_workspace_A_like_mdp_shape(qa_arr: np.ndarray, Ag_mdp: Any) -> np.ndarray:
+    """
+    MATLAB ``A{m,g} = spm_norm(qa{m,g})`` (~486) keeps ``MDP(m).A{g}`` layout.
+
+    Outcomes vary on axis 0 (``No`` rows). Never fold workspace ``(No,1)`` into ``(1,No)`` —
+    that breaks ``spm_VBX`` / ``A(:,s{:})`` (Call 2: ~50 modalities at mat ``(No,)`` vs py ``(1,No)``).
+    """
+    Ag_ref = Ag_mdp[0] if isinstance(Ag_mdp, list) and len(Ag_mdp) == 1 else Ag_mdp
+    ref = np.asarray(Ag_ref, dtype=np.float64)
+    ws = np.asarray(qa_arr, dtype=np.float64)
+    if ref.size != ws.size:
+        return ws
+    col = _a_colon_s_coerce_likelihood_(ws)
+    if ref.ndim == 1 and ref.size > 1:
+        return np.asarray(col.reshape(-1, order="F"), dtype=np.float64)
+    if (
+        ref.ndim == 2
+        and ref.shape[0] == 1
+        and ref.shape[1] > 1
+        and col.ndim == 2
+        and col.shape[0] == ref.shape[1]
+        and col.shape[1] == 1
+    ):
+        return np.asarray(col.reshape(-1, order="F"), dtype=np.float64)
+    if ref.shape == ws.shape:
+        return ws
+    if ref.shape == col.shape:
+        return np.asarray(col, dtype=np.float64)
+    if ref.ndim >= 2 and not (ref.ndim == 2 and ref.shape[0] == 1):
+        return np.asarray(col.reshape(ref.shape, order="F"), dtype=np.float64)
+    return np.asarray(col.reshape(-1, order="F"), dtype=np.float64)
+
+
 def _vb_mdp_field_matrix(md: dict[str, Any], key: str, n_rows: int, t_int: int) -> None:
     """
     MATLAB ``spm_MDP_VB_XXX.m`` ~705–730: ``k = zeros(...); i = find(MDP.s); k(i)=MDP.s(i);``.
@@ -2245,18 +2366,28 @@ def _unwrap_gp_elem(x: Any) -> Any:
     return x
 
 
-def _vb_gp_A_outcome_column(Ag: np.ndarray, ind_parts: list[int]) -> np.ndarray:
+def _vb_gp_A_outcome_column(Ag: Any, ind_parts: list[int]) -> np.ndarray:
     """
     ``GP(m).A{g}(:, ind{:})`` (~961–967): column-major outcome vector for parent states ``s(j,t)``.
 
     ``ind_parts`` are 0-based state indices (from MATLAB 1-based ``num2cell(s(j,t))``).
+    Preserve logical dtype for ``spm_sample`` / ``randperm`` replay (see ``spm_MDP_generate``).
     """
-    if Ag.ndim == 2 and len(ind_parts) == 1:
-        col = np.asarray(Ag[:, ind_parts[0]], dtype=np.float64)
+    if hasattr(Ag, "toarray"):
+        Ag_work = Ag.toarray()
     else:
-        ind_tup = tuple(ind_parts)
-        col = np.asarray(Ag[(slice(None),) + ind_tup], dtype=np.float64)
-    return col.reshape(-1, 1, order="F")
+        Ag_work = np.asarray(Ag)
+    if Ag_work.ndim == 1:
+        # MATLAB ``A{g}`` as ``Nx1`` column can arrive flat from ``loadmat``; ``(:, ind)`` is the whole column.
+        col = np.asarray(Ag_work)
+    elif Ag_work.ndim == 2 and len(ind_parts) == 1:
+        col = np.asarray(Ag_work[:, ind_parts[0]])
+    else:
+        col = np.asarray(Ag_work[(slice(None),) + tuple(ind_parts)])
+    col = col.reshape(-1, 1, order="F")
+    if col.dtype == bool:
+        return col.astype(bool)
+    return np.asarray(col, dtype=np.float64)
 
 
 def _vb_gp_transition_column(Bg: Any, s_1based: int, u_1based: int) -> np.ndarray:
@@ -2758,11 +2889,16 @@ def _vb_active_learning_in_loop(
                 qa_slot[0] = qa_new
             else:
                 bundle["qa"][mi][g_idx] = qa_new
+            qa_a = (
+                _vb_workspace_A_like_mdp_shape(qa_new, md["A"][g_idx])
+                if "A" in md
+                else qa_new
+            )
             A_slot = bundle["A"][mi][g_idx]
             if isinstance(A_slot, list) and len(A_slot) == 1:
-                A_slot[0] = qa_new
+                A_slot[0] = qa_a
             else:
-                bundle["A"][mi][g_idx] = qa_new
+                bundle["A"][mi][g_idx] = qa_a
             # MATLAB ~1403–1432: workspace ``qa``/``A{m,g}`` only (not ``MDP(m).a`` / ``MDP(m).A``).
             bundle["W"][mi][g_idx] = _spm_wnorm(qa_new)
             bundle["K"][mi][g_idx] = _spm_hnorm(qa_new)
@@ -3046,7 +3182,6 @@ def _vb_generate_outcomes_if_options_o(
                 if callable(Ag_raw) and not isinstance(Ag_raw, np.ndarray):
                     raise NotImplementedError("OPTIONS.O: GP.A{g} function_handle not translated")
                 # ``GP(m).A{g}(:,ind{:})`` (~967): frozen generative map, not workspace ``A{m,g}``.
-                Ag = np.asarray(Ag_raw, dtype=np.float64)
                 j_arr = np.atleast_1d(np.asarray(j_p, dtype=np.float64)).ravel()
                 ind_parts: list[int] = []
                 for jx in j_arr:
@@ -3054,11 +3189,12 @@ def _vb_generate_outcomes_if_options_o(
                     sv = float(md["s"][jxi - 1, t_idx])
                     ind_parts.append(int(round(sv)) - 1)
                 try:
-                    col = _vb_gp_A_outcome_column(Ag, ind_parts)
+                    col = _vb_gp_A_outcome_column(Ag_raw, ind_parts)
                 except (IndexError, TypeError):
                     raise
-                O_shell[mi][o_idx][t_idx] = col
-                md["o"][o_idx, t_idx] = float(_spm_sample(col))
+                k_out = _vb_gp_outcome_sample_index(col)
+                O_shell[mi][o_idx][t_idx] = np.asarray(col, dtype=np.float64).reshape(-1, 1, order="F")
+                md["o"][o_idx, t_idx] = float(k_out)
 
 
 def _vb_shared_probabilistic_outcomes(
@@ -3124,8 +3260,135 @@ def _vb_shared_probabilistic_outcomes(
             md["o"][g_idx, t_idx] = float(_spm_sample(po))
 
 
+def _vb_hierarchical_q_O_is_ng_t_rows(level: Any) -> bool:
+    """``mdp.Q.O{L}`` as ``Ng`` rows of ragged time vectors (MATLAB ``cell(Ng,T)`` / loadmat)."""
+    if not isinstance(level, list) or not level:
+        return False
+    first = level[0]
+    return isinstance(first, (list, tuple))
+
+
+def _vb_hierarchical_O_field_to_ng_t_rows(
+    O_field: Any,
+    t_child: int,
+    *,
+    ng: int = 0,
+    no: list[int] | None = None,
+) -> list[list[np.ndarray]]:
+    """
+    ``mdp.Q.O{L} = [mdp.Q.O{L} mdp.O]`` (~1238): store/append as ``Ng×T`` ragged rows.
+
+    Child ``mdp.O`` after assemble is post-``shiftdim`` ``O[t][g]`` (T×Ng); MATLAB ``Q.O``
+    uses ``cell(Ng,T)`` (``O[g][t]``) before paired compare transpose. Each row is one modality's
+    ``No(g)`` outcome vector at time ``t``.
+    """
+    t_child = max(0, int(t_child))
+    no_use = list(no) if no else []
+    ng_use = int(ng)
+
+    if isinstance(O_field, list) and O_field and isinstance(O_field[0], (list, tuple)):
+        n_outer = len(O_field)
+        n_inner = len(O_field[0]) if O_field[0] else 0
+        if ng_use > 0 and n_outer == ng_use:
+            ncol = min(
+                t_child,
+                max((len(O_field[g]) for g in range(ng_use)), default=0),
+            )
+            out = []
+            for g in range(ng_use):
+                n_g = int(no_use[g]) if g < len(no_use) else 0
+                row_g = O_field[g]
+                row = []
+                for t in range(ncol):
+                    part = row_g[t] if t < len(row_g) else None
+                    row.append(
+                        _vb_o_cell_to_column(part, n_g).ravel().copy()
+                        if part is not None
+                        else np.zeros(max(1, n_g), dtype=np.float64)
+                    )
+                out.append(row)
+            return out
+        if t_child > 0 and n_outer == t_child and (ng_use <= 0 or n_inner == ng_use):
+            ng_use = n_inner if ng_use <= 0 else ng_use
+            ncol = min(t_child, n_outer)
+            out = []
+            for g in range(ng_use):
+                n_g = int(no_use[g]) if g < len(no_use) else 0
+                row = []
+                for t in range(ncol):
+                    part = (
+                        O_field[t][g]
+                        if t < len(O_field) and g < len(O_field[t])
+                        else None
+                    )
+                    row.append(
+                        _vb_o_cell_to_column(part, n_g).ravel().copy()
+                        if part is not None
+                        else np.zeros(max(1, n_g), dtype=np.float64)
+                    )
+                out.append(row)
+            return out
+
+    mat = _vb_hierarchical_O_field_to_matrix(O_field, t_child, no=no_use)
+    if mat.size == 0 or int(mat.shape[1]) < 1:
+        return []
+    ncol = min(t_child, int(mat.shape[1]))
+    if ng_use < 1:
+        ng_use = len(no_use) if no_use else 1
+    if len(no_use) < ng_use:
+        step = max(1, int(mat.shape[0] // max(1, ng_use)))
+        no_use = [step] * (ng_use - 1) + [max(1, int(mat.shape[0] - step * (ng_use - 1)))]
+    out = []
+    for g in range(ng_use):
+        row0 = sum(int(no_use[gi]) for gi in range(g))
+        n_g = int(no_use[g]) if g < len(no_use) else 1
+        row = []
+        for t in range(ncol):
+            col = np.asarray(mat[:, t], dtype=np.float64).reshape(-1, order="F")
+            if row0 + n_g <= col.shape[0]:
+                row.append(np.asarray(col[row0 : row0 + n_g], dtype=np.float64).copy())
+            else:
+                row.append(np.zeros(max(1, n_g), dtype=np.float64))
+        out.append(row)
+    return out
+
+
+def _vb_hierarchical_q_O_ng_t_hstack(
+    old: Any,
+    new_rows: list[list[np.ndarray]],
+) -> list[list[np.ndarray]]:
+    """MATLAB ``[mdp.Q.O{L} mdp.O]`` on ``cell(Ng,T)`` — append time along columns (dim 2)."""
+    if old is None:
+        return copy.deepcopy(new_rows)
+    if isinstance(old, np.ndarray):
+        ng_guess = len(new_rows)
+        old_rows = _vb_hierarchical_O_field_to_ng_t_rows(
+            old,
+            t_child=int(old.shape[1]) if old.ndim >= 2 else 1,
+            ng=ng_guess,
+        )
+        return _vb_hierarchical_q_O_ng_t_hstack(old_rows, new_rows)
+    if isinstance(old, list) and old and _vb_hierarchical_q_O_is_ng_t_rows(old):
+        ng = max(len(old), len(new_rows))
+        out: list[list[np.ndarray]] = []
+        for g in range(ng):
+            row_old = list(old[g]) if g < len(old) else []
+            row_new = list(new_rows[g]) if g < len(new_rows) else []
+            out.append(
+                [np.asarray(x, dtype=np.float64).copy() for x in row_old]
+                + [np.asarray(x, dtype=np.float64).copy() for x in row_new]
+            )
+        return out
+    return copy.deepcopy(new_rows)
+
+
 def _vb_hierarchical_q_O_prev_ncols(ol: Any, *, ng: int = 0) -> int:
-    """MATLAB ``size(mdp.Q.O{mdp.L}, 2)`` — column count for hierarchical ``S`` segment offset."""
+    """
+    MATLAB ``size(mdp.Q.O{mdp.L}, 2)`` — column count for hierarchical ``S`` segment offset.
+
+    Canonical ``mdp.Q.O{L}`` is ``Ng×T`` ragged rows (``len(row[g])`` = time width). Legacy flat
+    rows and stacked matrices are still supported for migration/oracles.
+    """
     if ol is None:
         return 0
     if isinstance(ol, np.ndarray):
@@ -3136,22 +3399,38 @@ def _vb_hierarchical_q_O_prev_ncols(ol: Any, *, ng: int = 0) -> int:
     if isinstance(ol, list):
         if not ol:
             return 0
-        ng_i = int(ng)
-        if ng_i > 0 and len(ol) % ng_i == 0:
-            return len(ol) // ng_i
-        if isinstance(ol[0], list):
-            return int(len(ol))
-        first = ol[0]
-        if isinstance(first, np.ndarray) and int(np.asarray(first).ndim) <= 1:
-            if ng_i > 0 and len(ol) % ng_i == 0:
-                return len(ol) // ng_i
+        if _vb_hierarchical_q_O_is_ng_t_rows(ol):
+            return int(max(len(ol[g]) for g in range(len(ol))))
+        n_leaf = int(len(ol))
+        if n_leaf < 1:
+            return 0
+        max_ncol = 256
+        max_ng_record = 200
+        child_ng = int(ng)
+        if child_ng > 0 and n_leaf % child_ng == 0:
+            ncol_child = n_leaf // child_ng
+            if ncol_child <= max_ncol:
+                return int(ncol_child)
+        best_ng = 0
+        best_ncol = 0
+        for ng_c in range(1, min(n_leaf, max_ng_record) + 1):
+            if n_leaf % ng_c != 0:
+                continue
+            ncol = n_leaf // ng_c
+            if ncol > max_ncol:
+                continue
+            if ng_c > best_ng:
+                best_ng = ng_c
+                best_ncol = ncol
+        if best_ncol > 0:
+            return int(best_ncol)
         try:
             arr = np.asarray(ol, dtype=np.float64)
             if arr.ndim >= 2:
                 return int(arr.shape[1])
         except Exception:
             pass
-        return int(len(ol))
+        return n_leaf
     return 0
 
 
@@ -3163,7 +3442,7 @@ def _vb_no_list_from_mdp(md: dict[str, Any]) -> list[int]:
     out: list[int] = []
     for ag in A:
         try:
-            out.append(int(np.asarray(ag, dtype=np.float64).shape[0]))
+            out.append(int(_a_colon_s_coerce_likelihood_(ag).shape[0]))
         except Exception:
             out.append(1)
     return out
@@ -3356,6 +3635,63 @@ def _vb_hierarchical_apply_S_as_O_if_present(child: dict[str, Any]) -> None:
         )
 
 
+def _vb_hierarchical_field_to_ot_nested(field: Any, *, t_child: int) -> list[list[Any]]:
+    """
+    ``mdp.Y{o,t}`` / ``mdp.j{g,t}`` as nested ``[o][t]`` (Ng×T), not a flat ``(:)`` row.
+
+    ``mdp.o`` is an ``Ng×T`` **scalar** matrix (~725, ~4965); use the ``s``/``u``/``o`` matrix
+    append branch in ``_vb_hierarchical_q_append_level``, not this helper.
+    """
+    t_child = max(0, int(t_child))
+    if not isinstance(field, list) or not field:
+        if isinstance(field, np.ndarray):
+            arr = np.asarray(field, dtype=np.float64)
+            if arr.ndim == 2 and arr.size:
+                ncol = min(t_child, int(arr.shape[1]))
+                return [
+                    [np.asarray(arr[g, t], dtype=np.float64).reshape(1).copy() for t in range(ncol)]
+                    for g in range(int(arr.shape[0]))
+                ]
+        return []
+    if isinstance(field[0], (list, tuple)):
+        out: list[list[Any]] = []
+        for o_row in field:
+            row = list(o_row) if isinstance(o_row, (list, tuple)) else [o_row]
+            out.append(
+                [
+                    copy.deepcopy(row[t]) if t < len(row) else None
+                    for t in range(t_child)
+                ]
+            )
+        return out
+    arr = np.asarray(field, dtype=np.float64)
+    if arr.ndim >= 2:
+        ncol = min(t_child, int(arr.shape[1]))
+        return [
+            [np.asarray(arr[o, t], dtype=np.float64).reshape(-1, 1).copy() for t in range(ncol)]
+            for o in range(int(arr.shape[0]))
+        ]
+    return [[np.asarray(arr, dtype=np.float64).reshape(-1, 1).copy()]]
+
+
+def _vb_hierarchical_q_ot_nested_hstack(
+    old: Any,
+    new_nested: list[list[Any]],
+) -> list[list[Any]]:
+    """MATLAB ``[mdp.Q.Y{L} mdp.Y]`` on ``cell(Ng,T)`` — append along time (columns)."""
+    if old is None:
+        return copy.deepcopy(new_nested)
+    if isinstance(old, list) and old and isinstance(old[0], (list, tuple)):
+        ng = max(len(old), len(new_nested))
+        out: list[list[Any]] = []
+        for o in range(ng):
+            row_old = list(old[o]) if o < len(old) else []
+            row_new = list(new_nested[o]) if o < len(new_nested) else []
+            out.append(list(row_old) + list(row_new))
+        return out
+    return copy.deepcopy(new_nested)
+
+
 def _vb_hierarchical_q_ot_grid_to_cell_row(field: list[Any], *, t_child: int) -> list[Any]:
     """
     Flatten ``mdp.Y{o,t}`` / ``mdp.j{g,t}``-style nested lists ``field[o][t]`` to a cell row.
@@ -3424,7 +3760,7 @@ def _vb_hierarchical_q_O_flat_cells_to_matrix(
     ng: int,
     no: list[int],
 ) -> np.ndarray:
-    """Rebuild numeric ``mdp.Q.O{L}`` from flat ``Ng×T`` cell row (column-major ``t``, then ``g``)."""
+    """Rebuild numeric ``mdp.Q.O{L}`` from flat row (``g`` outer, ``t`` inner; index ``t + g*ncol``)."""
     if not cells or ng < 1:
         return np.zeros((0, 0), dtype=np.float64, order="F")
     n_leaf = len(cells)
@@ -3435,13 +3771,12 @@ def _vb_hierarchical_q_O_flat_cells_to_matrix(
     ncol = n_leaf // ng
     no_use = list(no) if no else [1] * ng
     cols: list[np.ndarray] = []
-    idx = 0
-    for _t in range(ncol):
+    for t in range(ncol):
         parts: list[np.ndarray] = []
         for g in range(ng):
+            idx = t + g * ncol
             n_g = int(no_use[g]) if g < len(no_use) else 1
             parts.append(_vb_o_cell_to_column(cells[idx], n_g))
-            idx += 1
         cols.append(np.vstack(parts) if parts else np.zeros((0, 1), dtype=np.float64))
     if not cols:
         return np.zeros((0, 0), dtype=np.float64, order="F")
@@ -3464,6 +3799,26 @@ def _vb_hierarchical_q_O_level_to_matrix(
     """
     if level is None:
         return np.zeros((0, 0), dtype=np.float64, order="F")
+    if isinstance(level, list) and level and _vb_hierarchical_q_O_is_ng_t_rows(level):
+        ncol = max((len(level[g]) for g in range(len(level))), default=0)
+        cols: list[np.ndarray] = []
+        no_use = list(no) if no else []
+        ng_use = len(level) if ng <= 0 else ng
+        for t in range(ncol):
+            parts: list[np.ndarray] = []
+            for g in range(ng_use):
+                n_g = int(no_use[g]) if g < len(no_use) else 0
+                row_g = level[g] if g < len(level) else []
+                part = row_g[t] if t < len(row_g) else None
+                parts.append(
+                    _vb_o_cell_to_column(part, n_g)
+                    if part is not None
+                    else np.zeros((max(1, n_g), 1), dtype=np.float64)
+                )
+            cols.append(np.vstack(parts) if parts else np.zeros((0, 1), dtype=np.float64))
+        if not cols:
+            return np.zeros((0, 0), dtype=np.float64, order="F")
+        return np.asfortranarray(np.hstack(cols))
     if isinstance(level, np.ndarray):
         arr = np.asarray(level, dtype=np.float64)
         if arr.ndim == 1:
@@ -3476,6 +3831,40 @@ def _vb_hierarchical_q_O_level_to_matrix(
     return np.zeros((0, 0), dtype=np.float64, order="F")
 
 
+def _vb_hierarchical_q_O_matrix_to_flat_cells(
+    mat: np.ndarray,
+    *,
+    ng: int,
+    no: list[int],
+) -> list[Any]:
+    """Script **3** / compare lane: flat ``Q.O{L}`` row with index ``t + g*ncol`` (``g`` outer, ``t`` inner)."""
+    arr = np.asarray(mat, dtype=np.float64)
+    if arr.ndim == 1:
+        arr = arr.reshape(-1, 1, order="F")
+    if arr.size == 0:
+        return []
+    ncol = int(arr.shape[1])
+    if ng < 1:
+        return [arr.copy()]
+    no_use = list(no) if no else []
+    if len(no_use) < ng:
+        step = max(1, int(arr.shape[0] // max(1, ng)))
+        no_use = [step] * (ng - 1) + [max(1, int(arr.shape[0] - step * (ng - 1)))]
+    cells: list[Any] = []
+    for g in range(ng):
+        row0 = sum(int(no_use[gi]) for gi in range(g))
+        n_g = int(no_use[g]) if g < len(no_use) else 1
+        for t in range(ncol):
+            col = np.asarray(arr[:, t], dtype=np.float64).reshape(-1, order="F")
+            if row0 + n_g <= col.shape[0]:
+                cells.append(
+                    np.asarray(col[row0 : row0 + n_g], dtype=np.float64).reshape(-1, 1, order="F")
+                )
+            else:
+                cells.append(np.zeros((max(1, n_g), 1), dtype=np.float64))
+    return cells
+
+
 def _vb_hierarchical_q_append_level(qv: list[Any], li: int, child_upd: dict[str, Any], ck: str, t_child: int) -> None:
     """Append one child field into ``qrec[qk]{li}`` (matrix ``O``, cell row otherwise)."""
     if ck not in child_upd:
@@ -3484,29 +3873,19 @@ def _vb_hierarchical_q_append_level(qv: list[Any], li: int, child_upd: dict[str,
         qv.append(None)
     if ck == "O":
         ng_m = len(child_upd.get("A", [])) if isinstance(child_upd.get("A"), list) else 0
-        new_cells = _vb_hierarchical_q_o_field_to_cell_row(
+        no = _vb_no_list_from_mdp(child_upd)
+        new_rows = _vb_hierarchical_O_field_to_ng_t_rows(
             child_upd[ck],
             t_child,
             ng=ng_m,
-            no=_vb_no_list_from_mdp(child_upd),
+            no=no,
         )
-        if not new_cells:
+        if not new_rows or not new_rows[0]:
             return
         if qv[li] is None:
-            qv[li] = new_cells
-        elif isinstance(qv[li], list):
-            qv[li] = list(qv[li]) + list(new_cells)
-        elif isinstance(qv[li], np.ndarray):
-            old_ncol = int(np.asarray(qv[li], dtype=np.float64).shape[1])
-            old_cells = _vb_hierarchical_q_o_field_to_cell_row(
-                qv[li],
-                old_ncol,
-                ng=ng_m,
-                no=_vb_no_list_from_mdp(child_upd),
-            )
-            qv[li] = list(old_cells) + list(new_cells)
+            qv[li] = new_rows
         else:
-            qv[li] = new_cells
+            qv[li] = _vb_hierarchical_q_O_ng_t_hstack(qv[li], new_rows)
         return
     if ck in ("P", "X"):
         new_level = _vb_hierarchical_q_field_to_cell_row(child_upd[ck], t_child=t_child, kind=ck)
@@ -3526,7 +3905,7 @@ def _vb_hierarchical_q_append_level(qv: list[Any], li: int, child_upd: dict[str,
         else:
             qv[li] = _vb_hierarchical_q_concat(qv[li], new_level)
         return
-    if ck in ("s", "u"):
+    if ck in ("s", "u", "o"):
         new_m = np.asarray(child_upd[ck], dtype=np.float64)
         if new_m.ndim == 1:
             new_m = new_m.reshape(-1, 1, order="F")
@@ -3537,11 +3916,30 @@ def _vb_hierarchical_q_append_level(qv: list[Any], li: int, child_upd: dict[str,
             return
         old = qv[li]
         if isinstance(old, list):
-            mats = [np.asarray(x, dtype=np.float64) for x in old if x is not None]
-            old_m = np.hstack(mats) if mats else np.zeros((new_m.shape[0], 0), dtype=np.float64, order="F")
+            if old and _vb_hierarchical_q_O_is_ng_t_rows(old):
+                old_m = _vb_hierarchical_q_O_level_to_matrix(
+                    old,
+                    t_child=max(len(old[0]) for row in old if row),
+                    ng=len(old),
+                    no=[1] * len(old),
+                )
+            else:
+                mats = [np.asarray(x, dtype=np.float64) for x in old if x is not None]
+                old_m = (
+                    np.hstack(mats)
+                    if mats
+                    else np.zeros((new_m.shape[0], 0), dtype=np.float64, order="F")
+                )
         else:
             old_m = np.asarray(old, dtype=np.float64)
         qv[li] = np.asfortranarray(np.hstack([old_m, new_m]))
+        return
+    if ck in ("Y", "j", "i"):
+        new_nested = _vb_hierarchical_field_to_ot_nested(child_upd[ck], t_child=t_child)
+        if qv[li] is None:
+            qv[li] = new_nested
+        else:
+            qv[li] = _vb_hierarchical_q_ot_nested_hstack(qv[li], new_nested)
         return
     new_cells = _vb_hierarchical_q_field_to_cell_row(child_upd[ck], t_child=t_child, kind=ck)
     if qv[li] is None:
@@ -3757,7 +4155,8 @@ def _vb_hierarchical_subordinate_outcomes(
                     j = spm_parents(bundle["id"][mi], int(g), [bundle["Q"][mi][ff][t_idx] for ff in range(len(bundle["Q"][mi]))])[0]
                     j_arr = np.atleast_1d(np.asarray(j, dtype=np.int64).ravel())
                     q_list = [bundle["Q"][mi][int(jj) - 1][t_idx] for jj in j_arr]
-                    po = np.asarray(spm_dot(bundle["A"][mi][int(g) - 1], q_list), dtype=np.float64).reshape(-1, 1)
+                    Ag = _a_colon_s_coerce_likelihood_(bundle["A"][mi][int(g) - 1])
+                    po = np.asarray(spm_dot(Ag, q_list), dtype=np.float64).reshape(-1, 1)
                     child["E"][f] = _spm_multiply(child["E"][f], po)
 
             idD = id_child.get("D", [])
@@ -3766,7 +4165,8 @@ def _vb_hierarchical_subordinate_outcomes(
                     j = spm_parents(bundle["id"][mi], int(g), [bundle["Q"][mi][ff][t_idx] for ff in range(len(bundle["Q"][mi]))])[0]
                     j_arr = np.atleast_1d(np.asarray(j, dtype=np.int64).ravel())
                     q_list = [bundle["Q"][mi][int(jj) - 1][t_idx] for jj in j_arr]
-                    po = np.asarray(spm_dot(bundle["A"][mi][int(g) - 1], q_list), dtype=np.float64).reshape(-1, 1)
+                    Ag = _a_colon_s_coerce_likelihood_(bundle["A"][mi][int(g) - 1])
+                    po = np.asarray(spm_dot(Ag, q_list), dtype=np.float64).reshape(-1, 1)
                     child["D"][f] = _spm_multiply(child["D"][f], po)
 
         # ~1077–1119 states and paths of child process
@@ -3804,26 +4204,36 @@ def _vb_hierarchical_subordinate_outcomes(
 
                 GU = np.asarray(child["GU"], dtype=np.float64).ravel()
                 nfu = int(child["u"].shape[0])
+                if "GE" not in child or not isinstance(child.get("GE"), (list, tuple)):
+                    child["GE"] = [None] * nfu
+                ge_list = child["GE"]
+                if len(ge_list) < nfu:
+                    ge_list = list(ge_list) + [None] * (nfu - len(ge_list))
+                    child["GE"] = ge_list
                 for f in range(nfu):
                     if f < GU.size and float(GU[f]) != 0.0:
-                        Ge = np.asarray(child["GE"][f], dtype=np.float64).reshape(-1, 1).copy()
-                        Ge[:] = 0.0
+                        # MATLAB ~1135–1137: ``mdp.GE{f}(:)=0; mdp.GE{f}(mdp.u(f))=1`` on ``Nu(f)`` paths.
+                        nu = _b_nu_third_dim(child["GB"][f])
+                        Ge = np.zeros((nu, 1), dtype=np.float64, order="F")
                         uf = int(round(float(child["u"][f, 0])))
-                        if 1 <= uf <= Ge.shape[0]:
+                        if 1 <= uf <= nu:
                             Ge[uf - 1, 0] = 1.0
-                        child["GE"][f] = Ge
+                        ge_list[f] = Ge
 
-                    GBf = np.asarray(child["GB"][f], dtype=np.float64)
                     sf = int(round(float(child["s"][f, 0])))
                     uf2 = int(round(float(child["u"][f, 0])))
-                    child["GD"][f] = np.asarray(GBf[:, sf - 1, uf2 - 1], dtype=np.float64).reshape(-1, 1)
-                    child["s"][f, 0] = float(_spm_sample(child["GD"][f]))
+                    child["GD"][f] = _gb_predicted_state_qs(child["GB"][f], sf, uf2)
+                    child["s"][f, 0] = float(_vb_spm_sample_column(child["GD"][f]))
+                for f in range(nfu):
+                    if ge_list[f] is None:
+                        # Non-controllable factor: MATLAB leaves ``GE{f}`` as ``[]`` (serialized ``1×0``).
+                        ge_list[f] = np.zeros((1, 0), dtype=np.float64, order="F")
         else:
             child["u"] = np.ones((nf_i, 1), dtype=np.float64)
             child["s"] = np.ones((nf_i, 1), dtype=np.float64)
             for f in range(nf_i):
-                child["u"][f, 0] = float(_spm_sample(np.asarray(child["E"][f], dtype=np.float64).reshape(-1, 1)))
-                child["s"][f, 0] = float(_spm_sample(np.asarray(child["D"][f], dtype=np.float64).reshape(-1, 1)))
+                child["u"][f, 0] = float(_vb_spm_sample_column(child["E"][f]))
+                child["s"][f, 0] = float(_vb_spm_sample_column(child["D"][f]))
 
         if "Q" in parent:
             child["Q"] = copy.deepcopy(parent["Q"])  # ~1163–1164
@@ -4386,10 +4796,7 @@ def _vb_ag_for_posterior_predictive(
         raise NotImplementedError(
             "spm_MDP_VB_XXX: OPTIONS.Y with likelihood function_handle A{g} is not translated yet"
         )
-    arr = np.asarray(Ag, dtype=np.float64)
-    if arr.ndim == 1:
-        arr = arr.reshape(-1, 1, order="F")
-    return arr
+    return _a_colon_s_coerce_likelihood_(Ag)
 
 
 def _vb_q_list_at_mt(bundle_q_mi: list, j_dom: Any, t_idx: int) -> list[np.ndarray]:
@@ -4847,7 +5254,7 @@ def _vb_tensors_through_H(
         for g_idx in range(int(Ng[m])):
             Ag = md["A"][g_idx]
             Ag = Ag[0] if isinstance(Ag, list) and len(Ag) == 1 else Ag
-            No[m, g_idx] = int(np.asarray(Ag).shape[0])
+            No[m, g_idx] = int(_a_colon_s_coerce_likelihood_(Ag).shape[0])
         for f_idx in range(int(Nf[m])):
             Bg = md["B"][f_idx]
             Bg = Bg[0] if isinstance(Bg, list) and len(Bg) == 1 else Bg
@@ -4939,14 +5346,15 @@ def _vb_tensors_through_H(
             else:
                 Ag = md["A"][g_idx]
                 Ag = Ag[0] if isinstance(Ag, list) and len(Ag) == 1 else Ag
-                if sparse.issparse(Ag):
-                    qa_mg = _vb_as_float64_array(Ag) * 512.0
+                Ag_col = _a_colon_s_coerce_likelihood_(Ag)
+                if sparse.issparse(Ag_col):
+                    qa_mg = _vb_as_float64_array(Ag_col) * 512.0
                 else:
-                    Ag_arr = np.asarray(Ag)
+                    Ag_arr = np.asarray(Ag_col, dtype=np.float64)
                     if np.issubdtype(Ag_arr.dtype, np.number) and Ag_arr.dtype != bool:
-                        qa_mg = Ag_arr.astype(np.float64) * 512.0
+                        qa_mg = Ag_arr * 512.0
                     else:
-                        qa_mg = Ag
+                        qa_mg = Ag_col
 
             # MATLAB ~482–486: ``pa{m,g}=qa{m,g}`` then ``A{m,g}=spm_norm(qa{m,g})`` in place.
             qa_ws = np.asarray(qa_mg, dtype=np.float64)
@@ -4966,11 +5374,17 @@ def _vb_tensors_through_H(
                     md["a"][g_idx] = qa_ws
             pa_t[m][g_idx] = qa_ws
             qa_t[m][g_idx] = qa_ws
-            A_t[m][g_idx] = qa_ws
+            if "A" in md:
+                A_t[m][g_idx] = _vb_workspace_A_like_mdp_shape(qa_ws, md["A"][g_idx])
+            elif "a" in md:
+                A_t[m][g_idx] = _vb_workspace_A_like_mdp_shape(qa_ws, md["a"][g_idx])
+            else:
+                A_t[m][g_idx] = qa_ws
 
             if _any_u_factor_cols(U_arr, f_parents):
-                W_t[m][g_idx] = _spm_wnorm(qa_ws)
                 K_t[m][g_idx] = _spm_hnorm(qa_ws)
+                if "a" in md:
+                    W_t[m][g_idx] = _spm_wnorm(qa_ws)
 
             if "c" in md:
                 qc_m = md["c"][g_idx]

@@ -32,6 +32,10 @@ FSL 1-11), stderr includes harness ``[XXX 12 run trace]`` at load/save and VB ba
 **Validation:** after **1a → 1b → 3**, run
 ``python tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`` (script **4**).
 See ``Atari_example.md`` § **Entry 12 workflow — four scripts**.
+
+RNG imperative: script **3** output is meaningful for compute parity only under the
+paired replay contract (same tag, coherent ``K``/``vb_rand_buf`` from **1a/1b**).
+If replay coherence is broken, repair RNG alignment before debugging causal reds.
 """
 
 from __future__ import annotations
@@ -52,9 +56,6 @@ from python_src.toolbox.DEM.DEM_AtariIII import (
     _rgms_run_deadline_check,
     _rgms_run_set_last_label,
     get_dem_atariiii_run_last_label,
-)
-from python_src.toolbox.DEM.entry12_matlab_capture import (
-    default_entry12_vb_matlab_rand_buf_mat_path,
 )
 from python_src.toolbox.DEM.spm_MDP_VB_XXX import spm_MDP_VB_XXX
 
@@ -148,7 +149,12 @@ def _xxx12_rdp_from_mat() -> bool:
 
 
 def _load_xxx12_rdp() -> dict[str, Any]:
-    """Default: FSL ``.mat`` oracle lane (sparse-friendly; no pre-VB densify). ``RGMS_XXX_12_RDP_FROM_CTX=1``: ctx PKL smoke."""
+    """Load ``RDP`` for VB: call ``tag`` → script **1b** ``rdp.mat``; else FSL ``.mat`` oracle."""
+    tag = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip()
+    if tag and _xxx12_rdp_from_mat():
+        from python_src.toolbox.DEM.entry12_atari_calls import load_entry12_rdp_for_tag
+
+        return load_entry12_rdp_for_tag(tag)
     if not _xxx12_rdp_from_mat():
         pkl_in = _fsl_context_pkl_in_path()
         if not pkl_in.is_file():
@@ -177,6 +183,11 @@ def _xxx12_pdp_pkl_out_path() -> Path:
     raw = str(os.getenv("RGMS_XXX_12_PDP_PKL_PATH", "")).strip()
     if raw:
         return Path(raw).expanduser().resolve()
+    tag = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip()
+    if tag:
+        from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
+
+        return entry12_signoff_artifact_paths(tag)["pdp_pkl"]
     return Path(__file__).resolve().parent / "fixtures" / "DEMAtariIII_XXX_12_pdp.pkl"
 
 
@@ -187,8 +198,20 @@ def _xxx12_out_dir() -> Path:
     return Path(__file__).resolve().parent / "fixtures"
 
 
+def _xxx12_rdp_pkl_out_path() -> Path:
+    raw = str(os.getenv("RGMS_XXX_12_RDP_PKL_PATH", "")).strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
+    tag = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip()
+    if tag:
+        from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
+
+        return entry12_signoff_artifact_paths(tag)["rdp_pkl"]
+    return _xxx12_out_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
+
+
 def _dump_xxx12_rdp_pkl(rdp: Any) -> None:
-    path = _xxx12_out_dir() / "DEMAtariIII_XXX_12_rdp.pkl"
+    path = _xxx12_rdp_pkl_out_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as f:
         pickle.dump({"RDP": rdp}, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -230,21 +253,25 @@ def _run_xxx12_spm_mdp_vb_xxx(rdp: dict[str, Any]) -> Any:
             _rgms_deadline_reset_for_run()
             _rgms_run_set_last_label("ENTRY12: spm_MDP_VB_XXX")
             _rgms_run_deadline_check()
+            from python_src.toolbox.DEM.entry12_atari_calls import (
+                entry12_assert_buf_k_coherent,
+                entry12_resolve_run_tag,
+                entry12_signoff_artifact_paths,
+                entry12_vb_oracle_flags,
+            )
+
             reuse = _xxx12_reuse_matlab_draws()
-            if reuse and not default_entry12_vb_matlab_rand_buf_mat_path().is_file():
+            tag = entry12_resolve_run_tag()
+            paths = entry12_signoff_artifact_paths(tag)
+            if reuse and not paths["rand_buf"].is_file():
                 raise FileNotFoundError(
                     "MATLAB vb_rand_buf missing for Phase 1 oracle "
-                    f"({default_entry12_vb_matlab_rand_buf_mat_path()}). "
+                    f"({paths['rand_buf']}). "
                     "Run entry12_preflight_vb_rand_k.py then DEMAtariIII_entry12_dump_all_subentries."
                 )
-            # monitoring=False matches MATLAB dump (3rd arg) for aligned draw count K.
-            return spm_MDP_VB_XXX(
-                rdp,
-                {},
-                monitoring=False,
-                dump_subentries=True,
-                reuse_matlab_draws=reuse,
-            )
+            if reuse:
+                entry12_assert_buf_k_coherent(tag)
+            return spm_MDP_VB_XXX(rdp, {}, **entry12_vb_oracle_flags(reuse_matlab_draws=reuse))
         except Exception as exc:
             print(
                 f"[XXX 12] last traced segment = {get_dem_atariiii_run_last_label()!r}",
@@ -297,7 +324,22 @@ def test_xxx_12_fsl_rdp_to_pdp_pkl() -> None:
         _xxx12_reset_segment_timer()
         _xxx12_run_trace("start (tee active)")
 
+        from python_src.toolbox.DEM.entry12_atari_calls import (
+            entry12_assert_buf_k_coherent,
+            entry12_assert_signoff_chain_ready,
+            entry12_log_signoff_chain,
+            entry12_resolve_run_tag,
+        )
+
+        tag_env = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip()
+        tag_use = tag_env or entry12_resolve_run_tag()
+        if tag_env or _xxx12_reuse_matlab_draws():
+            entry12_assert_signoff_chain_ready(tag_use, require_rand_buf=_xxx12_reuse_matlab_draws())
+        paths = entry12_log_signoff_chain(tag_use, stream=sys.stderr)
+
         src = "FSL RDP mat" if _xxx12_rdp_from_mat() else "FSL context PKL"
+        if tag_env:
+            src = f"tag {tag_env!r} rdp.mat (1b snapshot)"
         reuse = _xxx12_reuse_matlab_draws()
         print(f"[XXX 12] RDP source: {src}", file=sys.stderr, flush=True)
         print(
@@ -306,8 +348,12 @@ def test_xxx_12_fsl_rdp_to_pdp_pkl() -> None:
             flush=True,
         )
         if reuse:
+            try:
+                entry12_assert_buf_k_coherent(tag_use)
+            except ValueError as exc:
+                print(f"[XXX 12] warning: {exc}", file=sys.stderr, flush=True)
             print(
-                f"[XXX 12] vb_rand_buf: {default_entry12_vb_matlab_rand_buf_mat_path()}",
+                f"[XXX 12] vb_rand_buf: {paths['rand_buf']}",
                 file=sys.stderr,
                 flush=True,
             )

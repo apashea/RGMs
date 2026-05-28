@@ -93,6 +93,24 @@ def test_entry12_subentry_mat_loads_when_present(code: str) -> None:
         assert "PDP" in blob
 
 
+def test_entry12_Q_Y_py_level_aligns_to_mat_outcome_rows() -> None:
+    """Python ``Q.Y`` as one ``{L}`` level vs MATLAB ``Ng`` outcome rows (compare lane)."""
+    import numpy as np
+
+    from python_src.toolbox.DEM.entry12_matlab_capture import _entry12_align_Q_record_to_mat
+
+    ng, t_count = 3, 4
+    mat_rows = [
+        [np.asarray([1.0 if t == 3 and o == 2 else 0.0]) for t in range(t_count)] for o in range(ng)
+    ]
+    py_rows = [[row[t].copy() for t in range(t_count)] for row in mat_rows]
+    py_rows[2][3] = np.asarray([1.0])  # deliberate mismatch at o=2,t=3
+    aligned = _entry12_align_Q_record_to_mat({"Y": [py_rows]}, {"Y": mat_rows})
+    assert len(aligned["Y"]) == ng
+    assert float(np.max(np.abs(aligned["Y"][2][3] - mat_rows[2][3]))) < 1e-10
+    assert float(np.max(np.abs(aligned["Y"][0][0] - mat_rows[0][0]))) < 1e-10
+
+
 def test_entry12_Q_Y_flat_level_canonicalize_to_ng_t() -> None:
     """``Q.Y{L}`` flat ``Ng×T`` row → nested ``[o][t]`` (index ``o + t*Ng``)."""
     from python_src.toolbox.DEM.entry12_matlab_capture import _entry12_canonicalize_Q_ot_grid_levels
@@ -102,6 +120,14 @@ def test_entry12_Q_Y_flat_level_canonicalize_to_ng_t() -> None:
     nested = [[f"o{o}t{t}" for t in range(t_count)] for o in range(ng)]
     assert _entry12_canonicalize_Q_ot_grid_levels([flat]) == [nested]
     assert _entry12_canonicalize_Q_ot_grid_levels(nested) == nested
+    assert _entry12_canonicalize_Q_ot_grid_levels([nested]) == [nested]
+
+    import numpy as np
+
+    nested_nd = [
+        [np.asarray([1.0, 0.0, 0.0, 0.0, 0.0]) for _ in range(t_count)] for _ in range(ng)
+    ]
+    assert _entry12_canonicalize_Q_ot_grid_levels(nested_nd) == nested_nd
 
 
 def test_entry12_O_nested_canonicalize_tg_to_gt() -> None:

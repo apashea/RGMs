@@ -74,20 +74,37 @@ def rgms_repo_root() -> Path:
 
 def default_entry12_mat_output_dir() -> Path:
     """Default Entry 12 capture dir (``tests/oracle/toolbox/DEM/fixtures``; override with env)."""
+    raw = str(os.getenv("RGMS_ENTRY12_CAPTURE_OUT_DIR", "")).strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
     return rgms_repo_root() / "tests" / "oracle" / "toolbox" / "DEM" / "fixtures"
 
 
-def default_entry12_vb_matlab_rand_buf_mat_path() -> Path:
+def entry12_capture_run_tag() -> str:
+    """Active Entry 12 capture ``tag`` (env ``RGMS_ENTRY12_CAPTURE_RUN_TAG`` or canonical)."""
+    raw = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip()
+    return raw or ENTRY12_CANONICAL_RUN_TAG
+
+
+def default_entry12_vb_matlab_rand_buf_mat_path(tag: str | None = None) -> Path:
     """MATLAB-captured ``rand(K,1)`` for ``spm_MDP_VB_XXX(..., reuse_matlab_draws=True)``."""
     raw = os.getenv("RGMS_ENTRY12_VB_MATLAB_RAND_MAT", "").strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return default_entry12_mat_output_dir() / "DEMAtariIII_entry12_vb_matlab_rand_buf.mat"
+    tag = tag or entry12_capture_run_tag()
+    fix = default_entry12_mat_output_dir()
+    if tag == ENTRY12_CANONICAL_RUN_TAG:
+        return fix / "DEMAtariIII_entry12_vb_matlab_rand_buf.mat"
+    return fix / f"DEMAtariIII_entry12_vb_matlab_rand_buf_{tag}.mat"
 
 
-def default_entry12_vb_rand_k_mat_path() -> Path:
+def default_entry12_vb_rand_k_mat_path(tag: str | None = None) -> Path:
     """Preflight ``K`` written for MATLAB dump (``entry12_preflight_vb_rand_k.py``)."""
-    return default_entry12_mat_output_dir() / "entry12_vb_rand_K.mat"
+    tag = tag or entry12_capture_run_tag()
+    fix = default_entry12_mat_output_dir()
+    if tag == ENTRY12_CANONICAL_RUN_TAG:
+        return fix / "entry12_vb_rand_K.mat"
+    return fix / f"entry12_vb_rand_K_{tag}.mat"
 
 
 def _entry12_u_scalar_to_matrix(rdp: dict[str, Any]) -> None:
@@ -446,6 +463,17 @@ def _entry12_align_mdp_Q_for_12h(py_q: dict[str, Any], mat_q: dict[str, Any]) ->
             py_q[qk] = _entry12_align_nested_lists_for_compare(pq, mq)
 
 
+def _entry12_align_id_record_for_compare(py_id: dict[str, Any], mat_id: dict[str, Any]) -> dict[str, Any]:
+    """Align ``id.*`` (including ``id.A[f]`` scalars) to MATLAB ``loadmat`` template types."""
+    import copy
+
+    from python_src.toolbox.DEM.spm_MDP_checkX import _spm_MDP_checkX_transform_align
+
+    out = copy.deepcopy(py_id)
+    _spm_MDP_checkX_transform_align(out, mat_id)
+    return out
+
+
 def _entry12_align_pdp_assemble_shell(py_pdp: dict[str, Any], mat_pdp: dict[str, Any]) -> None:
     """
     **12H** / final **PDP** compare lane: MATLAB ``loadmat`` vs Python assemble layout.
@@ -472,7 +500,18 @@ def _entry12_align_pdp_assemble_shell(py_pdp: dict[str, Any], mat_pdp: dict[str,
                 _entry12_cast_leaf_for_compare(py_v[i], mat_v[i]) for i in range(len(mat_v))
             ]
         elif len(py_v) == len(mat_v):
-            py_pdp[key] = _entry12_align_scalar_list_to_mat(py_v, mat_v)
+            if (
+                key in ("Y", "j", "i")
+                and py_v
+                and isinstance(py_v[0], list)
+                and isinstance(mat_v[0], list)
+            ):
+                py_pdp[key] = [
+                    _entry12_align_nested_lists_for_compare(py_v[i], mat_v[i])
+                    for i in range(len(mat_v))
+                ]
+            else:
+                py_pdp[key] = _entry12_align_scalar_list_to_mat(py_v, mat_v)
     py_pa, mat_pa = py_pdp.get("Pa"), mat_pdp.get("Pa")
     if isinstance(py_pa, dict) and isinstance(mat_pa, list):
         keys = sorted(py_pa.keys(), key=lambda k: int(k) if str(k).isdigit() else k)
@@ -485,20 +524,10 @@ def _entry12_align_pdp_assemble_shell(py_pdp: dict[str, Any], mat_pdp: dict[str,
         ]
     py_id, mat_id = py_pdp.get("id"), mat_pdp.get("id")
     if isinstance(py_id, dict) and isinstance(mat_id, dict):
-        import copy
-
-        import numpy as np
-
-        aligned_id: dict[str, Any] = {}
-        for key in mat_id:
-            mv = mat_id[key]
-            if np.asarray(mv).size == 0:
-                aligned_id[key] = copy.deepcopy(mv)
-            elif key in py_id:
-                aligned_id[key] = _entry12_cast_leaf_for_compare(py_id[key], mv)
-            else:
-                aligned_id[key] = copy.deepcopy(mv)
-        py_pdp["id"] = aligned_id
+        py_pdp["id"] = _entry12_align_id_record_for_compare(py_id, mat_id)
+    for sk in ("T", "U"):
+        if sk in py_pdp and sk in mat_pdp:
+            py_pdp[sk] = _entry12_cast_leaf_for_compare(py_pdp[sk], mat_pdp[sk])
     py_q, mat_q = py_pdp.get("Q"), mat_pdp.get("Q")
     if isinstance(py_q, dict) and isinstance(mat_q, dict):
         py_pdp["Q"] = _entry12_align_Q_record_to_mat(py_q, mat_q)
@@ -523,6 +552,12 @@ def _entry12_align_pdp_assemble_shell(py_pdp: dict[str, Any], mat_pdp: dict[str,
         py_q, mat_q = py_mdp.get("Q"), mat_mdp.get("Q")
         if isinstance(py_q, dict) and isinstance(mat_q, dict):
             _entry12_align_mdp_Q_for_12h(py_q, mat_q)
+        py_id_n, mat_id_n = py_mdp.get("id"), mat_mdp.get("id")
+        if isinstance(py_id_n, dict) and isinstance(mat_id_n, dict):
+            py_mdp["id"] = _entry12_align_id_record_for_compare(py_id_n, mat_id_n)
+        for sk in ("T", "U", "u"):
+            if sk in py_mdp and sk in mat_mdp:
+                py_mdp[sk] = _entry12_cast_leaf_for_compare(py_mdp[sk], mat_mdp[sk])
 
 
 def _entry12_align_scalar_list_to_mat(py_list: list[Any], mat_list: list[Any]) -> list[Any]:
@@ -695,12 +730,172 @@ def _entry12_q_o_cells_row_to_matrix(mat_cells: list[Any], ncol: int) -> Any:
     return np.asfortranarray(out)
 
 
-def _entry12_Q_O_level_to_mat_cells(py_o_level: Any, mat_o_level: Any) -> Any:
-    """
-    Compare lane: one ``Q.O{L}`` level.
+def _entry12_is_q_o_mat_nested_grid(mat_o_level: list[Any]) -> bool:
+    """MATLAB ``loadmat`` ``Q.O{L}`` as ``Ng`` rows × ``T`` nested cells (``O{g,t}``)."""
+    import numpy as np
 
-    Python hierarchical append stores outcomes as a dense matrix (or ``[matrix]``);
-    MATLAB ``loadmat`` exposes ``Q.O{L}`` as a flat post-``shiftdim`` ``T×Ng`` cell row (``(:)`` order).
+    if not isinstance(mat_o_level, list) or not mat_o_level:
+        return False
+    first = mat_o_level[0]
+    return isinstance(first, list) and not isinstance(first, np.ndarray)
+
+
+def _entry12_q_ot_mat_row_len(row: Any) -> int | None:
+    """Length of one MATLAB ``Q.{Y,j,i,o}`` outcome row (``Ng×T`` history)."""
+    import numpy as np
+
+    if isinstance(row, list):
+        return len(row)
+    if isinstance(row, np.ndarray) and row.dtype == object:
+        return int(row.size)
+    return None
+
+
+def _entry12_q_ot_mat_row_cell(row: Any, t: int) -> Any:
+    import numpy as np
+
+    if isinstance(row, list):
+        return row[t]
+    if isinstance(row, np.ndarray) and row.dtype == object:
+        return row[t]
+    return row
+
+
+def _entry12_is_q_ot_mat_outcome_rows(mat_level: list[Any]) -> bool:
+    """``Q.{Y,j,i,o}{L}`` as ``Ng`` outcome rows × ``T`` history cells (``(:)`` index ``o + t*Ng``)."""
+    if not isinstance(mat_level, list) or len(mat_level) < 2:
+        return False
+    t_len = _entry12_q_ot_mat_row_len(mat_level[0])
+    if t_len is None or t_len < 1:
+        return False
+    for row in mat_level[1 : min(16, len(mat_level))]:
+        if _entry12_q_ot_mat_row_len(row) != t_len:
+            return False
+    return True
+
+
+def _entry12_pair_q_ot_flat_py_to_mat_outcome_rows(
+    flat: list[Any],
+    mat_rows: list[Any],
+) -> list[Any]:
+    """Pair flat Python ``Q.{Y,j,i,o}`` (``o + t*Ng``) to MATLAB ``Ng×T`` outcome rows — no substitution."""
+    ng = len(mat_rows)
+    t_len = _entry12_q_ot_mat_row_len(mat_rows[0])
+    if t_len is None:
+        _entry12_compare_lane_fail(
+            "_entry12_pair_q_ot_flat_py_to_mat_outcome_rows",
+            "mat_rows[0] is not a length-T cell row",
+        )
+    n_expect = ng * t_len
+    if len(flat) != n_expect:
+        _entry12_compare_lane_fail(
+            "_entry12_pair_q_ot_flat_py_to_mat_outcome_rows",
+            f"flat len {len(flat)} != Ng*T {n_expect} (Ng={ng} T={t_len})",
+        )
+    out: list[Any] = []
+    for o in range(ng):
+        mat_row = mat_rows[o]
+        if _entry12_q_ot_mat_row_len(mat_row) != t_len:
+            _entry12_compare_lane_fail(
+                "_entry12_pair_q_ot_flat_py_to_mat_outcome_rows",
+                f"row {o} len != T {t_len}",
+            )
+        row: list[Any] = []
+        for t in range(t_len):
+            idx = _entry12_q_o_flat_index_g_preshiftdim(o, t, ng=ng)
+            row.append(
+                _entry12_cast_leaf_for_compare(flat[idx], _entry12_q_ot_mat_row_cell(mat_row, t))
+            )
+        out.append(row)
+    return out
+
+
+def _entry12_q_o_py_flat_cell_row(py_o_level: Any) -> list[Any] | None:
+    """Script **3** flat post-``shiftdim`` ``Q.O{L}`` row (``t + g*T`` leaf list)."""
+    import numpy as np
+
+    if not isinstance(py_o_level, list) or not py_o_level:
+        return None
+    first = py_o_level[0]
+    if isinstance(first, (list, tuple)) and not isinstance(first, np.ndarray):
+        return None
+    if isinstance(first, np.ndarray) and first.ndim > 1 and int(first.size) > 64:
+        return None
+    return py_o_level
+
+
+def _entry12_pair_q_o_flat_py_to_mat_grid(
+    flat: list[Any],
+    mat_grid: list[Any],
+) -> list[Any]:
+    """Pair flat Python ``Q.O{L}`` (``t + g*ncol``) to MATLAB ``Ng×T`` grid — no MATLAB substitution."""
+    ng = len(mat_grid)
+    if ng < 1 or not isinstance(mat_grid[0], list):
+        _entry12_compare_lane_fail(
+            "_entry12_pair_q_o_flat_py_to_mat_grid",
+            "mat_grid is not Ng×T nested lists",
+        )
+    ncol = len(mat_grid[0])
+    n_expect = ng * ncol
+    if len(flat) != n_expect:
+        _entry12_compare_lane_fail(
+            "_entry12_pair_q_o_flat_py_to_mat_grid",
+            f"flat len {len(flat)} != Ng*T {n_expect} (Ng={ng} T={ncol})",
+        )
+    out: list[Any] = []
+    for g in range(ng):
+        mat_row = mat_grid[g]
+        if len(mat_row) != ncol:
+            _entry12_compare_lane_fail(
+                "_entry12_pair_q_o_flat_py_to_mat_grid",
+                f"row {g} len {len(mat_row)} != T {ncol}",
+            )
+        row: list[Any] = []
+        for t in range(ncol):
+            idx = _entry12_q_o_flat_index_t_shiftdim(t, g, ncol=ncol)
+            row.append(_entry12_cast_leaf_for_compare(flat[idx], mat_row[t]))
+        out.append(row)
+    return out
+
+
+def _entry12_is_q_o_ng_t_rows(level: Any) -> bool:
+    """``mdp.Q.O{L}`` as ``Ng`` rows of ragged time vectors (paired ``.mat`` / script **3**)."""
+    if not isinstance(level, list) or not level:
+        return False
+    return isinstance(level[0], (list, tuple))
+
+
+def _entry12_align_q_o_ng_t_rows(py_rows: list[Any], mat_rows: list[Any]) -> list[Any]:
+    """Element-wise align one ``Q.O{L}`` level stored as ``cell(Ng,T)`` rows."""
+    ng = max(len(py_rows), len(mat_rows))
+    out: list[Any] = []
+    for g in range(ng):
+        py_r = py_rows[g] if g < len(py_rows) else []
+        mat_r = mat_rows[g] if g < len(mat_rows) else []
+        if not isinstance(py_r, (list, tuple)):
+            py_r = [py_r]
+        if not isinstance(mat_r, (list, tuple)):
+            mat_r = [mat_r]
+        ncol = max(len(py_r), len(mat_r))
+        row: list[Any] = []
+        for t in range(ncol):
+            py_c = py_r[t] if t < len(py_r) else (py_r[-1] if py_r else None)
+            mat_c = mat_r[t] if t < len(mat_r) else (mat_r[-1] if mat_r else None)
+            row.append(_entry12_cast_leaf_for_compare(py_c, mat_c))
+        out.append(row)
+    return out
+
+
+def _entry12_Q_O_level_to_mat_cells(
+    py_o_level: Any,
+    mat_o_level: Any,
+    *,
+    kind: str = "O",
+) -> Any:
+    """
+    Compare lane: one ``Q.*{L}`` level.
+
+    ``O`` uses post-``shiftdim`` flat index ``t + g*ncol``; ``Y``/``j``/``i``/``o`` use ``o + t*Ng``.
     """
     import copy
 
@@ -708,6 +903,29 @@ def _entry12_Q_O_level_to_mat_cells(py_o_level: Any, mat_o_level: Any) -> Any:
 
     if not isinstance(mat_o_level, list) or not mat_o_level:
         return _entry12_cast_leaf_for_compare(py_o_level, mat_o_level)
+    if (
+        kind == "O"
+        and isinstance(py_o_level, list)
+        and _entry12_is_q_o_ng_t_rows(mat_o_level)
+        and _entry12_is_q_o_ng_t_rows(py_o_level)
+    ):
+        return _entry12_align_q_o_ng_t_rows(py_o_level, mat_o_level)
+    if (
+        kind in ("Y", "j", "i", "o")
+        and isinstance(py_o_level, list)
+        and _entry12_is_q_ot_mat_outcome_rows(mat_o_level)
+        and _entry12_is_q_ot_mat_outcome_rows(py_o_level)
+    ):
+        return _entry12_align_q_o_ng_t_rows(py_o_level, mat_o_level)
+    flat_py = _entry12_q_o_py_flat_cell_row(py_o_level)
+    if flat_py is not None and kind in ("Y", "j", "i", "o") and _entry12_is_q_ot_mat_outcome_rows(
+        mat_o_level
+    ):
+        return _entry12_pair_q_ot_flat_py_to_mat_outcome_rows(flat_py, mat_o_level)
+    if flat_py is not None and _entry12_is_q_o_mat_nested_grid(mat_o_level):
+        if kind in ("Y", "j", "i", "o"):
+            return _entry12_pair_q_ot_flat_py_to_mat_outcome_rows(flat_py, mat_o_level)
+        return _entry12_pair_q_o_flat_py_to_mat_grid(flat_py, mat_o_level)
     if isinstance(py_o_level, list) and len(py_o_level) == len(mat_o_level):
         return _entry12_align_scalar_list_to_mat(py_o_level, mat_o_level)
     py_arr: np.ndarray | None = None
@@ -719,10 +937,13 @@ def _entry12_Q_O_level_to_mat_cells(py_o_level: Any, mat_o_level: Any) -> Any:
         except (TypeError, ValueError):
             py_arr = None
     if py_arr is None or py_arr.size == 0:
-        return _entry12_align_scalar_list_to_mat(
-            py_o_level if isinstance(py_o_level, list) else [py_o_level],
-            mat_o_level,
-        )
+        py_list = py_o_level if isinstance(py_o_level, list) else [py_o_level]
+        flat_py = _entry12_q_o_py_flat_cell_row(py_list)
+        if flat_py is not None and _entry12_is_q_o_mat_nested_grid(mat_o_level):
+            if kind in ("Y", "j", "i", "o"):
+                return _entry12_pair_q_ot_flat_py_to_mat_outcome_rows(flat_py, mat_o_level)
+            return _entry12_pair_q_o_flat_py_to_mat_grid(flat_py, mat_o_level)
+        return _entry12_align_scalar_list_to_mat(py_list, mat_o_level)
     if py_arr.ndim == 1:
         py_arr = py_arr.reshape(-1, 1)
     if py_arr.ndim != 2:
@@ -837,7 +1058,7 @@ def _entry12_align_Q_record_to_mat(py_q: Any, mat_q: Any) -> Any:
                         for t in range(ncol)
                     ]
                     return flat
-        return _entry12_Q_O_level_to_mat_cells(py_li, mat_li)
+        return _entry12_Q_O_level_to_mat_cells(py_li, mat_li, kind="O")
 
     if "O" in mat_q and "O" in out:
         py_o = out["O"]
@@ -848,7 +1069,11 @@ def _entry12_align_Q_record_to_mat(py_q: Any, mat_q: Any) -> Any:
             ):
                 # ``Q.O{L}`` list-of-levels (Python) vs flat cell row (MATLAB) when ``L==1``.
                 if len(py_o) == 1 and len(mat_o) > 1:
-                    out["O"] = _entry12_Q_O_level_to_mat_cells(py_o[0], mat_o)
+                    inner = py_o[0]
+                    if isinstance(inner, list) and _entry12_is_q_o_ng_t_rows(inner):
+                        out["O"] = _entry12_align_q_o_ng_t_rows(inner, mat_o)
+                    else:
+                        out["O"] = _entry12_Q_O_level_to_mat_cells(py_o[0], mat_o)
                 else:
                     out["O"] = [
                         _entry12_Q_O_level_to_mat_cells(
@@ -890,14 +1115,18 @@ def _entry12_align_Q_record_to_mat(py_q: Any, mat_q: Any) -> Any:
             out[key] = _align_Q_PX_level(py_levels[0], mat_levels)
             continue
         if len(py_levels) == 1 and len(mat_levels) > 1:
+            if key in ("Y", "j", "i", "o") and _entry12_is_q_ot_mat_outcome_rows(mat_levels):
+                out[key] = _entry12_align_q_o_ng_t_rows(py_levels[0], mat_levels)
+                continue
             if not isinstance(mat_levels[0], list) or key in ("Y", "j", "i", "o"):
-                out[key] = _entry12_Q_O_level_to_mat_cells(py_levels[0], mat_levels)
+                out[key] = _entry12_Q_O_level_to_mat_cells(py_levels[0], mat_levels, kind=key)
                 continue
         if len(py_levels) == len(mat_levels):
             out[key] = [
                 _entry12_Q_O_level_to_mat_cells(
                     py_levels[li] if li < len(py_levels) else py_levels[-1],
                     mat_levels[li],
+                    kind=key,
                 )
                 if isinstance(mat_levels[li], list)
                 and len(mat_levels[li]) > 1
@@ -911,6 +1140,26 @@ def _entry12_align_Q_record_to_mat(py_q: Any, mat_q: Any) -> Any:
             ]
     if "F" in mat_q:
         out["F"] = _entry12_cast_leaf_for_compare(out.get("F", mat_q["F"]), mat_q["F"])
+    return out
+
+
+_ENTRY12_MATLAB_ONLY_MDP_SNAP_KEYS: frozenset[str] = frozenset(
+    {"GA", "GB", "GU", "GD", "GE", "GV", "ID", "chi"}
+)
+
+
+def _entry12_prune_mat_mdp_snap_keys_for_py(mat_node: Any, py_node: Any) -> Any:
+    """Drop MATLAB-only generative-process snap keys on ``mat`` when absent on paired ``py``."""
+    import copy
+
+    if not isinstance(mat_node, dict) or not isinstance(py_node, dict):
+        return mat_node
+    out = copy.deepcopy(mat_node)
+    for key in list(out.keys()):
+        if key not in py_node and key in _ENTRY12_MATLAB_ONLY_MDP_SNAP_KEYS:
+            del out[key]
+        elif key in py_node and isinstance(out[key], dict) and isinstance(py_node[key], dict):
+            out[key] = _entry12_prune_mat_mdp_snap_keys_for_py(out[key], py_node[key])
     return out
 
 
@@ -932,6 +1181,10 @@ def _entry12_align_12D_mdp_branch(
             del out[key]
     for key in mat_mdp:
         if key not in out and key not in skip:
+            if key in _ENTRY12_MATLAB_ONLY_MDP_SNAP_KEYS:
+                # MATLAB dump fork may list ``GP``/``ID``/``chi`` on saved ``MDP``; Python
+                # keeps likelihood ``A``/``B`` on the struct and workspace bundles elsewhere.
+                continue
             _entry12_compare_lane_fail(
                 "_entry12_align_12D_mdp_branch",
                 f"missing Python key {key!r}",
@@ -1156,7 +1409,19 @@ def _entry12_strip_nested_mdp_policy_traces(root: dict[str, Any]) -> None:
     else:
         return
     if isinstance(child, dict):
-        for key in ("R", "U", "v", "w", "F", "entry12_Yfill", "entry12_VBX", "entry12_forwards", "entry12_generation"):
+        for key in (
+            "R",
+            "U",
+            "v",
+            "w",
+            "F",
+            "GE",
+            "GD",
+            "entry12_Yfill",
+            "entry12_VBX",
+            "entry12_forwards",
+            "entry12_generation",
+        ):
             child.pop(key, None)
 
 
@@ -1203,10 +1468,19 @@ def _entry12_align_boundary_mdp_fgz(
             out["F"] = _entry12_cast_leaf_for_compare(py_mdp["F"], mat_mdp["F"])
     if "Z" in mat_mdp and "Z" in out:
         pz = np.asarray(py_mdp.get("Z"), dtype=np.float64).ravel()
-        mz = np.asarray(mat_mdp["Z"], dtype=np.float64)
-        if mz.ndim == 0 and pz.size > slot:
-            out["Z"] = _entry12_cast_leaf_for_compare(float(pz[slot]), mat_mdp["Z"])
+        mz = np.asarray(mat_mdp["Z"], dtype=np.float64).ravel()
+        if mz.size == 0:
+            pass
         elif mz.size == pz.size:
+            out["Z"] = _entry12_cast_leaf_for_compare(py_mdp["Z"], mat_mdp["Z"])
+        elif mz.size == 1:
+            idx = min(max(slot, 0), pz.size - 1) if pz.size else 0
+            out["Z"] = _entry12_cast_leaf_for_compare(float(pz[idx]), float(mz[0]))
+        elif pz.size > mz.size:
+            end = min(pz.size, max(slot, 0) + 1)
+            start = max(0, end - mz.size)
+            out["Z"] = _entry12_cast_leaf_for_compare(pz[start:end], mz)
+        else:
             out["Z"] = _entry12_cast_leaf_for_compare(py_mdp["Z"], mat_mdp["Z"])
     return out
 
@@ -1522,6 +1796,11 @@ def _entry12_canonicalize_Q_ot_grid_levels(val: Any) -> Any:
     """
     if not isinstance(val, list):
         return val
+    # ``mat_nested_to_py`` may expose ``Q.*{L}`` as ``Ng`` outcome rows (not one list-of-levels).
+    if _entry12_is_q_ot_mat_outcome_rows(val):
+        return val
+    if len(val) == 1 and _entry12_is_q_ot_mat_outcome_rows(val[0]):
+        return val
     out: list[Any] = []
     for level in val:
         if isinstance(level, list) and level and isinstance(level[0], (list, tuple)):
@@ -1654,26 +1933,53 @@ def entry12_mat_snap_for_value_assert(code: str, mat_snap: dict[str, Any]) -> di
 
 
 # Keys on parent ``MDP`` excluded from causal value assert (wrong instant or wrong storage).
-_ENTRY12_CAUSAL_12D_MDP_DROP: tuple[str, ...] = ("A", "O", "o", "F", "G", "Z")
-_ENTRY12_CAUSAL_12F_MDP_DROP: tuple[str, ...] = ("A", "F", "Z")
+# ``F``/``G``/``Z`` are aligned per-boundary in ``_entry12_align_boundary_mdp_fgz`` before payload build.
+_ENTRY12_CAUSAL_12D_MDP_DROP: tuple[str, ...] = ("A", "B", "O", "o")
+_ENTRY12_CAUSAL_12F_MDP_DROP: tuple[str, ...] = ("A",)
+# Nested generative-process copies (``MDP.MDP``) — not causal witnesses; see ``12DEF.md``.
+_ENTRY12_CAUSAL_NESTED_MDP_DROP: tuple[str, ...] = ("Y", "j", "i")
 
 
-def _entry12_mdp_drop_top_level_keys(md: Any, drop_keys: tuple[str, ...]) -> Any:
-    """Drop keys on each top-level model dict only (preserve nested ``MDP.MDP``)."""
+def _entry12_mdp_drop_top_level_keys(
+    md: Any,
+    drop_keys: tuple[str, ...],
+    *,
+    nested_extra_drop: tuple[str, ...] = _ENTRY12_CAUSAL_NESTED_MDP_DROP,
+) -> Any:
+    """
+    Drop keys on each model dict and on nested ``MDP.MDP`` children.
+
+    Struct ``MDP.A`` / ``MDP.Y`` (parent or child) are not causal witnesses; workspace
+    ``A{m,g}`` is asserted via ``A_peaks_*`` on **12F**; outcomes at ``t`` via **12E** ``O``.
+    """
     import copy
 
     if isinstance(md, list):
-        return [_entry12_mdp_drop_top_level_keys(x, drop_keys) for x in md]
+        return [
+            _entry12_mdp_drop_top_level_keys(x, drop_keys, nested_extra_drop=nested_extra_drop)
+            for x in md
+        ]
     if not isinstance(md, dict):
         return copy.deepcopy(md)
     out = copy.deepcopy(md)
     for key in drop_keys:
         out.pop(key, None)
+    nested = out.get("MDP")
+    child_drop = tuple(dict.fromkeys(drop_keys + nested_extra_drop))
+    if isinstance(nested, list):
+        out["MDP"] = [
+            _entry12_mdp_drop_top_level_keys(x, child_drop, nested_extra_drop=())
+            if isinstance(x, dict)
+            else copy.deepcopy(x)
+            for x in nested
+        ]
+    elif isinstance(nested, dict):
+        out["MDP"] = _entry12_mdp_drop_top_level_keys(nested, child_drop, nested_extra_drop=())
     return out
 
 
 def _entry12_causal_mdp_strip_nested_Q(md: Any) -> Any:
-    """Drop hierarchical ``Q`` records (flat ``Ng×T`` layout ≠ MATLAB); not a causal witness."""
+    """Drop all ``Q`` on parent and child (legacy); prefer ``_entry12_causal_mdp_strip_child_Q_only``."""
     import copy
 
     if isinstance(md, list):
@@ -1682,6 +1988,37 @@ def _entry12_causal_mdp_strip_nested_Q(md: Any) -> Any:
         return copy.deepcopy(md)
     out = copy.deepcopy(md)
     out.pop("Q", None)
+    nested = out.get("MDP")
+    if isinstance(nested, list):
+        out["MDP"] = [
+            (copy.deepcopy(c) if isinstance(c, dict) else c)
+            for c in nested
+        ]
+        for i, child in enumerate(out["MDP"]):
+            if isinstance(child, dict):
+                child.pop("Q", None)
+                out["MDP"][i] = child
+    elif isinstance(nested, dict):
+        child = copy.deepcopy(nested)
+        child.pop("Q", None)
+        out["MDP"] = child
+    return out
+
+
+def _entry12_causal_mdp_strip_child_Q_only(md: Any) -> Any:
+    """
+    Keep parent ``mdp.Q`` (aligned in compare lane) for causal assert; drop child ``MDP.MDP.Q`` only.
+
+    Child ``Q`` layout differs between script **3** and ``loadmat``; parent ``Q`` is the hierarchical
+    update witness at **12D** / **12F** boundaries.
+    """
+    import copy
+
+    if isinstance(md, list):
+        return [_entry12_causal_mdp_strip_child_Q_only(x) for x in md]
+    if not isinstance(md, dict):
+        return copy.deepcopy(md)
+    out = copy.deepcopy(md)
     nested = out.get("MDP")
     if isinstance(nested, list):
         out["MDP"] = [
@@ -1771,10 +2108,8 @@ def _entry12_a_peaks_from_snap_at_phase(
     if ent is None:
         for item in reversed(entries):
             if str(item.get("phase") or "") == phase and "A_peaks" in item:
-                qv = _entry12_phase_log_qf_factor1(item.get("Q_f"))
-                if qv is not None and int(qv.size) >= 400:
-                    ent = item
-                    break
+                ent = item
+                break
     if not ent:
         return None
     return _entry12_normalize_a_peaks_list(ent.get("A_peaks"))
@@ -1786,6 +2121,7 @@ def entry12_causal_payload_12d(snap: dict[str, Any]) -> dict[str, Any]:
 
     ``MDP.O`` / ``MDP.o`` / ``MDP.A`` are excluded — outcomes at ``t`` are **12E** ``O``;
     workspace ``A{m,g}`` for ``spm_VBX`` is **12F** ``A_peaks_*``, not struct ``MDP.A``.
+    Parent ``MDP.Q`` and trace-aligned ``MDP.F``/``G``/``Z`` are included (compare-aligned snap).
     """
     import copy
 
@@ -1795,7 +2131,7 @@ def entry12_causal_payload_12d(snap: dict[str, Any]) -> dict[str, Any]:
     if "Mrow" in snap:
         out["Mrow"] = copy.deepcopy(snap["Mrow"])
     if "MDP" in snap:
-        out["MDP"] = _entry12_causal_mdp_strip_nested_Q(
+        out["MDP"] = _entry12_causal_mdp_strip_child_Q_only(
             _entry12_mdp_drop_top_level_keys(snap["MDP"], _ENTRY12_CAUSAL_12D_MDP_DROP)
         )
     return out
@@ -1815,9 +2151,9 @@ def entry12_causal_payload_12f(
     """
     Causal value payload for **12F** (end of ``t``).
 
-    Workspace ``Q``/``P``/``R``/``v``/``w`` plus filtered ``MDP`` (no parent ``MDP.A``).
-    Workspace ``A{m,g}`` at ``spm_VBX`` via ``A_peaks_pre_vbx`` / ``A_peaks_pre_forwards``
-    from ``entry12_phase_log`` on ``raw_snap`` (stripped from aligned compare tree).
+    Workspace ``Q``/``P``/``R``/``v``/``w`` plus filtered ``MDP`` (no parent ``MDP.A``; ``F``/``G``/``Z`` kept).
+    Parent ``MDP.Q`` included; child ``MDP.MDP.Q`` stripped. Workspace ``A{m,g}`` at ``spm_VBX`` via
+    ``A_peaks_pre_vbx`` / ``A_peaks_pre_forwards`` from ``entry12_phase_log`` on ``raw_snap``.
     """
     import copy
 
@@ -1828,7 +2164,7 @@ def entry12_causal_payload_12f(
         if key in aligned_snap:
             out[key] = copy.deepcopy(aligned_snap[key])
     if "MDP" in aligned_snap:
-        out["MDP"] = _entry12_causal_mdp_strip_nested_Q(
+        out["MDP"] = _entry12_causal_mdp_strip_child_Q_only(
             _entry12_mdp_drop_top_level_keys(aligned_snap["MDP"], _ENTRY12_CAUSAL_12F_MDP_DROP)
         )
     missing: list[str] = []
@@ -1892,6 +2228,8 @@ def entry12_assert_causal_def_boundaries(
             mat_cmp = densify(mat_cmp)
         py_cmp = entry12_canonicalize_saved_structures_for_compare(py_cmp)
         mat_cmp = entry12_canonicalize_saved_structures_for_compare(mat_cmp)
+        if isinstance(py_cmp.get("MDP"), dict) and isinstance(mat_cmp.get("MDP"), dict):
+            mat_cmp["MDP"] = _entry12_prune_mat_mdp_snap_keys_for_py(mat_cmp["MDP"], py_cmp["MDP"])
         if code == "12D":
             py_payload = entry12_causal_payload_12d(py_cmp)
             mat_payload = entry12_causal_payload_12d(mat_cmp)
@@ -2680,14 +3018,18 @@ def _entry12_phase_log_qf_factor1(q_f: Any) -> np.ndarray | None:
 
     if q_f is None:
         return None
-    if isinstance(q_f, list):
-        if not q_f:
-            return None
-        inner = q_f[0]
-        if isinstance(inner, list):
+    try:
+        if isinstance(q_f, list):
+            if not q_f:
+                return None
+            inner = q_f[0]
+            if isinstance(inner, list):
+                return np.asarray(inner, dtype=np.float64).ravel()
             return np.asarray(inner, dtype=np.float64).ravel()
-        return np.asarray(inner, dtype=np.float64).ravel()
-    return np.asarray(q_f, dtype=np.float64).ravel()
+        return np.asarray(q_f, dtype=np.float64).ravel()
+    except (ValueError, TypeError):
+        # Nested child rows (e.g. ``post_hierarchical``) may carry short / ragged ``Q_f``.
+        return None
 
 
 def _entry12_phase_log_model_entries(log: Any, *, m_1b: int = 1) -> list[dict[str, Any]]:

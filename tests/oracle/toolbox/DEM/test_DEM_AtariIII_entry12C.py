@@ -90,6 +90,19 @@ def test_entry12c_w_k_i_and_domain_indices_are_built() -> None:
     assert len(np.asarray(id0["iI"]).ravel()) >= 1
 
 
+def test_entry12c_iW_requires_mdp_a_field() -> None:
+    """MATLAB ~470–472: ``W{m,g}`` only when ``isfield(MDP(m),'a')``; else ``id.iW`` empty."""
+    md = _mdp_for_12c()
+    out_with_a = _vb_tensors_through_H([md], nm=1, t_h=float(md["T"]))
+    assert len(np.asarray(out_with_a["id"][0]["iW"]).ravel()) >= 1
+
+    md_no_a = copy.deepcopy(md)
+    md_no_a.pop("a", None)
+    out_no_a = _vb_tensors_through_H([md_no_a], nm=1, t_h=float(md["T"]))
+    assert np.asarray(out_no_a["id"][0]["iW"]).ravel().size == 0
+    assert len(np.asarray(out_no_a["id"][0]["iK"]).ravel()) >= 1
+
+
 def test_entry12c_policy_shell_and_preallocation_inputs() -> None:
     """~619–743: ``GV/V/U/Np`` and ``N=min(N,T)`` + ``spm_MDP_get_M`` shell preallocation."""
     md = _mdp_for_12c()

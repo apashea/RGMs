@@ -612,6 +612,60 @@ def _run_checkx_schema_phase(
     return any(level == "ERROR" for level, _ in issues)
 
 
+def _leaf_types_equivalent_for_compare(py: Any, mat: Any) -> bool:
+    """Same equivalences as ``_assert_nested_rdp_equal`` for scalar/sparse leaves (type-walk lane)."""
+    import numpy as np
+
+    py = _norm_leaf(py)
+    mat = _norm_leaf(mat)
+    if isinstance(py, np.ndarray) and isinstance(mat, (int, float, np.integer, np.floating)):
+        if int(np.asarray(py, dtype=np.float64).size) == 1:
+            return bool(
+                np.isclose(
+                    float(np.asarray(py, dtype=np.float64).ravel()[0]),
+                    float(mat),
+                    rtol=0.0,
+                    atol=1e-10,
+                )
+            )
+        return False
+    if isinstance(mat, np.ndarray) and isinstance(py, (int, float, np.integer, np.floating)):
+        if int(np.asarray(mat, dtype=np.float64).size) == 1:
+            return bool(
+                np.isclose(
+                    float(py),
+                    float(np.asarray(mat, dtype=np.float64).ravel()[0]),
+                    rtol=0.0,
+                    atol=1e-10,
+                )
+            )
+        return False
+    if isinstance(py, (float, np.floating)) and isinstance(mat, (int, np.integer)):
+        fv = float(py)
+        return fv == round(fv) and int(round(fv)) == int(mat)
+    if isinstance(py, (int, np.integer)) and isinstance(mat, (float, np.floating)):
+        fv = float(mat)
+        return fv == round(fv) and int(py) == int(round(fv))
+    try:
+        from scipy import sparse as sp
+
+        if sp.issparse(py) or sp.issparse(mat):
+            pa = np.ravel(
+                py.toarray() if sp.issparse(py) else np.asarray(py, dtype=np.float64),
+                order="F",
+            )
+            ma = np.ravel(
+                mat.toarray() if sp.issparse(mat) else np.asarray(mat, dtype=np.float64),
+                order="F",
+            )
+            return pa.size == ma.size and (
+                pa.size == 0 or bool(np.allclose(pa, ma, rtol=0.0, atol=1e-10))
+            )
+    except Exception:
+        pass
+    return False
+
+
 def _collect_type_mismatches(py: Any, mat: Any, path: str, out: list[str]) -> None:
     import numpy as np
 
@@ -633,6 +687,8 @@ def _collect_type_mismatches(py: Any, mat: Any, path: str, out: list[str]) -> No
             return
         for i, (a, b) in enumerate(zip(py, mat, strict=True)):
             _collect_type_mismatches(a, b, f"{path}[{i}]", out)
+        return
+    if _leaf_types_equivalent_for_compare(py, mat):
         return
     if type(py) is not type(mat):
         out.append(f"{path}: type py={type(py).__name__} mat={type(mat).__name__}")

@@ -76,9 +76,19 @@ def _spm_VBX_sparse(P):
     return R, s
 
 
+def _a_colon_s_coerce_likelihood_(A):
+    """MATLAB ``A{g}`` is ``(No, …)`` column-major; ``loadmat`` may yield ``(No,)`` or ``(1, No)``."""
+    X = np.asarray(full(A), dtype=float, order="F")
+    if X.ndim == 1 and X.size > 1:
+        return X.reshape(-1, 1, order="F")
+    if X.ndim == 2 and X.shape[0] == 1 and X.shape[1] > 1:
+        return np.asarray(X.reshape(X.shape[1], 1, order="F"), dtype=float, order="F")
+    return X
+
+
 def _a_colon_s_logical(A, s_masks):
     """MATLAB ``A(:, s{:})`` with logical masks for trailing dimensions (``spm_VBX_update``)."""
-    X = np.asarray(full(A), dtype=float, order="F")
+    X = _a_colon_s_coerce_likelihood_(A)
     for k, mask in enumerate(s_masks):
         m = np.asarray(mask, dtype=bool).reshape(-1)
         axis = k + 1
@@ -205,7 +215,10 @@ def _spm_VBX_update(P, A, O, i_children, j_parents):
             U_last = U
         else:
             A_sub = _a_colon_s_logical(A, s)
-            U_last = spm_dot(A_sub, O[oi - 1])
+            Oo = np.asarray(full(O[oi - 1]), dtype=float, order="F")
+            if Oo.ndim == 1 and Oo.size > 1:
+                Oo = Oo.reshape(-1, 1, order="F")
+            U_last = spm_dot(A_sub, Oo)
             t = _vbx_log(U_last)
             L_acc = t if L_acc is None else (L_acc + t)
     U = U_last

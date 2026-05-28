@@ -12,6 +12,113 @@ Inserted **`### ENTRY 1-11 — full Python pipeline gate (before Entry 12)`** af
 
 ---
 
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 documentation hardening: RNG coherence as universal gate
+
+**Goal:** make RNG alignment explicitly non-optional in the persistent Entry 12 framework so future iterations cannot drift into compute-fix loops on mismatched trajectories.
+
+**Changes made (documentation only):**
+
+1. `Atari_example.md`
+   - Added **hard RNG gate before compute edits** in the mandatory XXX12+Validation12 loop.
+   - Added **Pillar B enforcement** text: script-4 first red is actionable only when RNG coherence is already green on the same tag.
+2. `12DEF.md`
+   - Added RNG gate directly in the mandatory ritual (`Each iteration` step **2b**) so call-site workflow forces RNG verification before class-A edits.
+   - Tightened top-level fix-order sentence to explicitly block compute edits when RNG is not coherent.
+3. `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`
+   - Expanded module docstring with RNG-imperative warning tied to script-4 interpretation.
+4. `tests/oracle/toolbox/DEM/test_DEM_AtariIII_XXX_12.py`
+   - Expanded module docstring to state script-3 artifacts are compute-meaningful only under coherent replay lane.
+
+**Rationale:** this places the same guard in policy, living workflow, and validation/test entrypoints, so RNG remains an always-visible precondition rather than a chat-only reminder.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_XXX_12.py`, `logs/log_0.md`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_XXX_12.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 regroup: trace integrity + call1/call2 documentation coherence
+
+**Purpose:** regroup before further compute edits; verify current evidence quality for call 2 RNG reuse and tighten docs so script-4 scope and tag coverage are explicit.
+
+**Code review findings:**
+
+- Re-read Entry 12 framework sections in `Atari_example.md` (goal/means, phase framework, Validation 12 honesty, no ad-hoc probes) and current call registry/oracles (`entry12_atari_calls.py`, script 3 + script 4 modules).
+- Confirmed script 4 already resolves artifacts by `RGMS_ENTRY12_CAPTURE_RUN_TAG` (default `rgms_canonical` = call 1; `rgms_atari_call2` = call 2), but this distinction was easy to miss in prose.
+- Identified instrumentation defect in MATLAB trace fork: `spm_sample` logged numeric branch input **after** `cumsum`, so trace-class evidence could be polluted.
+
+**Fixes this iteration:**
+
+1. `matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m`
+   - `spm_sample` now logs the original `P` (`P_in`) instead of mutated cumulative `P`.
+2. `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`
+   - Reverted temporary numeric-0/1→logical coercion in `_vb_sample_column_for_spm_sample`; keep logical behavior only when source dtype is actually logical.
+3. Documentation coherence updates:
+   - `Atari_example.md`: added explicit Validation-12 tag scope (call 1 default vs call 2 env-tag lane).
+   - `notes/andrew Python Matlab Translation Issues.md`: recorded call-2 regroup decision that blind numeric-0/1 coercion is invalid for VB replay parity.
+   - `12DEF.md`: replaced stale call-2 first-red wording from the temporary coercion branch with regroup guidance to re-establish first red on fresh 3→4 after rollback.
+
+**Runs (evidence refresh):**
+
+- MATLAB `refresh_call2` rerun succeeded with fixed trace logging.
+- `entry12_compare_sample_traces.py` still reports first mismatch at `seq=2` (`py L0 bool` vs `mat N1 double`) and policy anchor mismatch at `seq=252` (`py out=1`, `mat out=2`).
+- This confirms prior quick-fix coercion was not a trustworthy closure; first-red chain must be re-established on the rolled-back compute path.
+
+- Files read: `Atari_example.md`, `notes/andrew Python Matlab Translation Issues.md`, `spm_MDP_VB_XXX.py`, `entry12_atari_calls.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `test_DEM_AtariIII_XXX_12.py`, `12DEF.md`, `entry12_sample_trace_matlab.m`, `logs/log_0.md`
+- Files created: none
+- Files modified: `matlab_custom/entry12/spm_MDP_VB_XXX_entry12_dump.m`, `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `Atari_example.md`, `notes/andrew Python Matlab Translation Issues.md`, `12DEF.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
 ### `XXX_translation.md` — end goal + parity (2026-05-13)
 
 Per owner answers: explicit **end goal** (Python **`spm_MDP_VB_XXX`**, Pass 1), **parity** roles **`post_XXX`** / **`pre_XXX`** / **`checkX`** inside VB; revision row.
@@ -60,6 +167,21 @@ Added repo-root translation reference: canonical staged **`DEM_AtariIII`** line 
 
 ---
 
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
 ### `matlab_src/toolbox/DEM/spm_merge_structure_learning.m` — mirror from SPM (2026-05-08)
 
 Copied read-only source `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\spm_merge_structure_learning.m` into `matlab_src\toolbox\DEM\` (same relative path as SPM) so staged Atari ledger and `capture_DEM_AtariIII_entry12_pre_post_XXX.m` resolve the function under `matlab_src` only.
@@ -68,6 +190,21 @@ Copied read-only source `C:\Users\andre\Documents\MATLAB\spm-main\toolbox\DEM\sp
 - Files created: `matlab_src/toolbox/DEM/spm_merge_structure_learning.m`
 - Files modified: `logs/log_0.md`
 - Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
 - Shared files touched: no
 
 ---
@@ -84,6 +221,21 @@ Removed temporary `spm-main/toolbox/DEM` `addpath` block; script again uses only
 
 ---
 
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
 ### `capture_DEM_AtariIII_entry12_pre_post_XXX.m` — addpath for runnable capture (2026-05-08)
 
 Prepended `here` / `rgmsRoot` + `addpath(genpath(matlab_src))` and `addpath(genpath(matlab_custom))` (cwd-independent), aligned with `matlab_custom/entry12/README_entry12_matlab_capture.md`.
@@ -92,6 +244,21 @@ Prepended `here` / `rgmsRoot` + `addpath(genpath(matlab_src))` and `addpath(genp
 - Files created: none
 - Files modified: `matlab_custom/capture_DEM_AtariIII_entry12_pre_post_XXX.m`, `logs/log_0.md`
 - Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
 - Shared files touched: no
 
 ---
@@ -116,6 +283,21 @@ Inserted new section **Agent behavior: staying on brief (reference)** immediatel
 - Files created: none
 - Files modified: `Atari_example.md`, `logs/log_0.md`
 - Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
 - Shared files touched: no
 
 ---
@@ -10336,5 +10518,902 @@ Removing either edit breaks replay (exhausted or unused draws). Skipping **two**
 **Files modified:** `translation_framework_1to12.md`, `12DEF.md`, `logs/log_0.md`
 
 **Files created:** `matlab_custom/verify_pdp_O_dimensions.m`, `matlab_custom/verify_pdp_O_dimensions.py`
+
+---
+
+## Iteration (2026-05-22): 12H type-walk parity — nested `id`, aligned inventory walk
+
+**Goal:** Tighten compare-lane parity; clear **115** gating type-walk lines on **12H** / final **PDP** (`id.A`×111, `T`, `U`).
+
+**Compare (`entry12_matlab_capture.py`):**
+- `_entry12_align_id_record_for_compare` — `_spm_MDP_checkX_transform_align` on top + nested **`MDP.id`** ( **`id.A[f]`** → MATLAB **`int`** ).
+- Shell casts **`T`/`U`/`u`** on top + nested MDP.
+
+**Type-walk (`fsl_1_11_compare_ctx_pkl_to_mat.py`):**
+- `_leaf_types_equivalent_for_compare` — `(1,1)` ndarray ≈ scalar, whole-valued **float/int**, **`csr`/`csc`** same dense values.
+
+**Script 4 (`XXX_12_compare_pdp_pkl_to_mat.py`):** global PDP type-walk on **aligned** trees + **`entry12_mat_pdp_for_value_assert`** mat (not raw pickle).
+
+**Verified:** canonical **12H** aligned type-walk **0** lines; `test_entry12_pdp_id_type_parity.py` pass.
+
+**Docs:** `translation_framework_1to12.md` §6.2 **12H/PDP type-walk** row updated.
+
+**Files modified:** `entry12_matlab_capture.py`, `fsl_1_11_compare_ctx_pkl_to_mat.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `translation_framework_1to12.md`, `logs/log_0.md`
+
+**Files created:** `tests/oracle/toolbox/DEM/test_entry12_pdp_id_type_parity.py`
+
+**Shared files touched:** yes (`fsl_1_11_compare_ctx_pkl_to_mat.py` — type-walk equivalence used by Validation **1–11** and **12**)
+
+---
+
+## Iteration (2026-05-22): doc sync — framework + 12DEF
+
+**Edits:** `translation_framework_1to12.md` — header/§4.2/§3.3/§5.2–5.3/§6.2/§6.3/§8/B.5 aligned with type-walk + resolved witnesses; removed obsolete raw-pickle **12H** type-walk claims. `12DEF.md` Phase C living status synced.
+
+**Files modified:** `translation_framework_1to12.md`, `12DEF.md`, `logs/log_0.md`
+
+---
+
+## Iteration (2026-05-18): ENTRY 12PLOT — capture scripts, Python ports, plot oracle
+
+**Scope:** Implemented 12PLOT lane per **`Atari_plotting.md`**: extended **`dump_rdp_DEM_AtariIII_FSL_1_11.m`** → **`DEMAtariIII_fsl_1_11_plot_ctx.mat`**; new **`matlab_custom/entry12/DEMAtariIII_entry12_12plot_capture.m`** (loads **`DEMAtariIII_XXX_12_pdp.mat`**, no VB) → **`DEMAtariIII_entry12_<tag>_12PLOT.mat`** + **`visualizations/AtariIII_12plot_<timestamp>.png`**; staged **`spm_show_RGB.m`**, **`spm_imshow.m`**; Python **`spm_figure.py`**, **`spm_imshow.py`**, **`spm_show_RGB.py`**, **`entry12_plot.py`**; oracle **`test_spm_show_RGB_entry12plot.py`** (Phase A `.mat` PDP, Phase B `.pkl` PDP). Updated **`Atari_plotting.md`** § 8 registry + **`Atari_example.md`** § Entry 12PLOT.
+
+**Blocker:** **`rgms`** env lacks **`matplotlib`** — pytest collection fails until user authorizes install (plotting requires matplotlib by design).
+
+**Next (user/MATLAB):** Run FSL dump (if needed), **1a→1b**, **`DEMAtariIII_entry12_12plot_capture`**, then pytest after matplotlib available.
+
+**Files read:** `spm_show_RGB.m`, `Atari_plotting.md`, `Atari_example.md`
+
+**Files created:** `matlab_custom/entry12/DEMAtariIII_entry12_12plot_capture.m`, `matlab_src/toolbox/DEM/spm_show_RGB.m`, `matlab_src/toolbox/DEM/spm_imshow.m`, `python_src/toolbox/DEM/spm_figure.py`, `spm_imshow.py`, `spm_show_RGB.py`, `entry12_plot.py`, `tests/oracle/toolbox/DEM/test_spm_show_RGB_entry12plot.py`, `visualizations/.gitkeep`
+
+**Files modified:** `matlab_custom/dump_rdp_DEM_AtariIII_FSL_1_11.m`, `Atari_plotting.md`, `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+**Scope:** Owner-approved plotting strategy documented as authoritative reference: four-layer architecture (compute primitives → matplotlib shims → SPM viz functions → ledger composition); explicit **`spm_MDP_VB_XXX.py` compute-only boundary**; oracle policy (**`J`/`K`/`h`/`u` numeric primary**, human visual secondary, no pixel-perfect / no **`spm_DEM_ButtonDownFcn`** Pass 1); MATLAB fixture lane (**`plot_ctx.mat`** + Entry **12** **`PDP`**, not Python FSL **`ctx.pkl`** primary); staged `*PLOT` inventory; **12PLOT** inputs/outputs/deps; implementation sequence. **`Atari_example.md`**: intro points to plotting doc; **Read this first** plotting bullet; new **§ Entry 12PLOT** anchor with mandatory **`Atari_plotting.md`** reference.
+
+**Files read:** `Atari_example.md`, `Migration Plan.md`, planning context from prior session
+
+**Files created:** `Atari_plotting.md`
+
+**Files modified:** `Atari_example.md`, `logs/log_0.md`
+
+**Files deleted:** none
+
+**Shared files touched:** no
+
+---
+
+### Entry 12 compare-lane — honest `Q.O` pairing (2026-05-18)
+
+**Problem:** `_entry12_Q_O_level_to_mat_cells` paired flat Python `Q.O` (14208 cells, `t+g*T`) with MATLAB `Ng×T` grid via `_entry12_align_scalar_list_to_mat(flat[g], mat_row[g])`. Type mismatch (`ndarray` vs `list`) triggered `_cast_leaf_like_reference` → `copy.deepcopy(mat_row)` — forbidden per **`Atari_example.md`** compare-lane honesty.
+
+**Fix (class B):** `entry12_matlab_capture.py` — `_entry12_pair_q_o_flat_py_to_mat_grid`, `_entry12_is_q_o_mat_nested_grid`, `_entry12_q_o_py_flat_cell_row`; early branch in `_entry12_Q_O_level_to_mat_cells`.
+
+**Validation 12 (script 4):** causal **15/15** still green; **12H** + final **PDP** now **exit 1** — first value red **`MDP.Q.O[0][7]`** (max abs diff **1.0**). Align preserves all **14208** raw Python `Q.O` cells (no substitution).
+
+**Test:** `tests/oracle/toolbox/DEM/test_entry12_q_o_compare_lane.py`.
+
+**Next (class A):** fix **`spm_MDP_VB_XXX.py`** hierarchical **`Q.O`** append at first red; **12PLOT** remains deferred.
+
+- Files read: `entry12_matlab_capture.py`, `Atari_example.md`, fixtures
+- Files created: `tests/oracle/toolbox/DEM/test_entry12_q_o_compare_lane.py`
+- Files modified: `python_src/toolbox/DEM/entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`, `matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt` (script 4 re-run)
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+### Entry 12 class A — `Q.O` first red investigation (2026-05-18)
+
+**First red (unchanged):** **`MDP.Q.O[0][7]`** — g=0, t=7; py peak **4**, mat peak **1** (max abs diff **1.0**).
+
+**Findings:**
+- Compare lane honest; g=0 prefix **t=0..6** match, **t=7** first mismatch (**1648** / **14208** total cells differ).
+- Live assembled **`MDP.O`** (111×2): **0** mismatches vs MATLAB (outcome generation at final assembly is OK).
+- Hierarchical **`Q.O`** append flatten copies **`child_upd["O"]`** faithfully; mismatch is **`child mdp.O`** content at append, not list-concat order.
+- **`_vb_hierarchical_q_O_prev_ncols`:** hardened for inherited parent **`Ng`** vs child **`Ng`** (oracle **`test_vb_hierarchical_q_O_prev_ncols.py`**); current fixture S→O trace unchanged (no old-vs-new delta).
+
+**Validation 12 (script 4):** still exit **1** on **`PDP.MDP.Q.O[0][7]`**; causal **15/15** green.
+
+**Next:** trace outer hierarchical child VB return **`mdp.O`** for batch adding **`Q.O`** columns **6–7** (deeper than append mechanics).
+
+---
+
+### Entry 12 Step 0 + Step 1 — `Q.O[0][7]` class A fix (2026-05-18)
+
+**Step 0 ritual:** `entry12_draw_index_audit.py` → `unused_draws=0`, `sample_calls_match=true`.
+
+**Step 1 trace:** Hierarchical **`Q.O`** append in **`spm_MDP_VB_XXX.py`**. Flat storage order is **g-outer / t-inner** (`idx = t + g*ncol`, matching MATLAB **`(:)`** on **`Ng×T`** after **`shiftdim`**). **`_vb_hierarchical_q_O_flat_cells_to_matrix/D_matrix`** rebuild used **t-outer / g-inner** sequential indexing — wrong on second+ append when **`_vb_hierarchical_q_append_level`** roundtrips flat → matrix → **`hstack`**. Symptom: g=0 prefix **t=0..6** OK, first corruption at flat index **7** (parent hierarchical call #4, child col 2).
+
+**Class A fix:** Correct flat index in **`_vb_hierarchical_q_O_flat_cells_to_matrix`**; **`Q.O`** append uses matrix **`hstack`** + **`_vb_hierarchical_q_O_matrix_to_flat_cells`**. Oracle **`test_vb_hierarchical_q_O_matrix_append.py`** passes.
+
+**3 → 4:** Script **3** pass; script **4** exit **1**. Causal **15/15** green. **`Q.O`** value assert **green**. First value red: **`12H.MDP.Q.Y[0][1]`** and **`PDP.MDP.Q.Y[0][1]`** (max abs diff **1.0**).
+
+**Next:** class **A** on hierarchical **`Q.Y`** record at **`[0][1]`** (not **`Q.O`** / not compare lane).
+
+- Files read: `Atari_example.md`, `12DEF.md`, `spm_MDP_VB_XXX.py`, compare tee, fixtures
+- Files created: none (oracle test from prior session)
+- Files modified: `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `12DEF.md`, `logs/log_0.md`, `matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt`
+- Files deleted: none
+- Shared files touched: yes (`spm_MDP_VB_XXX.py`)
+
+---
+
+---
+
+### Entry 12 Q.Y compare-lane fix (2026-05-18)
+
+**Investigation:** Tee **[1]** **`Q.Y[0][1]`** looked like compute drift; live **`mdp.Y`** matched MATLAB on probed sites.
+
+**Finding:** Compute flat **`Q.Y`** uses **`o + t*Ng`** (oracle **`test_entry12_q_y_flatten_order.py`**). Compare lane reused **`Q.O`** shiftdim pairing **`t + g*ncol`**, mis-mapping flat index **1** onto mat **`[0][1]`** (semantic **`Y{1,2}`** lives at flat **111**).
+
+**Fix (class B):** **`entry12_matlab_capture.py`** — **`_entry12_pair_q_ot_flat_py_to_mat_outcome_rows`**, **`kind=key`** on **`_entry12_Q_O_level_to_mat_cells`**. Oracle **`test_entry12_q_y_compare_lane.py`**.
+
+**Script 4:** **`Q.Y`** green; **[1]** → **`id.iW`**. No **`spm_MDP_VB_XXX.py`** change.
+
+- Files read: fixtures, compare tee, `entry12_matlab_capture.py`, `12DEF.md`
+- Files created: `tests/oracle/toolbox/DEM/test_entry12_q_y_compare_lane.py`
+- Files modified: `python_src/toolbox/DEM/entry12_matlab_capture.py`, `12DEF.md`, `Atari_example.md`, `Atari_plotting.md`, `logs/log_0.md`, `matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt`
+- Files deleted: none
+- Shared files touched: yes (`entry12_matlab_capture.py`)
+
+---
+
+### Entry 12 class A — `id.iW` fix + Phase 1 sign-off (2026-05-18)
+
+**Step 0 ritual:** (prior session) draw audit **`unused_draws=0`**.
+
+**First red:** **`id.iW`** — py numel **20** (`1:20`), mat **0** (`[]`) on **12H** + final **PDP**.
+
+**Root cause:** MATLAB assigns **`W{m,g}`** only when **`isfield(MDP(m),'a')`** (~470–472); Atari **`RDP`** has **`A`** but no **`a`**. Python assigned **`W_t`** on controllable **`U`** alone → nonzero **`numel(W)`** → **`id.iW = find(...)`** populated all modalities.
+
+**Class A fix:** **`spm_MDP_VB_XXX.py`** — set **`W_t[m][g_idx]`** only if **`"a" in md`**; **`K_t`** unchanged.
+
+**Tests:** **`test_DEM_AtariIII_entry12C.py::test_entry12c_iW_requires_mdp_a_field`** PASS.
+
+**3 → 4:** Script **3** PASS; script **4** exit **0** — **`OK: Validation 12 passed`**.
+
+- Files read: `spm_MDP_VB_XXX.m` ~465–472, Atari `RDP`, compare tee
+- Files created: none
+- Files modified: `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_entry12C.py`, `12DEF.md`, `Atari_example.md`, `logs/log_0.md`, `tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_XXX_12_*.pkl` (script 3 regen)
+- Files deleted: none
+- Shared files touched: yes (`spm_MDP_VB_XXX.py`)
+
+---
+
+### Entry 12 user review — `id.iW` + script 3/4 gates (2026-05-18)
+
+Re-read **`spm_MDP_VB_XXX.m`**: **`id.iW`** init-only (~632–637); init **`W`** only with **`a`** (~501–503). Paired MATLAB **`PDP.id.iW`** is **`[]`**. **`test_entry12_q_o_compare_lane.py`** updated (stale drift test → parity). Script **4** exit **0**.
+
+- Files read: `spm_MDP_VB_XXX.m`, fixtures
+- Files created: none
+- Files modified: `tests/oracle/toolbox/DEM/test_entry12_q_o_compare_lane.py`, `12DEF.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+### Entry 12 class A — `Q.O` Ng×T ragged row storage (2026-05-25)
+
+**Context (prior probe):** MATLAB `child.Q.O` length **111** (one row per modality, ragged time); Python had **one** `(553, T)` matrix per level → script **4** compare-lane `ncol` vs `n_leaf=111` failure. Live `mdp.O` is post-``shiftdim`` `O[t][g]` (T×Ng); paired `.mat` loads `Q.O` as **`cell(Ng,T)`** rows (`len(Q.O)==Ng`).
+
+**Root cause:** `_vb_hierarchical_q_append_level` folded each child `mdp.O` into a single stacked matrix (`hstack`), not MATLAB ``[mdp.Q.O{L} mdp.O]`` on **`cell(Ng,T)`** (append time along dim 2 per modality row). Layout detection also preferred T×Ng when `T==Ng` on small tests.
+
+**Class A fix (`spm_MDP_VB_XXX.py`):**
+- `_vb_hierarchical_O_field_to_ng_t_rows`, `_vb_hierarchical_q_O_ng_t_hstack`, `_vb_hierarchical_q_O_is_ng_t_rows`
+- `Q.O` append stores **`qv[L]`** as **111×T** ragged rows (lists of 1-D outcome vectors per `No(g)`)
+- `_vb_hierarchical_q_O_prev_ncols` uses max row length for `S→O` `seg`
+- Ng×T detected **before** T×Ng in `_vb_hierarchical_O_field_to_ng_t_rows`
+
+**Class B fix (`entry12_matlab_capture.py`):** `_entry12_align_q_o_ng_t_rows`, `_entry12_is_q_o_ng_t_rows`; align `len(py_O)==1` / `len(mat_O)==Ng` via inner level rows.
+
+**Oracles:** `test_vb_hierarchical_q_O_ng_t_append.py`, updated `test_vb_hierarchical_q_nested_storage.py`, `test_vb_hierarchical_q_O_matrix_append.py` — **4/4 PASS**.
+
+**3 → 4:** Script **3** PASS (~31s). Script **4:** **causal 15/15 green** (no `Q.O` compare-lane failures). Final **PDP** still red: **`PDP.MDP.Q.o` numel py=0 mat=14208** (separate field; not `Q.O`).
+
+- Files read: paired 12F fixtures, `spm_MDP_VB_XXX.m` ~1238, `entry12_matlab_capture.py` O/Q.O notes
+- Files created: `tests/oracle/toolbox/DEM/test_vb_hierarchical_q_O_ng_t_append.py`
+- Files modified: `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `python_src/toolbox/DEM/entry12_matlab_capture.py`, `tests/oracle/toolbox/DEM/test_vb_hierarchical_q_nested_storage.py`, `tests/oracle/toolbox/DEM/test_vb_hierarchical_q_O_matrix_append.py`, `tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_XXX_12_pdp.pkl` (script 3), `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: yes (`entry12_matlab_capture.py`)
+
+---
+
+### Entry 12 — `Q.o` matrix append + docs + script 4 exit 0 (2026-05-25)
+
+**Docs:** `12DEF.md` § **Observation / Q storage**; `Atari_example.md` + `notes/andrew Python Matlab Translation Issues.md` rows for **`Q.O`** / **`Q.o`** storage classes.
+
+**`Q.o` root cause:** `mdp.o` is **`Ng×T`** scalar matrix; append wrongly used **`Y/j/i/o`** nested path → `_vb_hierarchical_field_to_ot_nested` returned **`[]`** on **`ndarray`** → empty **`Q.o`**.
+
+**Fix:** Route **`o`** with **`s`/`u`** — **`[mdp.Q.o{L} mdp.o]`** as **`np.hstack`**.
+
+**3 → 4:** Script **4** exit **0** — causal **15/15**, final **PDP** green, type-walk **0**.
+
+- Files modified: `spm_MDP_VB_XXX.py`, `12DEF.md`, `Atari_example.md`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`, fixtures pkl (script 3)
+- Shared files touched: yes (`entry12_matlab_capture.py` from prior iteration)
+
+---
+
+### Stream A hygiene + translation-scope docs (2026-05-25)
+
+**Goal:** Document project imperative (full **`DEM_AtariIII.m`**, reuse, Python-native simulations); clarify **Phase 1a** = **call 1** oracle only; remove stale guidance; fix oracle tests for Ng×T **`Q.O`** / nested **`Q.Y`** storage.
+
+**Docs (minimal edits):**
+- **`AGENTS.md`** — imperative paragraph under Purpose.
+- **`12DEF.md`** — Goal table (**Phase 1a** vs imperative); § **Translation scope** (four VB calls); **`Y{2,1}`** → historical/cleared; **Next experiment** → Stream A done / Stream C next; oracle-test roles.
+- **`Atari_example.md`** — expanded § **Goal vs means**; § **Four VB call sites**; strategy table **1a / 1b / 2 / T**; superseded historical Validation 12 bullet list; baseline wording **2026-05-25**.
+
+**Tests:** `test_entry12_q_o_compare_lane.py`, `test_entry12_q_y_compare_lane.py` — **`align_preserves_*`** now compare raw nested pickle vs align (**not** flat **`Q.O[0]`** / flat-index **`Q.Y`**).
+
+- Files read: `12DEF.md`, `Atari_example.md`, `AGENTS.md`, PDP pkl structure, prior tee
+- Files created: none
+- Files modified: `AGENTS.md`, `12DEF.md`, `Atari_example.md`, `tests/oracle/toolbox/DEM/test_entry12_q_o_compare_lane.py`, `tests/oracle/toolbox/DEM/test_entry12_q_y_compare_lane.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Stream C — widened causal witnesses (2026-05-25)
+
+**`entry12_matlab_capture.py` (class B + gate):**
+- Causal **12D** keeps **`F`/`G`/`Z`** (drop only **`A,O,o`**); parent **`MDP.Q`** via **`_entry12_causal_mdp_strip_child_Q_only`** (child **`Q`** stripped).
+- Causal **12F** keeps **`F`/`G`/`Z`** (drop only **`A`**).
+- **`_entry12_align_boundary_mdp_fgz`**: slice Python length-**`T`** **`Z`** to MATLAB short boundary vectors.
+
+**Tests:** `test_entry12_causal_payload_widened.py` — **3/3 PASS**.
+
+**Script 4** (`--coerce-sparse-to-dense-for-compare`): exit **0** — causal **15/15**, final **PDP** OK (unchanged after widen).
+
+**Docs:** `12DEF.md` causal table + Living status; `Atari_example.md` accumulated row; `matlab_custom/entry12/README_entry12_matlab_capture.md` Phase **1b** four-call table.
+
+**Next:** Phase **1b** MATLAB capture for **`rgms_atari_call2`** … **`call4`** (not started this iteration).
+
+- Files read: `entry12_matlab_capture.py`, paired 12D–12F fixtures, `XXX_12_compare` loaders
+- Files created: `tests/oracle/toolbox/DEM/test_entry12_causal_payload_widened.py`
+- Files modified: `python_src/toolbox/DEM/entry12_matlab_capture.py`, `12DEF.md`, `Atari_example.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt` (script 4 run), `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: yes (`entry12_matlab_capture.py`)
+- No files changed: no
+
+---
+
+### Phase 1b call 2 — infrastructure + MATLAB build started (2026-05-25)
+
+**MATLAB:** `matlab_custom/entry12/build_rdp_DEM_AtariIII_call2_game1.m` — assembles **`RDP`** for **`DEM_AtariIII.m`** call **2** game **1** (`spm_mdp2rdp(...,0,1/NS)`, **`RDP.T=fix(NT/Ne)`**). Long step: **`spm_MDP_generate`**.
+
+**Python:** `python_src/toolbox/DEM/entry12_atari_calls.py` (call registry + `load_entry12_rdp_for_tag`); `entry12_preflight_vb_rand_k.py` + `test_DEM_AtariIII_XXX_12.py` honor **`RGMS_ENTRY12_CAPTURE_RUN_TAG`**; `test_entry12_call2_oracle.py`; `run_entry12_call2_phase1b.ps1`.
+
+**Status:** MATLAB build launched in background (~12+ min, may still run). When **`DEMAtariIII_atari_call2_game1_rdp.mat`** exists, run **`run_entry12_call2_phase1b.ps1`** for **1a→1b→3→4**.
+
+- Files read: `DEMAtariIII_entry12_dump_all_subentries.m`, `capture_DEM_AtariIII_entry12_pre_post_XXX.m`, `test_DEM_AtariIII_XXX_12.py`
+- Files created: `matlab_custom/entry12/build_rdp_DEM_AtariIII_call2_game1.m`, `matlab_custom/entry12/run_entry12_call2_phase1b.ps1`, `python_src/toolbox/DEM/entry12_atari_calls.py`, `tests/oracle/toolbox/DEM/test_entry12_call2_oracle.py`
+- Files modified: `tests/oracle/toolbox/DEM/entry12_preflight_vb_rand_k.py`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_XXX_12.py`, `12DEF.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Entry 12 script 1b — inline ledger + call 2 in one dump (2026-05-25)
+
+**Plan:** Extend **`DEMAtariIII_entry12_dump_all_subentries.m`** only: **`rng(2)`** FSL 1–11 inline → VB **`rgms_canonical`** → DEM active-inference game **1** → VB **`rgms_atari_call2`**. Same **`vb_rand_buf`** rewind per call.
+
+**Code:** Rewrote **`DEMAtariIII_entry12_dump_all_subentries.m`**; tag-suffixed K/buf/RDP/PDP for call **2**. Python path wiring in **`entry12_matlab_capture.py`**, **`entry12_atari_calls.py`**, preflight, XXX 12, Validation 12. **`build_rdp_*`** marked deprecated.
+
+**Run:** **1a** **`K=27263`**. Extended **1b** started in background (MATLAB).
+
+- Files read: `dump_rdp_DEM_AtariIII_FSL_1_11.m`, `DEM_AtariIII.m`, `rand.m`
+- Files created: none
+- Files modified: `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_matlab_capture.py`, `entry12_atari_calls.py`, `entry12_preflight_vb_rand_k.py`, `test_DEM_AtariIII_XXX_12.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `test_entry12_call2_oracle.py`, `README_entry12_matlab_capture.md`, `run_entry12_call2_phase1b.ps1`, `12DEF.md`, `build_rdp_DEM_AtariIII_call2_game1.m` (deprecation header), `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: yes (`entry12_matlab_capture.py`)
+- No files changed: no
+
+---
+
+### Call 2 — refresh_call2 + scripts 3→4 (2026-05-25 cont.)
+
+**1b `refresh_call2`:** OK (~31 s); `vb_matlab_rand_buf` **K=32256** aligned with preflight.
+
+**Script 3:** **PASS** (~86–183 s per iteration after fixes).
+
+**Script 4 causal (coerced):** progressed **7/15** red → single root **`12F.out_t1.MDP.Q.E`** (max abs diff ≈**80.47** on all seven listed steps). Prior first-reds cleared in order: nested struct **`MDP.MDP.A`** (witness policy), nested **`Y`/`j`/`i`**, **`Q.O`** numel, **`Q.Y`** value.
+
+**Compute / compare fixes this iteration:**
+- **`entry12_matlab_capture.py`:** recursive causal drop of struct **`A`**; nested **`Y`/`j`/`i`**; strip nested **`GE`/`GD`** on policy-trace strip.
+- **`spm_MDP_VB_XXX.py`:** `_a_colon_s_coerce_likelihood_` on init **`No`**, workspace **`A`**, **`OPTIONS.Y`**, hierarchical **`spm_dot`**; **`_vb_no_list_from_mdp`** uses coerced **`No(g)`**.
+
+**RNG audit:** `entry12_draw_index_audit.py` **OK** (`sample_calls_match=true`, **32256** draws).
+
+**Next:** fix **`MDP.Q.E`** = `[Q.E{L} child.F]` append / child **`F`** trajectory at **`12F.out_t1`** (first causal red only); then **3→4** (no **1b** unless **K** changes).
+
+- Files read: `12DEF.md`, `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `spm_VBX.py`
+- Files created: none
+- Files modified: `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: yes (`entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`)
+- No files changed: no
+
+---
+
+### Entry 12 — documentation: Phase 1b call 2 (`rgms_atari_call2`) (2026-05-25)
+
+**User request:** Document how call **2** is incorporated (what it is, loop context, framework **1a→1b→3→4**, per-tag RNG vs DEM continuity) for **`DEM_AtariIII.m`** translation goal.
+
+**Updates:**
+- **`Atari_example.md`:** new § **Phase 1b — call 2 (`rgms_atari_call2`)**; refreshed § **Four VB call sites**, Pillar **B**, strategy table, baseline bullet, Layer **2** table, rerun commands.
+- **`12DEF.md`:** § **Translation scope** + **Next experiment** aligned with extended **1b** and in-loop semantics.
+- **`matlab_custom/entry12/README_entry12_matlab_capture.md`:** rewritten call-2 / extended-1b section; pointer to **`Atari_example.md`**.
+- **`AGENTS.md`:** Entry **12** bullet for call **2** doc anchor.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `AGENTS.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+### Call 2 — `spm_MDP_checkX` peaked `(No,)` A fix + scripts 3→4 (2026-05-18)
+
+**Root cause (first red `12F.out_t1.MDP.Q.E` ~80.47):** `spm_MDP_checkX` applied `spm_dir_norm` to 1-D likelihood vectors `(No,)`; `as_matlab_array` treated them as `(1,No)` rows, uniformizing ~50 child modalities (`Fq≈−log(0.2)` each → **−80.47** on nested child `F` / parent `Q.E`). Not a compare-lane or VBX-indexing bug.
+
+**Fix:** `spm_MDP_checkX.py` — reshape `(No,)` → `(No,1)` before `spm_dir_norm`, restore `(No,)` after. Belt-and-suspenders: `_vb_workspace_A_like_mdp_shape` in `spm_MDP_VB_XXX.py` (never fold `(No,1)` → `(1,No)`). Probe: save **pre-VBX** `P`; remove duplicate `spm_VBX` (RNG-safe).
+
+**Sign-off:** tag **`rgms_atari_call2`**, **3→4 only** (no **1b**; K unchanged). Script **3** **PASS** (~181 s). Script **4** causal **6/15** red (was **7/15**): **`12F.out_t1` `Q.E` green**; child **`F`** matches mat at `out_t1`. **First red now:** `12D.out_t2.MDP.s` (max abs diff **291**); also `12F.out_t2/out_t3` `MDP.o` (**8**). `Q.E` at `out_tT` ~**2.8e−9** only.
+
+**Next:** fix **`12D.out_t2.MDP.s`** (first causal red only); then **3→4**.
+
+- Files read: `spm_MDP_checkX.py`, `spm_MDP_VB_XXX.py`, `XXX_12_compare_pdp_pkl_to_mat_output.txt`, call2 fixtures
+- Files created: none
+- Files modified: `python_src/toolbox/DEM/spm_MDP_checkX.py`, `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: yes (`spm_MDP_checkX.py`)
+- No files changed: no
+
+---
+
+## 2026-05-18 — Entry 12 call 2: doc refresh + `12D.out_t2.MDP.s` triage
+
+**Scope:** Brief living-doc update after **`spm_MDP_checkX`** 1-D **`A`** fix cleared **`12F.out_t1.MDP.Q.E`**; triage new first causal red **`12D.out_t2.MDP.s`**.
+
+**Docs:** **`12DEF.md`** (Next experiment, maintenance row), **`Atari_example.md`** (baseline + Phase 1b tee bullet) — status marked *in flux*; first red **`12D.out_t2.MDP.s`**, not **`Q.E`**.
+
+**Triage (script 4 tee unchanged):** **6/15** causal red; **[1]** **`12D.out_t2.MDP.s`** max abs **291** — **`s(2)`** py **363** vs mat **72**; paired **`u(1)`** py **4** vs mat **2** ( **`out_t1`** **`u(1)=5`** both sides). Phase log **`k_policy`** at **`t=2`**: py **4**, mat **2**; **`Pu`** identical uniform **1/6**. Draw audit **`unused_draws=0`**, **`sample_calls_match`**. Hypothesis: **`spm_sample(Pu)`** at parent **`t=2`** uses a different replay index than MATLAB 1b despite **`t=1`** parent **`s/u/o`** match — fix lane **`spm_MDP_VB_XXX.py`** generation/policy at **`t=2`**, not downstream **`MDP.o`**.
+
+**Next:** Instrument draw index at **`_vb_prior_QP_paths_states_one_model`** when **`t_idx==1`**; compare to MATLAB **`vb_rand_buf`** scalar; one compute fix; **3→4** only.
+
+- Files read: `12DEF.md`, `Atari_example.md`, `XXX_12_compare_pdp_pkl_to_mat_output.txt`, `entry12_draw_index_audit_results.json`, phase logs in call-2 **12F** fixtures
+- Files created: none
+- Files modified: `12DEF.md`, `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+## 2026-05-18 — Entry 12 sign-off chain coherence guards
+
+**Scope:** Audit **1a→1b→3→4** load sequence; fail-fast path logging before script **3**/**4**.
+
+**Code:** `entry12_atari_calls.py` signoff helpers; call-1 **`rdp_mat`** → **`DEMAtariIII_XXX_12_rdp.mat`**; script **3**/**4** assert+log; draw audit drops redundant pre-VB **`checkX`**.
+
+- Files modified: `entry12_atari_calls.py`, `test_DEM_AtariIII_XXX_12.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `entry12_draw_index_audit.py`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-18 — Call 2 full framework rerun (`rgms_atari_call2`)
+
+**Chain:** **1a** → **1b** `refresh_call2` → **3** → **4** → draw audit; `RGMS_ENTRY12_CAPTURE_RUN_TAG=rgms_atari_call2` throughout.
+
+| Step | Result |
+|------|--------|
+| **1a** | **K=32256** → `entry12_vb_rand_K_rgms_atari_call2.mat` |
+| **1b** | `refresh_call2` OK — all `*_rgms_atari_call2_12{A–I}.mat`, `pdp.mat`, `rdp.mat`, `vb_rand_buf` (**K=32256**) |
+| **3** | **PASS** (~184 s); signoff log: all paths **ok**; `reuse_matlab_draws=True` on call-2 buf |
+| **4** | **exit 1** — causal **6/15** red; **[1]** `12D.out_t2.MDP.s` (291) — chain honest, compute still open |
+| **audit** | `unused_draws=0`, `sample_calls_match=true` |
+
+**Conclusion:** Sign-off **pipeline** runs as intended (paired tag, files, replay). Phase **1b** sign-off **not** achieved until first causal red clears in `spm_MDP_VB_XXX.py`.
+
+- Files modified: `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-18 — Call 2 Phase B: GP.A logical sampling fix + draw-index probe
+
+**Hypothesis:** `_vb_generate_outcomes_if_options_o` coerced `GP(m).A{g}` slices to `float64`, forcing numeric `spm_sample` (one `rand()`) where MATLAB logical columns use `randperm` (two scalars when `k∈{2,3,4}`), desynchronising replay before parent **`t=2`** policy.
+
+**Code (`spm_MDP_VB_XXX.py`):**
+- `_vb_gp_A_outcome_column`: preserve slice dtype (sparse→dense without `float64` coercion).
+- Outcome branch: store `O` as float64 for compare; sample via bool path when `col.dtype==bool` (same pattern as `spm_MDP_generate`).
+
+**Draw probe (`matlab_custom/_diag_entry12_policy_draw_t2.py`, temporary):**
+- Parent **`t=2`** policy (`depth=1`, `t_idx=1`, `Pu` len 6): Python draw **252** → **`k=4`** (`r≈0.521`); MATLAB needs draw **253** → **`k=2`** (`r≈0.232`).
+- Child GP.A at offending modality is **`uint8 (9×9)`**, not logical — bool fix does **not** shift policy index for this tag.
+- Last nested-child sample before parent policy: draw **251**, size-9 **`uint8`** one-hot (`depth=2`).
+
+**Validation (official chain, no 1a/1b):**
+
+| Step | Result |
+|------|--------|
+| **3** | **PASS** (~83 s) |
+| **4** | **exit 1** — **[1]** unchanged: `12D.out_t2.MDP.s` max **291**; `u(1)` py **4** mat **2**; `s(2)` py **363** mat **72** |
+| **audit** | `unused_draws=0`, `sample_calls_match=true` |
+
+**Next (first red only):** Bisect nested-child draw stream **draws 136–252** vs MATLAB — find the **first** `spm_sample` call with mismatched scalar consumption (likely child **`t=2`** outcome path with **`n=0`**, size-9 column, not bool). Do **not** chase **`MDP.o`** until **`12D.out_t2.MDP.s`** green.
+
+- Files read: `spm_MDP_VB_XXX.py`, `spm_MDP_generate.py`, `notes/andrew Python Matlab Translation Issues.md`, call-2 **12D** fixtures, `entry12_draw_index_audit_results.json`
+- Files created: `matlab_custom/_diag_entry12_policy_draw_t2.py` (temporary probe)
+- Files modified: `python_src/toolbox/DEM/spm_MDP_VB_XXX.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+- No files changed: no
+
+---
+
+## 2026-05-18 — Call 2: centralize RNG sign-off contract (mirror Call 1)
+
+**User steering:** Reuse the Call 1 four-script RNG framework for Call 2 via `entry12_atari_calls.py`, not ad-hoc draw-index debugging.
+
+**Code:**
+- `entry12_atari_calls.py`: `entry12_vb_oracle_flags`, `entry12_write_preflight_k`, `count_vb_rand_draws_on_rdp`, `entry12_load_vb_rand_buf_for_tag`, `entry12_load_k_from_mat`, `entry12_assert_buf_k_coherent`.
+- Rewired **1a**, **3**, **4**, draw audit, `spm_MDP_VB_XXX._vb_load_matlab_rand_buf` through signoff registry.
+- `default_entry12_mat_output_dir`: honor `RGMS_ENTRY12_CAPTURE_OUT_DIR`.
+
+**Verification (`tag=rgms_atari_call2`):** buf/K coherence OK; script **4** causal-only unchanged — first red **`12D.out_t2.MDP.s`**.
+
+- Files modified: `entry12_atari_calls.py`, `entry12_matlab_capture.py`, `spm_MDP_VB_XXX.py`, oracle scripts, `matlab_custom/entry12_draw_index_audit.py`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-18 — Call 2 coherence rerun (post-registry wiring)
+
+**Env:** `RGMS_ENTRY12_CAPTURE_RUN_TAG=rgms_atari_call2`, `conda activate rgms`.
+
+| Step | Result |
+|------|--------|
+| Registry `assert_signoff_chain_ready` + `assert_buf_k_coherent` | **OK** (`K=32256`) |
+| **1a** `entry12_preflight_vb_rand_k.py` | **exit 0**, `K=32256`, buf/K ok |
+| Draw audit | **OK**: `unused_draws=0`, `sample_calls_match=true`, `total_draws=32256` |
+| **3** pytest `test_DEM_AtariIII_XXX_12` | **PASS** (~84 s); signoff paths in tee |
+| **4** `--entry12-causal-only` | **exit 1** (expected): first red `12D.out_t2.MDP.s` unchanged |
+| Script **4** default paths vs registry | **match** |
+
+**Note:** **1a** runs VB with `dump_subentries=True` (native count) and overwrites `12{A–I}.pkl`; rerun **3** before **4** if **1a** ran alone.
+
+---
+
+## 2026-05-18 — Call 2 Phase B: RNG bisection at parent `t=2` policy (draw 252 vs 253)
+
+**Framework:** `tag=rgms_atari_call2`, **3→4** only (no **1b**). Script **3** **PASS** (~179 s). Script **4** causal **6/15** red unchanged — first red **`12D.out_t2.MDP.s`** (max **291**; **`u(1)`** py **4** mat **2**; **`s(2)`** py **363** mat **72**).
+
+**Draw audit:** `unused_draws=0`, `sample_calls_match=true`, `K=32256`.
+
+**Bisection (`matlab_custom/_diag_entry12_sample_window.py`, replay + `dump_subentries=True`):**
+- Nested child VB tail (**depth 2**): draws **244–251** — repeated **5×1** and **2×1** one-hot numeric samples, then **9×1** one-hot (`out=5`).
+- Parent **`t=2` policy** (**depth 1**, `Pu` len **6**): **`draw_start=252`**, `r=buf[252]≈0.521` → **`k_policy=4`**; MATLAB needs **`buf[253]≈0.232` → `k=2`**.
+- Next draws: **253** control from one-hot **`P`**; **254** parent **`s`** sample (**485×1**, `out=363`).
+
+**Rejected fix:** global float one-hot → logical `k=1` (zero draws) in `_vb_spm_sample_column` — script **3** failed (`unused_draws` remain); wrong direction vs needed **+1** draw before policy.
+
+**Paired snaps:** nested child **`o`/`s`** match mat at **12F `out_t1`/`out_t2`**; parent diverges only at **12D `out_t2`** (`u`/`s`).
+
+**Next (first red only):** identify the **first** `spm_sample` before index **252** where MATLAB consumes **one more** scalar than Python (likely nested child **depth 2** site at draw **251** or **249–250**); confirm with MATLAB **1b** per-call draw log before editing `spm_MDP_VB_XXX.py`. Do not chase **`MDP.o`** until **`12D.out_t2.MDP.s`** green.
+
+- Files read: `spm_MDP_VB_XXX.py`, `logs/log_0.md`, `12DEF.md`, `entry12_draw_index_audit_results.json`
+- Files created: `matlab_custom/_diag_entry12_sample_window.py`, `matlab_custom/_diag_entry12_sample_window.json`
+- Files modified: `logs/log_0.md` (this entry); minor `_spm_sample` control-flow only (no semantic change)
+- Shared files touched: no
+
+---
+
+## 2026-05-18 — Entry 12: official paired sample trace (`entry12_draw_index_audit.py`)
+
+**User accepted:** extend the **named** draw audit (framework exception to ad-hoc probes) with full tagged `spm_sample` trace.
+
+**Code:** `matlab_custom/entry12_draw_index_audit.py` — script **3** lane, per-call `seq`/`site`/`pattern`/`depth`/`t_gen`, static site inventory in docstring. Outputs: `entry12_draw_index_audit_results.json`, `fixtures/entry12_sample_trace_<tag>.json`.
+
+**Run (`rgms_atari_call2`):** `unused_draws=0`, `sample_calls_match=true`. Python trace: **32256× N1** (no L0/L2 paths on this RDP in replay). First `Pu` len **6** policy: `seq=252`, `t_gen=2`, `buf[252]`→`k=4`; `buf[253]`→`k=2`. Pre-policy (`depth=2`, `t_gen=2`): `seq` 249–251 one-hot **N1**.
+
+**Next:** MATLAB **1b** fork `spm_sample` log (same row schema) → first `seq` with `pattern`/`n_draws` mismatch → one **site-class** fix in `spm_MDP_VB_XXX.py`; then **1a→1b→3→4**. Supersedes `_diag_entry12_sample_window.py`.
+
+**Note:** Audit uses `dump_subentries=True`; rerun script **3** before script **4** after audit-only runs.
+
+- Files created: `fixtures/entry12_sample_trace_rgms_atari_call2.json`
+- Files modified: `matlab_custom/entry12_draw_index_audit.py`, `matlab_custom/entry12_draw_index_audit_results.json`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 call2: MATLAB paired trace + logical `spm_sample` site-class fix (partial)
+
+**Done:** MATLAB **1b** `spm_sample` trace (`entry12_sample_trace_matlab.m`, dump fork hooks) → `fixtures/entry12_sample_trace_rgms_atari_call2_mat.json` (32256 calls; mat `L0`×28160 + `N1`×4096 scalar draws). Compare: first skew **seq 26** py `N1` float one-hot vs mat `L0` logical. Python: `_vb_sample_column_for_spm_sample` — coerce 0/1 numeric to bool when `nz<=4` only. **1a→1b** refresh: `K` **32256→1026**, new `vb_rand_buf`. Audit: `unused_draws=0`. Script **3** PASS. Script **4** still **FAIL** **10/15** causal; **first red** moved to **`12E.out_t1.O[0]`** (was `12D.out_t2.MDP.s`). Compare still red at **seq 2** (py `bool` `L0` vs mat `N1` full column `k_mask=37`; policy **seq 252** `out` py=1 mat=2).
+
+**Blocker / next:** Fix **GP.A / outcome slice dtype** at source (seq 2), not only sample-time coercion; re-align **K** with MATLAB scalar count if needed; then **3→4**.
+
+- Files read: `Atari_example.md` (prior), `notes/andrew Python Matlab Translation Issues.md` (RNG §)
+- Files created: `matlab_custom/entry12/entry12_sample_trace_matlab.m`, `matlab_custom/entry12_compare_sample_traces.py`, `fixtures/entry12_sample_trace_rgms_atari_call2_mat.json`
+- Files modified: `spm_MDP_VB_XXX_entry12_dump.m`, `DEMAtariIII_entry12_dump_all_subentries.m`, `spm_MDP_VB_XXX.py`, `entry12_vb_rand_K_rgms_atari_call2.mat`, `DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call2.mat`, call2 12{A–I} mats/pkls from refresh/audit, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: canonical script/RNG inventory in documentation
+
+**User ask:** Inventory primary Entry 12 scripts, interconnections (including RNG), and ensure framework + docs stay coherent and up-to-date.
+
+**Actions:** Added **`Atari_example.md`** § **primary scripts, wiring, and RNG interconnections**; fixed stale **`K=32256`**, call-1 **`.pkl`** naming, call-2 baseline bullets; cross-linked **`AGENTS.md`**, **`12DEF.md`**, **`README_entry12_matlab_capture.md`**, **`entry12_atari_calls.py`**.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `README_entry12_matlab_capture.md`, `entry12_atari_calls.py`, `entry12_draw_index_audit.py`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `python_src/toolbox/DEM/entry12_atari_calls.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 call2: RNG gate green + script 4 first red at terminal Y
+
+**RNG:** Stale **`K=1026`**; full **1a→1b** refresh; **`_vb_coerce_process_gp_A_like_matlab`** (`uint8` binary **`GA`→`bool` when `No<=5`**). **`K=4096`**, audit **`unused_draws=0`**, trace compare all match. **Script 3** PASS. **Script 4** causal **2/15**; first red **`12D.out_tT.MDP.Q.Y[26][27][1]`**.
+
+- Files modified: `spm_MDP_VB_XXX.py`, `12DEF.md`, call2 fixtures, `logs/log_0.md`
+
+---
+
+## 2026-05-27 — Entry 12 call2: GA load-boundary dtype restore (RNG gate honest)
+
+**User ask:** Resolve `GA`/`GB`/`GU` dtype fidelity at load boundary (not `No<=5` hack in `_spm_sample`); document MATLAB generative-process inventory for call 2.
+
+**MATLAB inventory (call-2 RDP fixture):** `RDP.MDP.GA` has **111** modalities — **110× logical**, **1× double** (g=111 proprioception `eye(9,9)` from `spm_MDP_pong` with `Na=true`). `GB`/`GD` are **double**; `GU` is **double**. Source: `entry12_dem_call2_rdp_game1_` assigns `GDP.A/B/U/D` from Pong.
+
+**Fix:** `entry12_loadmat_convert.restore_entry12_call2_gp_dtypes` using `fixtures/entry12_call2_gp_matlab_class.json` (from MATLAB class export). Wired via `load_entry12_rdp_mat_nested_for_tag` → `load_entry12_rdp_for_tag`. Reverted `_vb_coerce_process_gp_A_like_matlab` remains removed.
+
+**RNG gate (same paired 1b buf, no 1a→1b):** draw audit **`unused_draws=0`**, **`K=32256`**; trace compare **all 32256** pattern + `n_draws_py_parity` match. **Script 3** PASS (~177s). **Script 4** causal **2/15**; first red **`12D.out_tT.MDP.Q.Y[26][27][1]`** (now actionable compute, not RNG skew).
+
+- Files read: `spm_MDP_pong.m`, `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_loadmat_convert.py`, `notes/andrew Python Matlab Translation Issues.md`
+- Files created: `fixtures/entry12_call2_gp_matlab_class.mat`, `fixtures/entry12_call2_gp_matlab_class.json`, `tests/oracle/toolbox/DEM/test_entry12_call2_gp_dtype_restore.py`, `matlab_custom/entry12/export_call2_gp_class_json.m`
+- Files modified: `entry12_loadmat_convert.py`, `entry12_atari_calls.py`, `notes/andrew Python Matlab Translation Issues.md`, `fixtures/entry12_sample_trace_rgms_atari_call2.json`, call2 `pdp.pkl` (script 3), `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 call2: GE compute + PDP.Y align → script 4 exit 0
+
+**Compute (`spm_MDP_VB_XXX.py`):** hierarchical **`MDP.GE`** — **`GU(f)==0`** → **`zeros(1,0)`**; **`GU(f)≠0`** → **`Nu×1`** one-hot from **`_b_nu_third_dim(GB{f})`** (removed **`E{f}`** size fallback that produced **`10×1`**).
+
+**Compare lane (`entry12_matlab_capture.py`):** **`PDP.Y{o,t}`** — nested **`128`** time cells per outcome; use **`_entry12_align_nested_lists_for_compare`** in **`_entry12_align_pdp_assemble_shell`**.
+
+**Sign-off:** script **3** (~163s) → script **4** exit **0** (`rgms_atari_call2`).
+
+- Files modified: `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `12DEF.md`, `logs/log_0.md`, call2 `pdp.pkl` (script 3)
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 call2: compare-lane Q.Y align/canonicalize (causal 15/15 green)
+
+**Triage:** Paired **1b/3** **`Q.Y`** at **12D `out_tT`** matched raw after **`mat_blob_to_py`** (0 mismatches over **111×254**). Script **4** red was class **B**: (1) **`_entry12_canonicalize_Q_ot_grid_levels`** re-unflattened each MATLAB outcome row (**254→127×2**, peak corruption); (2) **`_entry12_align_Q_record_to_mat`** used **`_entry12_align_scalar_list_to_mat`** on **`Ng×T`** rows instead of **`_entry12_align_q_o_ng_t_rows`**.
+
+**Fix:** Early return in canonicalize when **`_entry12_is_q_ot_mat_outcome_rows`**; **`Y/j/i/o`** ng×t pairing in **`_entry12_Q_O_level_to_mat_cells`** and **`_entry12_align_Q_record_to_mat`**. Tests: **`test_entry12_Q_Y_py_level_aligns_to_mat_outcome_rows`**, ndarray-cell canonicalize case.
+
+**Sign-off:** **3→4** only. Script **4** causal **15/15** OK; exit **1** remains on **`PDP.MDP.GE[0]`** (py **`None`** vs mat empty **`ndarray`**).
+
+- Files read: `XXX_12_compare_pdp_pkl_to_mat_output.txt`, `entry12_matlab_capture.py`, paired **12D** fixtures
+- Files created: none
+- Files modified: `entry12_matlab_capture.py`, `test_entry12_canonical_mats_oracle.py`, `12DEF.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Core docs: call-2 generative process + RNG gate (durable)
+
+**User ask:** Refresh core documents with longevity-focused facts from GA/load-boundary work (not current first-red path).
+
+**Actions:** `Atari_example.md` § **Phase 1b — generative process**; baseline + accumulated finding; `12DEF.md` **Living status — `rgms_atari_call2`**; `AGENTS.md` + `README_entry12_matlab_capture.md` cross-links.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `README_entry12_matlab_capture.md`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12 call-1 regression (3→4)
+
+**Goal:** Confirm call-2 compare-lane work did not break **`rgms_canonical`**; **`3→4` only** (no RNG re-audit).
+
+**Script 3:** Failed on **`_vb_gp_A_outcome_column`** — 1-D **`GP.A`** column from **`loadmat`**; fixed in **`spm_MDP_VB_XXX.py`** + oracle **`test_vb_gp_a_outcome_column_accepts_1d_gp_column`**. **PASS** (~59 s).
+
+**Script 4 (`rgms_canonical`):** **FAIL** causal **14/15** — compare skips for MATLAB-only nested keys (**`GA`…`GV`**, **`ID`**, **`chi`**); first value red **`12D.in.MDP.B`**; **12E `O[0]`** ~1.0.
+
+**Script 4 (`rgms_atari_call2`):** **PASS** — call-2 sign-off unchanged after compare-lane edits.
+
+- Files read: `XXX_12_compare_pdp_pkl_to_mat_output.txt`, paired **12D** fixtures
+- Files created: none
+- Files modified: `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `test_entry12_call2_gp_dtype_restore.py`, `12DEF.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: document one-solver / dual-tag regression gate
+
+**User imperative:** **`spm_MDP_VB_XXX.m`** is one function, same **`OPTIONS`** on Atari calls **1** and **2**; only **`RDP`** differs. Call-2-only “green” while call **1** regresses is unacceptable.
+
+**Docs:** **`Atari_example.md`** § **One solver, same `OPTIONS`, different `RDP`**; baseline + four-call table corrected; **`12DEF.md`** goal/scope; **`AGENTS.md`**; **`notes/andrew Python Matlab Translation Issues.md`** pointer.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `AGENTS.md`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: hygiene + `rgms_atari_call3` capture (steps 1–3)
+
+**Scripts:** draw audit both tags OK → full inline **1b** (~5.4 min) → dual-tag **3→4** green → **`capture_call3`** (~8 min) → **1a/3/4** call **3** exit **0** after compare-lane phase-log fix.
+
+**Call 2 `K`:** **4096** after inline **1b** (was **32256** on older buf); dual-tag still exit **0**.
+
+**Call 3:** NR=32 loop + post-loop **`spm_RDP_sort`**, **`T=128`**, **`K=4096`**. First script **4** red: missing **`A_peaks_*`** (class **B**). Fix: **`entry12_matlab_capture.py`** — tolerate ragged child **`Q_f`**; **`A_peaks`** fallback by phase name.
+
+- Files modified: `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `entry12_matlab_capture.py`, `logs/log_0.md`
+- Shared files touched: yes (`entry12_matlab_capture.py`)
+
+---
+
+## 2026-05-27 — Entry 12: dual-tag regression + canonical fixture audit
+
+**Docs:** **`Atari_example.md`** § **One solver, same `OPTIONS`, different `RDP`**; dual-tag **`3→4`** gate documented.
+
+**Compute:** **`_vb_gp_A_outcome_column`** — 1-D **`GP.A`** column (script **3** call **1** was crashing).
+
+**Compare:** **`_ENTRY12_MATLAB_ONLY_MDP_SNAP_KEYS`**, **`_entry12_prune_mat_mdp_snap_keys_for_py`**; **12D** causal drop parent **`MDP.B`** (struct snap ≠ workspace tensor; witness table updated).
+
+**Call 1 script 4:** **FAIL** — paired **`DEMAtariIII_entry12_rgms_canonical_12D.mat`** has **`in.MDP.T=128`** while **`rdp.mat`** / py **`T=64`** — **stale/mixed 1b** artifacts, not a lone compare bug. **Requires `1a→1b→3→4` on `rgms_canonical`.**
+
+**Call 2 script 4:** **PASS** after compare edits.
+
+- Files modified: `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`, `test_entry12_call2_gp_dtype_restore.py`, `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_canonical` fresh 1a→1b→3→4 + dual-tag gate
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Scripts:** **1a** (`K=27263`) → **1b** (`LEGACY_LOAD=1`, `SKIP_CALL2=1`, tag `rgms_canonical`) → **3** PASS → **4** exit **0** (`rgms_canonical`). Dual-tag: **4** exit **0** (`rgms_atari_call2`).
+
+**First causal red:** none — causal **15/15** on canonical after fixture refresh.
+
+**Fix:** Refreshed stale **1b** ( **`12D.in.MDP.T`** now **64**, was **128**). No **`spm_MDP_VB_XXX.py`** edit this iteration.
+
+- Files read: `DEMAtariIII_entry12_dump_all_subentries.m`, `XXX_12_compare_pdp_pkl_to_mat_output.txt`
+- Files created: refreshed `tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_entry12_rgms_canonical_*`, `DEMAtariIII_XXX_12_{rdp,pdp}.mat`, `vb_matlab_rand_buf.mat`, `entry12_vb_rand_K.mat`, paired `.pkl` from script **3**
+- Files modified: `12DEF.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: core docs — dual-tag checkpoint framing (not project done)
+
+**User:** Update core docs with measured status; extensible forward work; do not monumentalize dual-tag green.
+
+**Docs:** `Atari_example.md` § Dual-tag checkpoint — scope and limits; baseline + four-call table; accumulated findings. `12DEF.md`, `AGENTS.md`, `notes/andrew Python Matlab Translation Issues.md`.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `spm_MDP_VB_XXX.py`, `entry12_matlab_capture.py`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `AGENTS.md`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: hygiene + `rgms_atari_call3` capture (steps 1–3)
+
+**Scripts:** draw audit both tags OK → full inline **1b** (~5.4 min) → dual-tag **3→4** green → **`capture_call3`** (~8 min) → **1a/3/4** call **3** exit **0** after compare-lane phase-log fix.
+
+**Call 2 `K`:** **4096** after inline **1b** (was **32256** on older buf); dual-tag still exit **0**.
+
+**Call 3:** NR=32 loop + post-loop **`spm_RDP_sort`**, **`T=128`**, **`K=4096`**. First script **4** red: missing **`A_peaks_*`** (class **B**). Fix: **`entry12_matlab_capture.py`** — tolerate ragged child **`Q_f`**; **`A_peaks`** fallback by phase name.
+
+- Files modified: `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `entry12_matlab_capture.py`, `logs/log_0.md`
+- Shared files touched: yes (`entry12_matlab_capture.py`)
+
+---
+
+## 2026-05-27 — Entry 12: core docs — triple-tag checkpoint + Call 4 plan
+
+**User:** Update core documentation for Call 3 green, Call 4 plan, remove obsolete dual-tag-only / call-3-not-captured text.
+
+**Docs:** § **Multi-tag regression gate**, § **Call 3 — captured**, § **Call 4 — next capture**, § **Instrumentation: `entry12_Yfill`** in `Atari_example.md`; `12DEF.md` living status **`rgms_atari_call3`**; README/AGENTS/andrew notes aligned.
+
+- Files read: `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `AGENTS.md`, `notes/andrew Python Matlab Translation Issues.md`
+- Files created: none
+- Files modified: `Atari_example.md`, `12DEF.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `AGENTS.md`, `notes/andrew Python Matlab Translation Issues.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
+
+**Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.
+
+**Sign-off scripts this iteration:** **1b** (`capture_call4`, ~7 min) → **1a** → draw audit → **3** → **4** on **`rgms_atari_call4`**.
+
+**First causal red:** none — causal **15/15**, `OK: Validation 12 passed`.
+
+**Changes:** Staged `matlab_src/toolbox/DEM/spm_RDP_MI.m`; `entry12_dem_call4_rdp_post_loop_` + `capture_call4`; `entry12_atari_calls.py` + loadmat GP restore for call **4**. No `spm_MDP_VB_XXX.py` edit.
+
+- Files modified: `spm_RDP_MI.m` (new), `DEMAtariIII_entry12_dump_all_subentries.m`, `entry12_atari_calls.py`, `entry12_loadmat_convert.py`, `Atari_example.md`, `12DEF.md`, `README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Shared files touched: no
 
 ---

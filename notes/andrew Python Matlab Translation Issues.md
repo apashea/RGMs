@@ -762,6 +762,86 @@ outputs at the agreed boundary (`PDP` / nested `MDP` fields). If future SPM edit
 add **`randn`** / **`randi`** / other draws in `spm_MDP_VB_XXX.m`, revisit this
 subsection and extend the replay bridge explicitly.
 
+**Entry 12 call-2 regroup note (2026-05-27):** do **not** globally coerce numeric
+0/1 columns to logical in `spm_MDP_VB_XXX` sampling helpers. Paired MATLAB
+trace on `rgms_atari_call2` shows early `spm_sample` sites where MATLAB passes a
+numeric one-hot/delta vector (`double`, pattern `N1`) and still consumes one
+scalar `rand()`. Blind numeric-0/1→bool coercion reduces Python draws, breaks
+`K` consistency, and can manufacture misleading "fixed" local rows while moving
+the stochastic trajectory. Only preserve logical semantics when the source
+column is actually logical at the call site.
+
+### Entry 12 call-2 — generative process (`GA`/`GB`/`GU`/`GD`) MATLAB inventory
+
+**Call context:** Entry 12 **call 2** (`RGMS_ENTRY12_CAPTURE_RUN_TAG=rgms_atari_call2`)
+exercises hierarchical VB with a nested **process** child. Call **1**
+(`rgms_canonical`) does not attach `GDP.A/B/U/D` to the parent in the same way;
+call 2 is the lane that proves `spm_MDP_VB_XXX` works when `MDP.MDP` carries
+generative-process tensors copied from Pong.
+
+**MATLAB assembly (driver):** `matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`
+→ `entry12_dem_call2_rdp_game1_` assigns, on the parent model shell:
+
+- `MDP{1}.GA = GDP.A`
+- `MDP{1}.GB = GDP.B`
+- `MDP{1}.GU = GDP.U`
+- `MDP{1}.GD = GDP.D`
+- `MDP{1}.ID = GDP.id`
+- `MDP{1}.chi = 512`
+
+then `spm_set_goals`, `spm_set_costs`, `spm_mdp2rdp`. Saved fixture:
+`tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_XXX_12_rgms_atari_call2_rdp.mat`
+with **`RDP.MDP.GA`** at the **top-level** parent (111 modalities), not under a
+nested `MDP.MDP` row in the saved `.mat`.
+
+**MATLAB source of `GDP.A` (Pong):** `matlab_src/toolbox/DEM/spm_MDP_pong.m`
+builds outcome likelihoods mostly as **`logical`**:
+
+- Default grid modalities `A{g} = false(5,Ns,Nc)` with background row set `true`.
+- Paddle overlays assign `true`/`false` on logical tensors.
+- Random-pixel distractors: `A{j} = logical(full(spm_speye(5,3)))`.
+- With **`Na=true`** (Atari call 2 uses `spm_MDP_pong(..., Na=true, Np=0)`), the
+  **`if true`** branch appends proprioception as **`A{end+1} = eye(Nc,Nc)`** —
+  a **`double`** identity matrix (not wrapped in `logical(...)`). For the Atari
+  grid `Nr=12`, `Nc=9`, this is modality **g=111**, shape **`[9 9]`**, **`No=9`**.
+
+**Measured classes on the saved call-2 RDP (MATLAB R2024b, fixture above):**
+
+| Field | Count | Classes |
+|-------|------:|---------|
+| **`GA{g}`** | 111 | **110× `logical`**, **1× `double`** (g=111 proprioception `eye(9,9)`) |
+| **`GB{f}`** | 2 | **2× `double`** (`[176 176]` factor 1; `[9 9 3]` factor 2 after `spm_dir_norm`) |
+| **`GU`** | — | **`double`** (not a cell; scalar/matrix control tensor) |
+| **`GD{f}`** | 2 | **2× `double`** (`[176 1]`, `[9 1]`) |
+
+Note: Pong initially constructs **`B{1}`, `B{2}`** as **`false(...)`** (logical),
+but **`spm_dir_norm(B)`** before export yields **`GB`** stored as **`double`** in
+the saved RDP. Do not assume “binary ⇒ logical” from values alone on **`GB`**.
+
+**VB assignment inside `spm_MDP_VB_XXX.m`:** process child gets direct copies
+(`GP(m).A = MDP(m).GA`, same for `B`, `U`, `D`). Local **`spm_sample(P)`** branches
+only on **`islogical(P)`** — no modality-size heuristics.
+
+**`loadmat` dtype loss (Python oracle lane):** `scipy.io.loadmat(..., simplify_cells=True)`
+on the call-2 RDP maps **all** `GA{g}` leaves to **`uint8`**, including the
+proprioception **`double`** `eye(9,9)` (binary-valued). That makes Python treat
+110 logical modalities as numeric at `spm_sample`, changing draw counts vs MATLAB.
+
+**Decision (2026-05-27):** restore dtypes at the **load/assignment boundary** in
+`tests/oracle/toolbox/DEM/entry12_loadmat_convert.py`, guided by MATLAB class
+metadata exported to
+`tests/oracle/toolbox/DEM/fixtures/entry12_call2_gp_matlab_class.json`
+(see `matlab_custom/entry12/export_call2_gp_class_json.m`). Apply via
+`load_entry12_rdp_mat_nested_for_tag(..., tag='rgms_atari_call2')` before
+`spm_MDP_checkX`. Do **not** add `No<=5` or other modality-count rules inside
+`_spm_sample` or `_vb_coerce_process_gp_A_like_matlab`.
+
+**RNG consequence:** logical `GA` columns must reach `_spm_sample` as **`bool`**
+so `k=1` sites consume **0** draws and `2≤k≤4` sites consume **2** draws, matching
+MATLAB `randperm` replay. The proprioception **`double`** column stays numeric
+(**`N1`**, one draw). This is the approved fix for call-2 nested-child trace skew
+(e.g. py `N1` vs mat `L0` at early seqs) without rejected global 0/1→bool coercion.
+
 **Implemented slice:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py` defines **`_spm_sample`**
 (Pass 1 duplicate of `spm_MDP_generate._spm_sample`). Closed-oracle coverage:
 **`tests/oracle/toolbox/DEM/test_spm_MDP_VB_XXX_spm_sample.py`** (MATLAB Engine inline
@@ -987,6 +1067,14 @@ caused nested child VB to re-``spm_sample`` ``s`` at ``t=1`` and broke Entry **1
 
 **Policy:** size `Y` (and bounds on `o`) with **`Ng`**, not `max(No)`.
 
+## Entry 12 — one solver, multi-tag regression (pointer)
+
+**Authoritative policy:** **`Atari_example.md`** § **One solver, same `OPTIONS`, different `RDP` (all four VB calls — mandatory)** and § **Multi-tag regression gate**.
+
+All four VB invocations in **`DEM_AtariIII.m`** use **`spm_MDP_VB_XXX(RDP, OPTIONS)`** with the **same** options profile; only **`RDP`** differs. A compute change that greens one **`tag`** but reds another captured tag is a **holistic failure** until all captured tags are restored. After every **`spm_MDP_VB_XXX.py`** edit: script **3 → 4** on **`rgms_canonical`**, **`rgms_atari_call2`**, and **`rgms_atari_call3`** (add **`rgms_atari_call4`** when captured; no new **1b** unless draw contract changes).
+
+**Checkpoint vs done (2026-05-27):** Calls **1–3** can exit script **4** **0** without proving full **`DEM_AtariIII`**, call **4**, or all loop games — see **`Atari_example.md`** § **Multi-tag regression gate**. **Stale `1b`:** mixed capture causes false reds; fix with **`1a→1b→3→4`** on that tag. **1-D `GP.A`:** **`_vb_gp_A_outcome_column`** **`ndim==1`** path. **Call 3 `A_peaks_*`:** phase-log witness selection in **`entry12_matlab_capture.py`** (class **B**, not VB compute).
+
 ## Entry 12 — Validation 12 and compare-lane honesty (pointer)
 
 **Authoritative policy:** **`Atari_example.md`** § **Entry 12 — Validation 12 and compare-lane honesty (mandatory)**. Validation **12** (script **4**) is the **full** Phase **1** sign-off oracle: causal **12D–12F** lean snaps (**15** steps, fix at **first** red), input **`RDP`**, subentries **12A–12I** (gating: **12A–12F**, **12H**, **12I**; **12G** excluded), and **final `PDP`** — one paired **1b/3** run. Compare lane (`entry12_matlab_capture.py`) may reshape for representation only — it must **not** substitute MATLAB values on layout failure (`Entry12CompareLaneError`).
@@ -1094,7 +1182,11 @@ nonzeros vs MATLAB `R_sum=32` with one).
 
 **`mdp.Q.{Y,j,i,o}{L}` append row:** Python must flatten child ``Ng×T`` nested grids with MATLAB ``(:)`` index **`o + t*Ng`** (loop **`t` then `o`** in ``_vb_hierarchical_q_ot_grid_to_cell_row``). Wrong order **`o*T+t`** permutes cells vs live ``mdp.Y{o,t}`` while live ``Y`` can still match. Compare: ``_entry12_canonicalize_Q_ot_grid_levels`` on paired snaps.
 
-**Nested `mdp.O` / `MDP.MDP.O` (post-``shiftdim`` vs ``.mat`` load):** After child VB, MATLAB ``shiftdim(O,1)`` yields **`O{t,g}`** (**T×Ng**); Python mirrors as **`O[t][g]`** in script **3** dumps. Paired **1b** ``loadmat`` still exposes workspace-style **`cell(Ng,T)`** as **`O[g][t]`** (e.g. **111×2** object array → length-**111** list of length-**2** rows). Same **222** outcome cells; transposed nesting only. Compare lane: **`entry12_canonicalize_saved_structures_for_compare`** maps both sides to **`O[g][t]`** via **`_entry12_canonicalize_O_nested_block`** (not a VB change). Flat **`Q.O{L}`** rows still use **`_entry12_q_o_flat_index_t_shiftdim`** (**`t + g*T`**) — separate surface from full nested **`MDP.MDP.O`**.
+**Nested `mdp.O` / `MDP.MDP.O` (post-``shiftdim`` vs ``.mat`` load):** After child VB, MATLAB ``shiftdim(O,1)`` yields **`O{t,g}`** (**T×Ng**); Python mirrors as **`O[t][g]`** in script **3** dumps. Paired **1b** ``loadmat`` still exposes workspace-style **`cell(Ng,T)`** as **`O[g][t]`** (e.g. **111×2** object array → length-**111** list of length-**2** rows). Same **222** outcome cells; transposed nesting only. Compare lane: **`entry12_canonicalize_saved_structures_for_compare`** maps both sides to **`O[g][t]`** via **`_entry12_canonicalize_O_nested_block`** (not a VB change). Flat **`Q.O{L}`** rows still use **`_entry12_q_o_flat_index_t_shiftdim`** (**`t + g*T`**) when folding matrix ↔ flat cells — separate surface from full nested **`MDP.MDP.O`**.
+
+**`mdp.Q.O{L}` (2026-05-25, class A):** MATLAB ``[mdp.Q.O{L} mdp.O]`` (~1238) appends on **`cell(Ng,T)`** with **variable ``No(g)``** per row (ragged vectors), not a single dense ``(sum(No),T)`` matrix. Paired **``.mat``** often shows **`len(mdp.Q.O)==Ng`** (one row per modality). Python must use **`_vb_hierarchical_O_field_to_ng_t_rows``** + **`_vb_hierarchical_q_O_ng_t_hstack``**; detect **Ng×T** before **T×Ng** when dimensions are ambiguous. Compare: **`_entry12_align_q_o_ng_t_rows`**.
+
+**`mdp.Q.o{L}` (2026-05-25):** ``mdp.o`` is an **`Ng×T`** **scalar** matrix (~725 / assemble). ``[mdp.Q.o{L} mdp.o]`` matches **`s``/``u``** — **`np.hstack``** on the matrix, **not** ``_vb_hierarchical_field_to_ot_nested`` (that helper is for **`Y``/``j``/``i``** nested cells only). Routing ``o`` with ``Y`` left **`Q.o``** empty on PDP while live ``mdp.o`` was fine.
 
 **`entry12_Yfill`:** MATLAB **`cell(Ng,T)`** (e.g. **111×2**). Preserve as nested **`[g][t]`** in **`mat_nested_to_py`** (do not flatten to **`Ng×T`**). Distinct from **`4×4`** **`ss`** blocks — shape heuristics must not treat all 2D object arrays alike.
 

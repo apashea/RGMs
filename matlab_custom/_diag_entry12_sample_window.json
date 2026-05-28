@@ -1,0 +1,1078 @@
+{
+  "tag": "rgms_atari_call2",
+  "K": 32256,
+  "buf_252": 0.5211358308040015,
+  "buf_253": 0.23159438670852384,
+  "window_log": [
+    {
+      "draw_start": 244,
+      "draw_end": 245,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        5,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "out": 5,
+      "depth": 2
+    },
+    {
+      "draw_start": 245,
+      "draw_end": 246,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        5,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "out": 5,
+      "depth": 2
+    },
+    {
+      "draw_start": 246,
+      "draw_end": 247,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        5,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "out": 5,
+      "depth": 2
+    },
+    {
+      "draw_start": 247,
+      "draw_end": 248,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        5,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "out": 5,
+      "depth": 2
+    },
+    {
+      "draw_start": 248,
+      "draw_end": 249,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        5,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "out": 5,
+      "depth": 2
+    },
+    {
+      "draw_start": 249,
+      "draw_end": 250,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        2,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        1.0,
+        0.0
+      ],
+      "out": 1,
+      "depth": 2
+    },
+    {
+      "draw_start": 250,
+      "draw_end": 251,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        2,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        1.0,
+        0.0
+      ],
+      "out": 1,
+      "depth": 2
+    },
+    {
+      "draw_start": 251,
+      "draw_end": 252,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        9,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "out": 5,
+      "depth": 2
+    },
+    {
+      "draw_start": 252,
+      "draw_end": 253,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        6,
+        1
+      ],
+      "nz": 6,
+      "is_bool": false,
+      "vals": [
+        0.16666666666666666,
+        0.16666666666666666,
+        0.16666666666666666,
+        0.16666666666666666,
+        0.16666666666666666,
+        0.16666666666666666
+      ],
+      "out": 4,
+      "depth": 1
+    },
+    {
+      "draw_start": 253,
+      "draw_end": 254,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        6,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "out": 4,
+      "depth": 1
+    },
+    {
+      "draw_start": 254,
+      "draw_end": 255,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        485,
+        1
+      ],
+      "nz": 485,
+      "is_bool": false,
+      "vals": [
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392,
+        0.0013495276653171392
+      ],
+      "out": 363,
+      "depth": 1
+    },
+    {
+      "draw_start": 255,
+      "draw_end": 256,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        41,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "out": 5,
+      "depth": 1
+    },
+    {
+      "draw_start": 256,
+      "draw_end": 257,
+      "n_draws": 1,
+      "dtype": "float64",
+      "shape": [
+        14,
+        1
+      ],
+      "nz": 1,
+      "is_bool": false,
+      "vals": [
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "out": 2,
+      "depth": 1
+    }
+  ],
+  "policy_hits": [
+    {
+      "draw_start": 137,
+      "draw_end": 138,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 252,
+      "draw_end": 253,
+      "k_policy": 4,
+      "Pu_len": 6
+    },
+    {
+      "draw_start": 389,
+      "draw_end": 390,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 641,
+      "draw_end": 642,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 893,
+      "draw_end": 894,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 1145,
+      "draw_end": 1146,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 1397,
+      "draw_end": 1398,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 1649,
+      "draw_end": 1650,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 1901,
+      "draw_end": 1902,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 2153,
+      "draw_end": 2154,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 2405,
+      "draw_end": 2406,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 2657,
+      "draw_end": 2658,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 2909,
+      "draw_end": 2910,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 3161,
+      "draw_end": 3162,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 3413,
+      "draw_end": 3414,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 3665,
+      "draw_end": 3666,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 3917,
+      "draw_end": 3918,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 4169,
+      "draw_end": 4170,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 4421,
+      "draw_end": 4422,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 4673,
+      "draw_end": 4674,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 4925,
+      "draw_end": 4926,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 5177,
+      "draw_end": 5178,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 5429,
+      "draw_end": 5430,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 5681,
+      "draw_end": 5682,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 5933,
+      "draw_end": 5934,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 6185,
+      "draw_end": 6186,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 6437,
+      "draw_end": 6438,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 6689,
+      "draw_end": 6690,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 6941,
+      "draw_end": 6942,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 7193,
+      "draw_end": 7194,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 7445,
+      "draw_end": 7446,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 7697,
+      "draw_end": 7698,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 7949,
+      "draw_end": 7950,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 8201,
+      "draw_end": 8202,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 8453,
+      "draw_end": 8454,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 8705,
+      "draw_end": 8706,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 8957,
+      "draw_end": 8958,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 9209,
+      "draw_end": 9210,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 9461,
+      "draw_end": 9462,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 9713,
+      "draw_end": 9714,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 9965,
+      "draw_end": 9966,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 10217,
+      "draw_end": 10218,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 10469,
+      "draw_end": 10470,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 10721,
+      "draw_end": 10722,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 10973,
+      "draw_end": 10974,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 11225,
+      "draw_end": 11226,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 11477,
+      "draw_end": 11478,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 11729,
+      "draw_end": 11730,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 11981,
+      "draw_end": 11982,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 12233,
+      "draw_end": 12234,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 12485,
+      "draw_end": 12486,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 12737,
+      "draw_end": 12738,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 12989,
+      "draw_end": 12990,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 13241,
+      "draw_end": 13242,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 13493,
+      "draw_end": 13494,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 13745,
+      "draw_end": 13746,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 13997,
+      "draw_end": 13998,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 14249,
+      "draw_end": 14250,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 14501,
+      "draw_end": 14502,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 14753,
+      "draw_end": 14754,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 15005,
+      "draw_end": 15006,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 15257,
+      "draw_end": 15258,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 15509,
+      "draw_end": 15510,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 15761,
+      "draw_end": 15762,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 16013,
+      "draw_end": 16014,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 16265,
+      "draw_end": 16266,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 16517,
+      "draw_end": 16518,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 16769,
+      "draw_end": 16770,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 17021,
+      "draw_end": 17022,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 17273,
+      "draw_end": 17274,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 17525,
+      "draw_end": 17526,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 17777,
+      "draw_end": 17778,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 18029,
+      "draw_end": 18030,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 18281,
+      "draw_end": 18282,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 18533,
+      "draw_end": 18534,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 18785,
+      "draw_end": 18786,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 19037,
+      "draw_end": 19038,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 19289,
+      "draw_end": 19290,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 19541,
+      "draw_end": 19542,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 19793,
+      "draw_end": 19794,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 20045,
+      "draw_end": 20046,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 20297,
+      "draw_end": 20298,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 20549,
+      "draw_end": 20550,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 20801,
+      "draw_end": 20802,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 21053,
+      "draw_end": 21054,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 21305,
+      "draw_end": 21306,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 21557,
+      "draw_end": 21558,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 21809,
+      "draw_end": 21810,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 22061,
+      "draw_end": 22062,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 22313,
+      "draw_end": 22314,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 22565,
+      "draw_end": 22566,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 22817,
+      "draw_end": 22818,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 23069,
+      "draw_end": 23070,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 23321,
+      "draw_end": 23322,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 23573,
+      "draw_end": 23574,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 23825,
+      "draw_end": 23826,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 24077,
+      "draw_end": 24078,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 24329,
+      "draw_end": 24330,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 24581,
+      "draw_end": 24582,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 24833,
+      "draw_end": 24834,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 25085,
+      "draw_end": 25086,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 25337,
+      "draw_end": 25338,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 25589,
+      "draw_end": 25590,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 25841,
+      "draw_end": 25842,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 26093,
+      "draw_end": 26094,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 26345,
+      "draw_end": 26346,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 26597,
+      "draw_end": 26598,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 26849,
+      "draw_end": 26850,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 27101,
+      "draw_end": 27102,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 27353,
+      "draw_end": 27354,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 27605,
+      "draw_end": 27606,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 27857,
+      "draw_end": 27858,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 28109,
+      "draw_end": 28110,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 28361,
+      "draw_end": 28362,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 28613,
+      "draw_end": 28614,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 28865,
+      "draw_end": 28866,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 29117,
+      "draw_end": 29118,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 29369,
+      "draw_end": 29370,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 29621,
+      "draw_end": 29622,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 29873,
+      "draw_end": 29874,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 30125,
+      "draw_end": 30126,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 30377,
+      "draw_end": 30378,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 30629,
+      "draw_end": 30630,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 30881,
+      "draw_end": 30882,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 31133,
+      "draw_end": 31134,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 31385,
+      "draw_end": 31386,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 31637,
+      "draw_end": 31638,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 31889,
+      "draw_end": 31890,
+      "k_policy": 1,
+      "Pu_len": 1
+    },
+    {
+      "draw_start": 32141,
+      "draw_end": 32142,
+      "k_policy": 1,
+      "Pu_len": 1
+    }
+  ]
+}

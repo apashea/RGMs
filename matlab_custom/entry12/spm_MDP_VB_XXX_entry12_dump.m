@@ -246,6 +246,9 @@ else
         'phases', struct());
 end
 
+entry12_sample_trace_matlab('depth_incr');
+cleanupTraceDepth = onCleanup(@() entry12_sample_trace_matlab('depth_decr'));
+
 % check MDP specification
 %--------------------------------------------------------------------------
 MDP = spm_MDP_checkX(MDP);
@@ -843,6 +846,7 @@ end
 % belief updating over successive time points
 %==========================================================================
 for t = 1:T
+    entry12_sample_trace_matlab('set_t', t);
 
     % generate hidden states and paths for each agent or model
     %======================================================================
@@ -875,6 +879,7 @@ for t = 1:T
 
             % sample policy
             %--------------------------------------------------------------
+            entry12_sample_trace_matlab('set_pu_len', numel(Pu));
             k     = spm_sample(Pu);
             for f = 1:Nf(m)
 
@@ -3308,12 +3313,17 @@ process = all(isfield(MDP,{'GA','GB','GU'}));
 function i  = spm_sample(P)
 % log of numeric array plus a small constant
 %--------------------------------------------------------------------------
+P_in = P;
 if islogical(P)
     i = find(P);
     i = i(randperm(numel(i),1));
 else
     P = cumsum(P);
     i = find(rand*P(end) < P,1);
+end
+global rgms_entry12_trace_active
+if ~isempty(rgms_entry12_trace_active) && rgms_entry12_trace_active
+    entry12_sample_trace_matlab('log', P_in, i);
 end
 
 function A  = spm_log(A)

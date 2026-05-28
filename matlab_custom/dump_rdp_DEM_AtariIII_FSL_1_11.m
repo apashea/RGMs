@@ -17,6 +17,10 @@
 % Output: tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_rdp.mat
 %   Variables: RDP (nested), meta (struct). MAT-file v7 for scipy.io.loadmat.
 %
+% Also writes tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_plot_ctx.mat
+%   Variables: RGB, GDP, Nm, Nr, Nc, Nd, C, Sc, plot_meta — MATLAB-native plot inputs
+%   (see Atari_plotting.md § Plot artifact registry).
+%
 % Requires SPM on path the same way you run the stock demo.
 
 rng(2)
@@ -150,3 +154,13 @@ meta.matlab_release = version;
 
 save(outMat,'RDP','meta','-v7');
 fprintf(1,'Saved FSL 1-11 oracle: %s\n', outMat);
+
+% Plot context for *PLOT entries (12PLOT and later); same run as RDP above.
+plotCtxMat = fullfile(outDir,'DEMAtariIII_fsl_1_11_plot_ctx.mat');
+plot_meta = struct();
+plot_meta.capture_script = mfilename;
+plot_meta.rng_seed = 2;
+plot_meta.rdp_mat = outMat;
+plot_meta.purpose = 'MATLAB-native inputs for Atari plotting oracles (RGB, GDP, Nm); see Atari_plotting.md';
+save(plotCtxMat,'RGB','GDP','Nm','Nr','Nc','Nd','C','Sc','plot_meta','-v7');
+fprintf(1,'Saved FSL 1-11 plot context: %s\n', plotCtxMat);
