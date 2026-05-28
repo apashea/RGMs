@@ -1,6 +1,6 @@
 # Entry 12 MATLAB subentry `.mat` capture
 
-**Goal (project):** Faithful, **reusable** Python **`spm_MDP_VB_XXX.py`** for full **`DEM_AtariIII.m`** (four VB call sites), other DEM drivers, and future Python-native simulations. **Phase 1** sign-off is script **4** exit **0** per **`tag`** on paired **1b/3** fixtures. **Green today:** all four tags — **`rgms_canonical`**, **`rgms_atari_call2`**, **`rgms_atari_call3`**, **`rgms_atari_call4`** (script **4** exit **0** each; quad-tag **`3→4`** after solver edits). Authoritative narrative: **`Atari_example.md`** (§ **Multi-tag regression gate**, § **Call 3**, § **Call 4 — next capture**).
+**Goal (project):** Faithful, **reusable** Python **`spm_MDP_VB_XXX.py`** for full **`DEM_AtariIII.m`** (four VB call sites), other DEM drivers, and future Python-native simulations. **Phase 1** sign-off is script **4** exit **0** per **`tag`** on paired **1b/3** fixtures. **Current gate:** all four tags green — **`rgms_canonical`**, **`rgms_atari_call2`**, **`rgms_atari_call3`**, **`rgms_atari_call4`**. After shared solver edits, re-run quad-tag **`3→4`**. Authoritative narrative: **`Atari_example.md`** (§ **Multi-tag regression gate**, § **Call 3**, § **Call 4 — captured**).
 
 **This folder is instrumentation only** — capture fork and driver for **`.mat`** fixtures, not the translation target.
 

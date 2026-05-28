@@ -46,7 +46,7 @@ if nargin >= 1 && ~isempty(mode) && strcmpi(strtrim(mode), 'refresh_call2')
     end
     S = load(rdpPath, 'RDP');
     fprintf(1, '[entry12 dump] refresh_call2 started %s\n', datestr(now, 31));
-    entry12_dump_one_vb_call_(S.RDP, 'rgms_atari_call2', outDir, rdpPath);
+    entry12_dump_one_vb_call_(S.RDP, 'rgms_atari_call2', outDir, rdpPath, 'refresh_call2');
     fprintf(1, '[entry12 dump] refresh_call2 done\n');
     return;
 end
@@ -63,7 +63,7 @@ if nargin >= 1 && ~isempty(mode) && strcmpi(strtrim(mode), 'capture_call3')
     MDP = entry12_dem_active_inference_nr_loop_(MDP, GDP, Ne, C, Nm, NT, NS, NR);
     RDP3 = entry12_dem_call3_rdp_post_loop_(MDP, C, NS);
     entry12_count_and_save_vb_rand_k_(RDP3, outDir, 'rgms_atari_call3');
-    entry12_dump_one_vb_call_(RDP3, 'rgms_atari_call3', outDir, 'inline_nr_loop_post_call3');
+    entry12_dump_one_vb_call_(RDP3, 'rgms_atari_call3', outDir, 'inline_nr_loop_post_call3', 'capture_call3');
     fprintf(1, '[entry12 dump] capture_call3 finished — elapsed %.1f s (%.2f min)\n', ...
         toc(tRun), toc(tRun) / 60);
     return;
@@ -81,7 +81,7 @@ if nargin >= 1 && ~isempty(mode) && strcmpi(strtrim(mode), 'capture_call4')
     MDP = entry12_dem_active_inference_nr_loop_(MDP, GDP, Ne, C, Nm, NT, NS, NR);
     RDP4 = entry12_dem_call4_rdp_post_loop_(MDP, C, NS);
     entry12_count_and_save_vb_rand_k_(RDP4, outDir, 'rgms_atari_call4');
-    entry12_dump_one_vb_call_(RDP4, 'rgms_atari_call4', outDir, 'inline_nr_loop_post_call4');
+    entry12_dump_one_vb_call_(RDP4, 'rgms_atari_call4', outDir, 'inline_nr_loop_post_call4', 'capture_call4');
     fprintf(1, '[entry12 dump] capture_call4 finished — elapsed %.1f s (%.2f min)\n', ...
         toc(tRun), toc(tRun) / 60);
     return;
@@ -105,7 +105,7 @@ if legacyLoad
     RDP = S.RDP;
     rdpSource = rdpMat;
     fprintf(1, '[entry12 dump] legacy load call 1 RDP from %s\n', rdpMat);
-    entry12_dump_one_vb_call_(RDP, 'rgms_canonical', outDir, rdpSource);
+    entry12_dump_one_vb_call_(RDP, 'rgms_canonical', outDir, rdpSource, 'legacy_call1');
     if skipCall2
         fprintf(1, '[entry12 dump] SKIP_CALL2 — finished legacy call 1 only\n');
         return;
@@ -123,13 +123,13 @@ RDP = spm_mdp2rdp(RDP);
 RDP.T = 64;
 rdpSource = 'inline_rng2_DEM_AtariIII_entry11';
 
-entry12_dump_one_vb_call_(RDP, 'rgms_canonical', outDir, rdpSource);
+entry12_dump_one_vb_call_(RDP, 'rgms_canonical', outDir, rdpSource, 'inline_call1');
 
 if ~skipCall2
     fprintf(1, '[entry12 dump] elapsed %.1f s — continue DEM_AtariIII active inference (game 1)\n', toc(tRun));
     RDP2 = entry12_dem_call2_rdp_game1_(MDP, GDP, Ne, C);
     entry12_count_and_save_vb_rand_k_(RDP2, outDir, 'rgms_atari_call2');
-    entry12_dump_one_vb_call_(RDP2, 'rgms_atari_call2', outDir, 'inline_after_call1_game1');
+    entry12_dump_one_vb_call_(RDP2, 'rgms_atari_call2', outDir, 'inline_after_call1_game1', 'inline_call2');
 end
 
 fprintf(1, '[entry12 dump] finished %s — total elapsed %.1f s (%.2f min)\n', ...
@@ -137,7 +137,7 @@ fprintf(1, '[entry12 dump] finished %s — total elapsed %.1f s (%.2f min)\n', .
 end
 
 
-function entry12_dump_one_vb_call_(RDP, tag, outDir, rdpSource)
+function entry12_dump_one_vb_call_(RDP, tag, outDir, rdpSource, captureMode)
 % One VB invocation + Entry 12 subentry capture for ``tag``.
 
 setenv('RGMS_ENTRY12_CAPTURE_RUN_TAG', tag);
@@ -151,6 +151,7 @@ OPTIONS = entry12_default_options_sp_mdp_vb_xxx();
 meta = struct();
 meta.run_tag = tag;
 meta.rdp_source = rdpSource;
+meta.capture_mode = captureMode;
 meta.capture_script = which('DEMAtariIII_entry12_dump_all_subentries');
 meta.matlab_release = version;
 meta.timestamp = datestr(now, 31);
@@ -195,6 +196,74 @@ metaPdp.source_rdp_mat = rdpOut;
 metaPdp.run_tag = tag;
 save(pdpOut, 'PDP', 'meta', '-v7');
 fprintf(1, '[entry12 dump] tag=%s wrote %s\n', tag, pdpOut);
+
+entry12_write_signoff_manifest_(tag, outDir, captureMode, K, numel(vb_rand_buf), rdpOut, pdpOut, randOut);
+end
+
+
+function entry12_write_signoff_manifest_(tag, outDir, captureMode, K, vbRandLen, rdpMat, pdpMat, randBufMat)
+manifest = struct();
+manifest.manifest_schema = 2;
+manifest.tag = tag;
+manifest.matlab_release = version;
+manifest.capture_mode = captureMode;
+manifest.timestamp = datestr(now, 31);
+manifest.K = double(K);
+manifest.vb_rand_buf_len = double(vbRandLen);
+manifest.paths = struct( ...
+    'rdp_mat', rdpMat, ...
+    'pdp_mat', pdpMat, ...
+    'rand_buf_mat', randBufMat);
+manifest.checksums = struct( ...
+    'rdp_mat_sha256', entry12_sha256_file_hex_(rdpMat), ...
+    'pdp_mat_sha256', entry12_sha256_file_hex_(pdpMat), ...
+    'rand_buf_mat_sha256', entry12_sha256_file_hex_(randBufMat), ...
+    'subentry_mat', entry12_subentry_mat_checksums_(tag, outDir));
+
+manifestPath = fullfile(outDir, sprintf('entry12_signoff_manifest_%s.json', tag));
+fid = fopen(manifestPath, 'w');
+if fid < 0
+    error('Could not open manifest for write: %s', manifestPath);
+end
+cleanupObj = onCleanup(@() fclose(fid)); %#ok<NASGU>
+fprintf(fid, '%s\n', jsonencode(manifest, 'PrettyPrint', true));
+fprintf(1, '[entry12 dump] tag=%s wrote %s\n', tag, manifestPath);
+end
+
+
+function sub = entry12_subentry_mat_checksums_(tag, outDir)
+% SHA-256 hex for ``DEMAtariIII_entry12_<tag>_12{A–I}.mat`` present after script **1b**.
+codes = {'12A','12B','12C','12D','12E','12F','12G','12H','12I'};
+sub = struct();
+for i = 1:numel(codes)
+    code = codes{i};
+    p = fullfile(outDir, sprintf('DEMAtariIII_entry12_%s_%s.mat', tag, code));
+    if isfile(p)
+        sub.(code) = entry12_sha256_file_hex_(p);
+    end
+end
+end
+
+
+function hex = entry12_sha256_file_hex_(path)
+if ~isfile(path)
+    error('Missing file for checksum: %s', path);
+end
+bytes = fileread_uint8_(path);
+md = java.security.MessageDigest.getInstance('SHA-256');
+md.update(bytes);
+d = typecast(md.digest(), 'uint8');
+hex = lower(reshape(dec2hex(d, 2).', 1, []));
+end
+
+
+function bytes = fileread_uint8_(path)
+fid = fopen(path, 'r');
+if fid < 0
+    error('Could not open file for checksum read: %s', path);
+end
+cleanupObj = onCleanup(@() fclose(fid)); %#ok<NASGU>
+bytes = fread(fid, Inf, '*uint8');
 end
 
 

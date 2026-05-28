@@ -418,6 +418,15 @@ def main() -> int:
     fp = out["trace_summary"].get("first_policy_uniform_multi")
     if fp:
         print("[entry12 trace] first multi-action policy row:", json.dumps(fp, indent=2))
+    coh = out.get("coherence", {})
+    if not coh.get("unused_draws_ok") or not coh.get("sample_calls_match"):
+        print(
+            "[entry12 draw audit] FAIL: unused_draws_ok="
+            f"{coh.get('unused_draws_ok')} sample_calls_match="
+            f"{coh.get('sample_calls_match')}",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 

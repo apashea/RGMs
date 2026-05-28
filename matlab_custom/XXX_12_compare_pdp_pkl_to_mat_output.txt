@@ -34,6 +34,7 @@ See ``Atari_example.md`` § **Entry 12** (XXX 12 / Validation 12 table).
 [entry12 signoff] pdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_pdp.pkl (ok)
 [entry12 signoff] rand_k: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_vb_rand_K_rgms_atari_call4.mat (ok)
 [entry12 signoff] rand_buf: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call4.mat (ok)
+[entry12 signoff] manifest: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_signoff_manifest_rgms_atari_call4.json (ok)
 [XXX 12 validation] --- causal 12D→12E→12F boundaries (first in run) ---
   12D.in
   12E.in

@@ -1,0 +1,46 @@
+{
+  "tag": "rgms_atari_call4",
+  "matlab_release": "24.2.0.3157250 (R2024b) Update 8",
+  "capture_mode": "capture_call4",
+  "timestamp": "2026-05-28 08:02:16",
+  "K": 4096,
+  "vb_rand_buf_len": 4096,
+  "paths": {
+    "rdp_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_XXX_12_rgms_atari_call4_rdp.mat",
+    "pdp_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_XXX_12_rgms_atari_call4_pdp.mat",
+    "rand_buf_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call4.mat"
+  },
+  "checksums": {
+    "rdp_mat_sha256": "9bc5ce772c077bb930d556e1afbd1d9e3aaab55eca7bad82bc513eca477c7959",
+    "pdp_mat_sha256": "cd0f43ba9d9b8a1c7d55b5a1ce3fdd5279874183d89f9addf94c0d59e477ef79",
+    "rand_buf_mat_sha256": "6e291ccc595ed97686f038ecf37e44cefb36fb3350fed4682f94b7f5347bdc04",
+    "subentry_mat": {
+      "12A": "694aa276e26c1d3ea98ecee9b875b145ca24d886a600f3d46445aec494cdd6a4",
+      "12B": "12f460f157562cf17ac52a7a80eaecb1ce4969c89836b95aaebb12d67b578285",
+      "12C": "5b13535b3ceb41054b8a50c3bae7535f7e066f7252bff360e33a737a5655a59c",
+      "12D": "563914692b6471b6bf58fd4331d319356c80868116258fbe3b969a97adb3a881",
+      "12E": "73cafe0f32d296ab6d2b3ab6559c9b00b7ceb2a537e9a6404e963707f3f5e232",
+      "12F": "96ffa8d999fd3f9765b69d89b9e45dd7df11d304e4a644a1c3d96ad61aa7d823",
+      "12G": "266b0898f2992263a7d71a82900cb4724b7049f152ddbdfe02bef1dc4a566c44",
+      "12H": "891237f9134e707312065bd008358106baa1ae5cf66c418c8539e74e80ea1941",
+      "12I": "69c00cb3a915fa1550201057707f73b1e9e0aa399a2e6dad87b2db556ee21269"
+    },
+    "subentry_pkl": {
+      "12A": "007e08cad5a6e152dac8097e385e5599883e15550314c9121509175c43d5cf82",
+      "12B": "f9ed57e5365ac37450595ac7026e01175e09e8e60b7f50e4994cf1be287b88f6",
+      "12C": "41c4c10d5707bdf68293d77aaa42ccf52d4b0dbda2d3f742f349ed1852ab80cc",
+      "12D": "2eded3be12fa27ead15fa72d36124c2b4585207aad3b30b9f0de12f4e4aa0ae7",
+      "12E": "caa94ca07148e3498769ca54a268272482ad4026c8601381acfd11945d81d280",
+      "12F": "9afd3d0e1579e3f0c17f84b489617f14181ed8b30c7a3becf4fe9895eb5f3458",
+      "12G": "aa66f8f5fec4037c7683ec45652e63cc2fe34f22b5fdd7e60326788c39020730",
+      "12H": "89410146230756a1707faee780a08d6378cc92a5028bf6894562371c8fded5d2",
+      "12I": "40a31244a159c0c1d95b89d4b8146c5ba9f26cd84168f4feab744e5b0b01dcad"
+    },
+    "rdp_pkl_sha256": "17acc72520497ee981b2d2a17eecfdce161e0dc6ebebb657526ffd882c8fe13f",
+    "pdp_pkl_sha256": "5bf4c81fc1d93d251991bfee0274b0bbf48d8ac97fa22e7f1b3e8e153378294a"
+  },
+  "manifest_schema": 2,
+  "script3": {
+    "timestamp": "2026-05-28T18:18:39Z"
+  }
+}

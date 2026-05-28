@@ -12,6 +12,118 @@ Inserted **`### ENTRY 1-11 — full Python pipeline gate (before Entry 12)`** af
 
 ---
 
+## 2026-05-28 — Entry 12: sign-off manifest guardrail (minimal) + full-chain rerun
+
+**User:** Implement only minimal artifact-chain integrity guardrails (manifest + coherence checks + preflight provenance) and rerun full Entry 12 framework.
+
+**Code changes (minimal):**
+- `matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`: script **1b** now writes per-tag `entry12_signoff_manifest_<tag>.json` with `tag`, `matlab_release`, `capture_mode`, `K`, `vb_rand_buf_len`, and SHA-256 checksums of `rdp.mat` / `pdp.mat` / `rand_buf.mat`.
+- `python_src/toolbox/DEM/entry12_atari_calls.py`: added manifest path/load/checksum helpers and integrated manifest coherence into `entry12_assert_signoff_chain_ready`.
+- `tests/oracle/toolbox/DEM/entry12_preflight_vb_rand_k.py`: emits preflight provenance line (`tag`, resolved `rdp_mat`, `sha256_12` digest token).
+
+**Full chain rerun (`tag=rgms_atari_call4`):**
+- **1a**: PASS (`K=4096`), provenance printed.
+- **1b** (`capture_call4`): PASS, manifest written.
+- draw audit: PASS (`unused_draws=0`, `sample_calls_match=true`).
+- **3**: PASS.
+- **4**: PASS — causal **15/15** on paired fixtures; sign-off manifest checks **ok**.
+
+- Files read: `entry12_atari_calls.py`, `entry12_preflight_vb_rand_k.py`, `test_DEM_AtariIII_XXX_12.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `DEMAtariIII_entry12_dump_all_subentries.m`, `XXX_12_compare_pdp_pkl_to_mat_output.txt`
+- Files created: `tests/oracle/toolbox/DEM/fixtures/entry12_signoff_manifest_rgms_atari_call4.json`
+- Files modified: `matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`, `python_src/toolbox/DEM/entry12_atari_calls.py`, `tests/oracle/toolbox/DEM/entry12_preflight_vb_rand_k.py`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-28 — Entry 12: chain + process integrity (manifest schema 2, quad-tag runner)
+
+**User:** Implement tightening items (1) extended artifact manifest for **12A–12I** mat/pkl pairs; (2) single quad-tag **3 → draw audit → coerced 4** runner.
+
+**Code:**
+- `DEMAtariIII_entry12_dump_all_subentries.m`: manifest schema **2** + `checksums.subentry_mat` for **12A–12I** `.mat` at **1b**.
+- `entry12_atari_calls.py`: `entry12_refresh_manifest_script3_checksums`, `entry12_upgrade_manifest_schema2_mat_only`, extended `entry12_assert_manifest_coherent` (mat + pkl subentries); `entry12_assert_draw_audit_summary`.
+- `test_DEM_AtariIII_XXX_12.py`: `require_script3_pkls=False` at start; refresh manifest after pickle writes.
+- `entry12_draw_index_audit.py`: exit **1** when replay coherence fails.
+- `tests/oracle/toolbox/DEM/entry12_quad_tag_signoff.py`: quad-tag runner (`--upgrade-manifest-mat`, `--skip-draw-audit`).
+- `tests/oracle/toolbox/DEM/test_entry12_signoff_manifest.py`: oracle for call-4 manifest coherence.
+- Docs: `Atari_example.md` (manifest + runner rows), `12DEF.md` (next priority).
+
+**On-disk:** Upgraded schema-2 manifests for all four tags from existing fixtures (mat + pkl checksums).
+
+- Files read: `entry12_atari_calls.py`, `XXX_12_compare_pdp_pkl_to_mat.py`, `DEMAtariIII_entry12_dump_all_subentries.m`
+- Files created: `tests/oracle/toolbox/DEM/entry12_quad_tag_signoff.py`, `tests/oracle/toolbox/DEM/test_entry12_signoff_manifest.py`
+- Files modified: `python_src/toolbox/DEM/entry12_atari_calls.py`, `matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`, `tests/oracle/toolbox/DEM/test_DEM_AtariIII_XXX_12.py`, `matlab_custom/entry12_draw_index_audit.py`, `Atari_example.md`, `12DEF.md`, `logs/log_0.md`, `tests/oracle/toolbox/DEM/fixtures/entry12_signoff_manifest_*.json` (content refresh)
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-28 — Entry 12: quad-tag sign-off runner executed (all tags PASS)
+
+**User:** Proceed with framework next steps after manifest schema **2** + quad runner implementation.
+
+**Run:** `python tests/oracle/toolbox/DEM/entry12_quad_tag_signoff.py` — exit **0**, ~23 min wall.
+
+| Tag | Script **3** | Draw audit | Script **4** (coerced) |
+|-----|--------------|------------|-------------------------|
+| `rgms_canonical` | PASS (~32 s) | `unused_draws=0`, `sample_calls_match=true` | PASS |
+| `rgms_atari_call2` | PASS | PASS | PASS |
+| `rgms_atari_call3` | PASS | PASS | PASS |
+| `rgms_atari_call4` | PASS (~76 s) | PASS | PASS |
+
+**Tee:** `matlab_custom/entry12_quad_tag_signoff_output.txt` (overwritten).
+
+- Files read: quad runner terminal output
+- Files created: `matlab_custom/entry12_quad_tag_signoff_output.txt`
+- Files modified: `12DEF.md`, `Atari_example.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-28 — Entry 12: doc hygiene — manifest iteration log correction
+
+**User:** Ensure docs do not treat a one-off script **4** red (manifest-guardrail rerun) as open work.
+
+**Change:** Corrected **2026-05-28** manifest iteration log: script **4** **PASS** (causal **15/15**). Grep: no other `*.md` carried that stale FAIL line.
+
+- Files read: `logs/log_0.md` (grep across `*.md`)
+- Files created: none
+- Files modified: `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-28 — Entry 12: core-doc historical pruning and reorganization
+
+**User:** Tighten core docs so historical content is explicitly classified, concise, and limited to durable/extensible lessons.
+
+**Docs:** `12DEF.md` pruned and reorganized: converted verbose stale/hypothesis-heavy sections into concise **Resolved patterns** and explicit **Historical notes**; updated residual “multi-tag call1–3” wording to quad-tag current state. `AGENTS.md` Entry 12 policy line updated from stale triple-tag/call4-next language to current four-tag gate. `README_entry12_matlab_capture.md` wording updated to “Call 4 — captured” and current quad-tag regression rule.
+
+- Files read: `12DEF.md`, `Atari_example.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `AGENTS.md`
+- Files created: none
+- Files modified: `12DEF.md`, `AGENTS.md`, `matlab_custom/entry12/README_entry12_matlab_capture.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
+## 2026-05-28 — Entry 12: `12DEF.md` coherence cleanup after call-4 sign-off
+
+**User:** Thoroughly review `12DEF.md` and update it to accurately reflect current status and framework.
+
+**Docs:** Removed remaining stale wording after call-4 capture: holistic gate now explicitly all four tags, `rgms_canonical`/call-2 next-step text now quad-tag, and proceed-plan steps updated from “call4 next” to “call4 done” with a new current step for ongoing quad-tag regression discipline.
+
+- Files read: `12DEF.md`
+- Files created: none
+- Files modified: `12DEF.md`, `logs/log_0.md`
+- Files deleted: none
+- Shared files touched: no
+
+---
+
 ## 2026-05-27 — Entry 12: `rgms_atari_call4` capture + quad-tag sign-off
 
 **Proof target:** Python `spm_MDP_VB_XXX.py` matches MATLAB VB on Atari FSL `RDP`; Phase 1 done when script **4** exits **0** on paired **1b**/**3** fixtures.

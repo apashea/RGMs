@@ -26,8 +26,10 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from python_src.toolbox.DEM.entry12_atari_calls import (
+    entry12_atari_call_rdp_mat_path,
     entry12_assert_buf_k_coherent,
     entry12_log_signoff_chain,
+    entry12_quick_digest,
     entry12_resolve_run_tag,
     entry12_write_preflight_k,
 )
@@ -36,6 +38,14 @@ from python_src.toolbox.DEM.entry12_atari_calls import (
 def main() -> int:
     tag = entry12_resolve_run_tag()
     entry12_log_signoff_chain(tag, stream=sys.stderr)
+    rdp_mat = entry12_atari_call_rdp_mat_path(tag)
+    if not rdp_mat.is_file():
+        raise FileNotFoundError(f"missing RDP mat for preflight tag {tag!r}: {rdp_mat}")
+    print(
+        f"[entry12 preflight] provenance tag={tag!r} rdp_mat={rdp_mat} "
+        f"sha256_12={entry12_quick_digest(rdp_mat)}",
+        file=sys.stderr,
+    )
     k, out = entry12_write_preflight_k(tag)
     print(f"[entry12 preflight] tag={tag!r} K={k}", file=sys.stderr)
     print(f"[entry12 preflight] wrote {out}", file=sys.stderr)

@@ -40,11 +40,12 @@ If replay coherence is broken, repair RNG alignment before debugging causal reds
 --- RUN OUTPUT (stdout + stderr) — C:\Users\andre\.cursor\RGMs\matlab_custom\test_DEM_AtariIII_XXX_12_output.txt ---
 [entry12 signoff] tag='rgms_atari_call4'
 [entry12 signoff] rdp_mat: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_rdp.mat (ok)
-[entry12 signoff] rdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_rdp.pkl (MISSING)
+[entry12 signoff] rdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_rdp.pkl (ok)
 [entry12 signoff] pdp_mat: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_pdp.mat (ok)
-[entry12 signoff] pdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_pdp.pkl (MISSING)
+[entry12 signoff] pdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_pdp.pkl (ok)
 [entry12 signoff] rand_k: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_vb_rand_K_rgms_atari_call4.mat (ok)
 [entry12 signoff] rand_buf: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call4.mat (ok)
+[entry12 signoff] manifest: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_signoff_manifest_rgms_atari_call4.json (ok)
 [XXX 12] RDP source: tag 'rgms_atari_call4' rdp.mat (1b snapshot)
 [XXX 12] reuse_matlab_draws=True
 [XXX 12] vb_rand_buf: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call4.mat
@@ -58,5 +59,6 @@ If replay coherence is broken, repair RNG alignment before debugging causal reds
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_atari_call4_12G.pkl
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_atari_call4_12H.pkl
 [XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_atari_call4_12I.pkl
-[XXX 12] spm_MDP_VB_XXX wall_s=71.218277
+[XXX 12] spm_MDP_VB_XXX wall_s=73.529983
 [XXX 12] wrote PDP pickle: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rgms_atari_call4_pdp.pkl
+[entry12 signoff] refreshed manifest script3 checksums (9 subentry pkls): C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_signoff_manifest_rgms_atari_call4.json

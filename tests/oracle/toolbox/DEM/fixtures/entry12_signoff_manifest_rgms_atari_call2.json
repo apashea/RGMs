@@ -1,0 +1,39 @@
+{
+  "tag": "rgms_atari_call2",
+  "capture_mode": "upgrade_from_disk",
+  "checksums": {
+    "rdp_mat_sha256": "eb5948d920eb52fb8ceda2e40e7332b5cd86aee9d72b30c2d5b9fc0ab5e846f7",
+    "pdp_mat_sha256": "d389ac42da4f84e8752ead957a7f231bdd15b5d817f853e0d826cd78efddf28f",
+    "rand_buf_mat_sha256": "860dfea425f2d97b5fa17ae65b14a73c0340ff13f7f69d16e1ca435979691df1",
+    "subentry_mat": {
+      "12A": "059e94fa1d137c8c87284177dcfaed120155b2d217925d40eaa9ed9196345932",
+      "12B": "c23315f4184b6420cbfff5a34bf7d187f23d0127dac61c25ee819156d8c0bdc7",
+      "12C": "8ddcdb4bb2b4119a2ba70b14b0a110d407ac13a4f6e0e3faca05013c49eca323",
+      "12D": "350d5e884f51b8b656eff4caf7fd76ba2c32a187c0eba7e20876da070ec805c8",
+      "12E": "4d30acd575fb7008577f27ca1825019e2a504bed8e013b8f5a1f8f203d319fc7",
+      "12F": "d82a82a2ffbc7ad99dfb506291a0145ba21328dc29f4a5f6ff895dd6db0cdfc1",
+      "12G": "bfe09f1931417d2bdfb1c6d0fdee5d7d96b496120020715119fd770933652393",
+      "12H": "38d5eeb6b5663c02abb051ffce749437713f41a25ded00ae6668ba46d9fcfdea",
+      "12I": "c9a18da5592e0e0cecf352ddc12a2d4d73c9cc8c78693b790e093667e3779107"
+    },
+    "subentry_pkl": {
+      "12A": "210024a21e57298244c76b21e0def57680cd35adcda994678b24445e0e485afe",
+      "12B": "087ca8836a0b66a00efc1e1a169da79bfb468decfa40d94fe0fbc021372b633b",
+      "12C": "41e7cd645b4abf1563f6ce1284b67a29349b8c9c00ba30891441be3642656607",
+      "12D": "c4bc3312282196c56aa28df9edf3378b708bcad8a660ad67d016a940b7ada5ce",
+      "12E": "c82657474737aa21b4bb2b082931ead9b157298217543c42df6217ff7b39fb1f",
+      "12F": "92d405fde36f05eb274683de1e6fbf9626072f0b78146cbe97bd6945d69c8bcf",
+      "12G": "6ac45f4ff5d5f1c2b2c80d9aa2efbef1faa7262792f72c05c7d376c28d171c1c",
+      "12H": "4a26820b17bffcc32c9380816c44bc7b4b18206d8224c96dd9b60235ce73f88d",
+      "12I": "2cba0ba21d1e754da769a1a201794a503d363f7a347c77be870d9874153b8eb9"
+    },
+    "rdp_pkl_sha256": "c8dc7b71e92a7a36a618e2c95f0cc510b491c54cf791110ee5ad58d35c788da5",
+    "pdp_pkl_sha256": "cd022921170c4f668c7999682e1497b523ba5450d967ebe8dc842f08030a6e29"
+  },
+  "K": 4096,
+  "vb_rand_buf_len": 4096,
+  "manifest_schema": 2,
+  "script3": {
+    "timestamp": "2026-05-28T18:05:05Z"
+  }
+}

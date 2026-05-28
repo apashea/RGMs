@@ -328,13 +328,18 @@ def test_xxx_12_fsl_rdp_to_pdp_pkl() -> None:
             entry12_assert_buf_k_coherent,
             entry12_assert_signoff_chain_ready,
             entry12_log_signoff_chain,
+            entry12_refresh_manifest_script3_checksums,
             entry12_resolve_run_tag,
         )
 
         tag_env = str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip()
         tag_use = tag_env or entry12_resolve_run_tag()
         if tag_env or _xxx12_reuse_matlab_draws():
-            entry12_assert_signoff_chain_ready(tag_use, require_rand_buf=_xxx12_reuse_matlab_draws())
+            entry12_assert_signoff_chain_ready(
+                tag_use,
+                require_rand_buf=_xxx12_reuse_matlab_draws(),
+                require_script3_pkls=False,
+            )
         paths = entry12_log_signoff_chain(tag_use, stream=sys.stderr)
 
         src = "FSL RDP mat" if _xxx12_rdp_from_mat() else "FSL context PKL"
@@ -369,6 +374,7 @@ def test_xxx_12_fsl_rdp_to_pdp_pkl() -> None:
         assert isinstance(pdp, dict)
         _dump_xxx12_pdp_pkl(pdp)
         _xxx12_run_trace("after PDP pickle write")
+        entry12_refresh_manifest_script3_checksums(tag_use)
     finally:
         sys.stderr = old_err
         sys.stdout = old_out
