@@ -1,0 +1,40 @@
+FSL backward Track A — integrated ``run_dem_atariiii`` 1–11 + Entry 12 VB.
+
+**Entries 1–11:** ``RGMS_FSL_BACKWARD_REPLAY_MATLAB_DRAWS=1`` (default) — ``dem_atari_rand_buf`` through ``K_11``.
+
+**Entry 12:** ``vb_rand_buf`` replay on ``spm_MDP_VB_XXX`` (canonical ``rgms_canonical`` tag).
+
+Writes ``fixtures/DEMAtariIII_fsl_backward_entry1_12_ctx.pkl`` and VB dumps under
+``fixtures/fsl_backward_entry1_12_integration_vb/``.
+
+Validate with ``fsl_backward_validate_entry1_12_integration.py``.
+
+Report: ``matlab_custom/fsl_backward_run_entry1_12_integration_output.txt``
+
+--- RUN OUTPUT — C:\Users\andre\.cursor\RGMs\matlab_custom\fsl_backward_run_entry1_12_integration_output.txt ---
+[Track A 1-12] tag='rgms_canonical' dem_atari replay=1 vb_out=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb
+[DEM_AtariIII entry timing] ENTRY1 total_s=0.002581
+[DEM_AtariIII entry timing] ENTRY2 total_s=0.158971
+[DEM_AtariIII entry timing] ENTRY3 total_s=1613.966150
+[DEM_AtariIII entry timing] ENTRY4 total_s=14.982722
+[DEM_AtariIII entry timing] ENTRY5 total_s=0.016301
+[DEM_AtariIII entry timing] ENTRY6 total_s=0.004966
+[DEM_AtariIII entry timing] ENTRY7 total_s=37.203624
+[DEM_AtariIII entry timing] ENTRY8 total_s=431.711736
+[DEM_AtariIII entry timing] ENTRY9 total_s=767.620420
+[DEM_AtariIII entry timing] ENTRY10 total_s=31.836125
+[DEM_AtariIII entry timing] ENTRY11 total_s=0.243232
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12A.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12B.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12C.pkl
+C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\spm_VBX.py:41: RuntimeWarning: divide by zero encountered in log
+  return np.fmax(np.log(np.asarray(A, dtype=float)), -32.0)
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12D.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12E.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12F.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12G.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12H.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_entry12_rgms_canonical_12I.pkl
+[Track A 1-12] K_11=40001 dem_atari_used=40001 vb_wall_s=31.296
+[Track A 1-12] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry1_12_ctx.pkl
+[Track A 1-12] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\fsl_backward_entry1_12_integration_vb\DEMAtariIII_fsl_backward_entry1_12_pdp.pkl

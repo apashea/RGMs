@@ -1,0 +1,3 @@
+[call4 overlay diag] spine assemble (template_mat overlay) vs MATLAB call4 assembly
+MDP_post_nr=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_MDP_post_nr.mat
+RESULT: PASS — overlay-path call4 RDP ≡ MATLAB call4 RDP

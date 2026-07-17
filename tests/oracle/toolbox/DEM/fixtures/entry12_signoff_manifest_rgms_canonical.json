@@ -2,19 +2,19 @@
   "tag": "rgms_canonical",
   "capture_mode": "upgrade_from_disk",
   "checksums": {
-    "rdp_mat_sha256": "a790ca9d7417922237863d8e24be6bce67649299b971f8fcc90ad34e300b3231",
-    "pdp_mat_sha256": "9d0302c38f504e2f63ef620dca4e3fec4a16c5b3d25388e79eb960b50d383689",
-    "rand_buf_mat_sha256": "b1f6052da8080ee92ad7f5f6f44ab4005fc1abcebd2ea84f117cdce119701b5a",
+    "rdp_mat_sha256": "cb2112ef73f55e836798ec950b8ea4e93e1ce2c45434292769466d59d0a43462",
+    "pdp_mat_sha256": "ef296d7017ce752667b58bda19b300870675f71a45edad38bea9d949c488e61d",
+    "rand_buf_mat_sha256": "704fd372e8507c5aefe7d179c9be7e05c1bbb0250a14cc2f187fe0b6cd0aed1a",
     "subentry_mat": {
-      "12A": "3de4a285b47615e9b2681c172bc05fc7b222e142df27fc9bd523d650d92664d6",
-      "12B": "1c90dfc6931aa8fe43c23857530db3ad136d3b0e0b85bec7d2a9a0de85c841ab",
-      "12C": "0c6286cfb1bc9d3ff3af2869dc96b31e9093aa51aa0be02a18d9067b9182d121",
-      "12D": "9059c1977c1cd2d51c0e3cf49d3c6dab4b583df69f9c7d58eaa887c5026ecc5a",
-      "12E": "7bc265a8fdc6af58f4d4f56a8afa4995912496f8b58316042498307ef4547fc5",
-      "12F": "afcf6c7ff153441c79693dd2c87a02eeb5b9bc9473d5354bc8e93417bc4352ed",
-      "12G": "cbdc1ba6312e53b5003bf239af072c33eb0558a2c044ecf588a8c1ba73d3a770",
-      "12H": "4207cb5caef7738cad03d4616fde784da1c03bb83db4fc36e69684d7ca587cff",
-      "12I": "3809d7033b0b45c193188bc107c02b563121f3715babb20ed1336b54296c1263"
+      "12A": "1d91eed923fba30e36a13438b9e5cff3bf0f74ec610993141a4e1c9e4e7838bc",
+      "12B": "3af596d839f36f6474ce0fa4b5dfe5201d8df2c0f08728f205a8b8c413b3dacc",
+      "12C": "3e25aa6cedb77023a7d9edef64b52560135aecb4d02d0ad67e75ab99e9100e33",
+      "12D": "cba5a1eac0d903b7a1ec091b8469ce26b10859eaa71d72c7b0dc747a21f737b8",
+      "12E": "895c97f3ce7decfd81a1bedff57a52b14e0fc8483d6dbee8e50ff4de26cf8d5a",
+      "12F": "92b9a68861ad05fb161be5cedf198172e91e06d5664663d9dc62af6902968b3a",
+      "12G": "99e8903fa2dc45214ee777325494111601684b31773149bbfaf20f5f64d794cc",
+      "12H": "fb922be7cc86766fc43b5e9f81d979a21e181f6bcabfc23c2f5cf0e024f28624",
+      "12I": "861678c4209d0ad1ea831c76b7e39903a2b765774edb9348f0a2393b790e9cff"
     },
     "subentry_pkl": {
       "12A": "f60b8ab46bd243e8f16caebee9d925c220586673ca839b4c3f6dbb5124724924",
@@ -34,6 +34,6 @@
   "vb_rand_buf_len": 27263,
   "manifest_schema": 2,
   "script3": {
-    "timestamp": "2026-05-28T18:01:36Z"
+    "timestamp": "2026-06-04T11:36:52Z"
   }
 }

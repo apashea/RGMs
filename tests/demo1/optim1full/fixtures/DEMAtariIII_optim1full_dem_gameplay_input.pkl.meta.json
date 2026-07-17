@@ -1,0 +1,27 @@
+{
+  "boundary": "generate",
+  "ledger_protocol": "optim1full_scalar_rand_log_v1",
+  "matlab_pdp": {
+    "mtime_ns": 1784202533112539000,
+    "name": "DEMAtariIII_optim1full_dem_gameplay_matlab_pdp.mat",
+    "nbytes": 1220579,
+    "path_rel": "tests/demo1/optim1full/fixtures/DEMAtariIII_optim1full_dem_gameplay_matlab_pdp.mat"
+  },
+  "schema": "optim1full_spine_pkl_v1",
+  "site_id": "dem_gameplay",
+  "vb_dev_optim": true,
+  "vb_modules": [
+    {
+      "mtime_ns": 1783196675280355000,
+      "name": "spm_MDP_VB_XXX_optim.py",
+      "nbytes": 1106,
+      "path_rel": "python_src/optimized/toolbox/DEM/spm_MDP_VB_XXX_optim.py"
+    },
+    {
+      "mtime_ns": 1784050212726903000,
+      "name": "vb_induction_optim.py",
+      "nbytes": 31273,
+      "path_rel": "python_src/optimized/toolbox/DEM/vb_induction_optim.py"
+    }
+  ]
+}

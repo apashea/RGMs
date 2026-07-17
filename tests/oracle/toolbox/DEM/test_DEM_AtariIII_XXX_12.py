@@ -188,7 +188,7 @@ def _xxx12_pdp_pkl_out_path() -> Path:
         from python_src.toolbox.DEM.entry12_atari_calls import entry12_signoff_artifact_paths
 
         return entry12_signoff_artifact_paths(tag)["pdp_pkl"]
-    return Path(__file__).resolve().parent / "fixtures" / "DEMAtariIII_XXX_12_pdp.pkl"
+    return _xxx12_out_dir() / "DEMAtariIII_XXX_12_pdp.pkl"
 
 
 def _xxx12_out_dir() -> Path:

@@ -1,0 +1,45 @@
+{
+  "utc": "2026-06-04T21:39:46.349435+00:00",
+  "mkl_probe": false,
+  "n_blocks": 58,
+  "known_fail_hashes": [
+    "2d5f8b838be81f21",
+    "4ab4f22de6228a3a",
+    "6abd2a358966b834",
+    "7d978bc6b89bde7b",
+    "7f1469f5003eebf1",
+    "866ab1a9b2265fd6",
+    "a03d7da5d5c09bab"
+  ],
+  "backends": [
+    {
+      "label": "scipy_eig",
+      "order_ok": 51,
+      "jmax_ok": 58,
+      "n": 58,
+      "fail_group_absv_tie_mean": 67.85714285714286,
+      "pass_group_absv_tie_mean": 23.058823529411764
+    },
+    {
+      "label": "numpy_eig",
+      "order_ok": 51,
+      "jmax_ok": 58,
+      "n": 58,
+      "fail_group_absv_tie_mean": 67.85714285714286,
+      "pass_group_absv_tie_mean": 23.058823529411764
+    },
+    {
+      "label": "lapack_dgeev_balanced",
+      "order_ok": 51,
+      "jmax_ok": 58,
+      "n": 58,
+      "fail_group_absv_tie_mean": 67.85714285714286,
+      "pass_group_absv_tie_mean": 23.058823529411764
+    }
+  ],
+  "structure_note": "Seven fail blocks show higher principal-column |abs| tie counts than passing blocks; all tested OpenBLAS-family solvers score 51/58 order.",
+  "toolchain_leads": [
+    "MATLAB-linked BLAS/LAPACK (e.g. MKL) build of geevx/nobalance \u2014 not in rgms SciPy",
+    "Compare live MATLAB eig vectors (Engine probe \u00a728) \u2014 post-process OK at 58/58"
+  ]
+}

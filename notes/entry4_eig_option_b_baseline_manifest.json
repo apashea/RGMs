@@ -1,0 +1,120 @@
+{
+  "experiment_id": "entry4_eig_option_b_vendored_dgeevx",
+  "captured_utc": "2026-06-04T23:41:07.397311+00:00",
+  "git_branch": "andrew",
+  "git_commit": "af8e2b72d95b3edafbe1aa93a88c98af914763c7",
+  "policy": "production spm_rgm_group default eig=scipy frozen until B3 58/58",
+  "files": {
+    "python_src/toolbox/DEM/spm_rgm_group.py": {
+      "sha256": "4e47e51cc77353c5c817cc76ecf6356d2cda3c717b7cc9f1fe039262045a0284",
+      "bytes": 18079,
+      "group": "production_compute_frozen"
+    },
+    "python_src/toolbox/DEM/spm_faster_structure_learning.py": {
+      "sha256": "50388953b0949bf41697d3e22283b85a01311a8ccaf8f3172bdf6cd7452c13fd",
+      "bytes": 22981,
+      "group": "production_compute_frozen"
+    },
+    "python_src/toolbox/DEM/spm_RDP_sort.py": {
+      "sha256": "f93b2a3345d178277b6fd3dcd96dc6b9053ad29ab6487b49e84c9d7ab002d860",
+      "bytes": 3931,
+      "group": "production_compute_frozen"
+    },
+    "matlab_compat.py": {
+      "sha256": "699bf53c9c338ec5fcb6b0f42943f42abdc11e444a3158c5363591e8a101971c",
+      "bytes": 7825,
+      "group": "production_compute_frozen"
+    },
+    "python_src/utils/eig_nobalance.py": {
+      "sha256": "86d45d1454ecb8052f95d0190245ca91c830a585f3f365c56a44ac2025174156",
+      "bytes": 10325,
+      "group": "experiment_utils_may_change"
+    },
+    "python_src/utils/eig_layout_research.py": {
+      "sha256": "d8f5aab618085ec876ac7de1bc6ee3d2e32159bebb0cf739ec97c26f6253e214",
+      "bytes": 10245,
+      "group": "experiment_utils_may_change"
+    },
+    "python_src/utils/eig_principal_fixture.py": {
+      "sha256": "6f259f75033fc0f2806b1bb32d20b5d680352e56de76094abf7a7e0fe411378a",
+      "bytes": 1147,
+      "group": "experiment_utils_may_change"
+    },
+    "python_src/utils/eig_lapack_nobalance/__init__.py": {
+      "sha256": "e4f8baef76bd5ec13d9503dc0d38218b8102c8607fa98d9aec3cd002dac6b786",
+      "bytes": 265,
+      "group": "experiment_utils_may_change"
+    },
+    "python_src/utils/eig_lapack_nobalance/wrapper.py": {
+      "sha256": "c058d43451a2834acf103bf945ed502d4b72704fea174d0f65c6e8f22ff704b2",
+      "bytes": 4075,
+      "group": "experiment_utils_may_change"
+    },
+    "python_src/utils/eig_lapack_nobalance/README.md": {
+      "sha256": "628f57732bfd0aff19bbac99562d5ff9d85367decfff1e1eda37b00ceb12f652",
+      "bytes": 1312,
+      "group": "experiment_utils_may_change"
+    },
+    "eig.md": {
+      "sha256": "4aaac656e0ed840d4355abcd2fd121bee94dc299b1132606ae3458b8048030b4",
+      "bytes": 71209,
+      "group": "experiment_tools_may_change"
+    },
+    "tools/eig_lapack_nobalance/build_windows.ps1": {
+      "sha256": "bcad42656f8be142315a2a25b828a8474702b92d4e0a8197f25580a2cf0459f9",
+      "bytes": 1935,
+      "group": "experiment_tools_may_change"
+    },
+    "tools/eig_lapack_nobalance/src/rgms_eig_nobalance.f": {
+      "sha256": "d6b8a7d6aa0b844cad4f02635ad34b74e5419181330960242cf58d1354433e22",
+      "bytes": 1552,
+      "group": "experiment_tools_may_change"
+    },
+    "python_src/toolbox/DEM/fsl_backward_entry4.py": {
+      "sha256": "690c14c18c187b51d381ea8059b63b0ee430fa6bf97f0b1c04c1b52b46f57424",
+      "bytes": 3887,
+      "group": "hooks_measurement_only"
+    },
+    "python_src/toolbox/DEM/dem_atariiii_entry4.py": {
+      "sha256": "8ffc70852f4d2c51438757adb59853ebee97b48e1484ad8d14dc413b8d6d9693",
+      "bytes": 1503,
+      "group": "hooks_measurement_only"
+    },
+    "tests/oracle/toolbox/DEM/fsl_backward_run_entry4_isolated.py": {
+      "sha256": "9c60934667300083476f663b9ad210ab116918fd9293ef7fc300656d18d95181",
+      "bytes": 6843,
+      "group": "hooks_measurement_only"
+    },
+    "tests/oracle/test_eig_nobalance.py": {
+      "sha256": "47593bfab0139293bd74ae621d4d5eb00c729f2b6b490dc5f360ff0d0b31150c",
+      "bytes": 7509,
+      "group": "t0_tests_instruments"
+    },
+    "tests/oracle/toolbox/DEM/entry4_eig_diagnosis.py": {
+      "sha256": "16a93d92591b53d8f6994bdb6e09eed3968669715472d19b3460df9576badd96",
+      "bytes": 12320,
+      "group": "t0_tests_instruments"
+    },
+    "tests/oracle/toolbox/DEM/entry4_eig_dump_paths.py": {
+      "sha256": "a79437745d44fd3f8ba85ac15e9c951ccd805e382e34bd53a93dc0168eda325c",
+      "bytes": 6758,
+      "group": "t0_tests_instruments"
+    },
+    "tests/oracle/toolbox/DEM/entry4_eig_principal_fixture.py": {
+      "sha256": "20c3da1acf786c48db2afe96a1d4672d3be2a5c1ebfe57b2ac49c8503c18d593",
+      "bytes": 3197,
+      "group": "t0_tests_instruments"
+    },
+    "tests/oracle/toolbox/DEM/fsl_backward_instrument_entry4_eig_geevx_vendored_gate.py": {
+      "sha256": "5fcd267006da2e8bab7108e731043384a96b7591698f7c714a14b8529a7a8806",
+      "bytes": 3735,
+      "group": "t0_tests_instruments"
+    },
+    "tests/oracle/toolbox/DEM/fsl_backward_instrument_entry4_eig_native_status.py": {
+      "sha256": "efa3b72d86c82ceec7f81641a12f7b519af9af0ccb8f4ccc23bd0e8d8865001b",
+      "bytes": 4075,
+      "group": "t0_tests_instruments"
+    }
+  },
+  "missing": []
+}

@@ -1,0 +1,84 @@
+{
+  "utc": "2026-06-04T23:51:53.239814+00:00",
+  "eig_md_section": "4.1",
+  "rows": [
+    {
+      "sub_hash": "2d5f8b838be81f21",
+      "n": 90,
+      "absv_max_live": 0.22122683078232674,
+      "n_on_plateau": 14,
+      "n_diff_above_ulp": 1,
+      "n_diff_on_plateau": 1,
+      "max_absv_diff": 3.635980405647388e-15,
+      "frac_diff_on_plateau": 0.07142857142857142,
+      "first_diff_index": 74
+    },
+    {
+      "sub_hash": "4ab4f22de6228a3a",
+      "n": 54,
+      "absv_max_live": 0.5000000000000046,
+      "n_on_plateau": 3,
+      "n_diff_above_ulp": 1,
+      "n_diff_on_plateau": 0,
+      "max_absv_diff": 1.3322676295501878e-14,
+      "frac_diff_on_plateau": 0.0,
+      "first_diff_index": 51
+    },
+    {
+      "sub_hash": "6abd2a358966b834",
+      "n": 108,
+      "absv_max_live": 0.43283159909988017,
+      "n_on_plateau": 1,
+      "n_diff_above_ulp": 0,
+      "n_diff_on_plateau": 0,
+      "max_absv_diff": 6.661338147750939e-16,
+      "frac_diff_on_plateau": 0.0,
+      "first_diff_index": null
+    },
+    {
+      "sub_hash": "7d978bc6b89bde7b",
+      "n": 81,
+      "absv_max_live": 0.3268126918432574,
+      "n_on_plateau": 5,
+      "n_diff_above_ulp": 0,
+      "n_diff_on_plateau": 0,
+      "max_absv_diff": 1.5265566588595902e-15,
+      "frac_diff_on_plateau": 0.0,
+      "first_diff_index": null
+    },
+    {
+      "sub_hash": "7f1469f5003eebf1",
+      "n": 72,
+      "absv_max_live": 0.3711968769588879,
+      "n_on_plateau": 7,
+      "n_diff_above_ulp": 2,
+      "n_diff_on_plateau": 2,
+      "max_absv_diff": 6.6058269965196814e-15,
+      "frac_diff_on_plateau": 0.2857142857142857,
+      "first_diff_index": 22
+    },
+    {
+      "sub_hash": "866ab1a9b2265fd6",
+      "n": 63,
+      "absv_max_live": 0.4389968340923798,
+      "n_on_plateau": 1,
+      "n_diff_above_ulp": 5,
+      "n_diff_on_plateau": 1,
+      "max_absv_diff": 6.616929226765933e-14,
+      "frac_diff_on_plateau": 1.0,
+      "first_diff_index": 1
+    },
+    {
+      "sub_hash": "a03d7da5d5c09bab",
+      "n": 99,
+      "absv_max_live": 0.22792911068453287,
+      "n_on_plateau": 3,
+      "n_diff_above_ulp": 1,
+      "n_diff_on_plateau": 0,
+      "max_absv_diff": 3.3584246494910985e-15,
+      "frac_diff_on_plateau": 0.0,
+      "first_diff_index": 49
+    }
+  ],
+  "use": "High n_diff_on_plateau \u2192 B5.3 must fix principal column on tie set, not sort."
+}

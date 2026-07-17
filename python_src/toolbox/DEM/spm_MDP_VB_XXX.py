@@ -54,6 +54,8 @@ _VB_TIMING_BAND_WALL: dict[str, float] = {}
 _VB_RAND_REPLAY_ITER: Any = None
 _VB_RAND_REPLAY_ORIG_RAND: Any = None
 _PROBE_12F_PARENT: dict[str, Any] | None = None
+# OPTIM1FULL ledger call4 dig: per-policy G term stack at one parent MATLAB ``t``.
+_OPTIM1FULL_FORWARDS_T_PROBE: dict[str, Any] | None = None
 _ENTRY12_PROBE_CHILD_F_NPZ_DONE: bool = False
 
 
@@ -1023,6 +1025,20 @@ def _spm_induction_vb(
     G[0, :] = 0.0
     dmx = np.max(G, axis=0)
     nmx = np.argmax(G, axis=0)
+    # Soft nearly-one-hot ``Q``: ``I'*Qf`` can creep by ~1e-16 so bare ``argmax``
+    # prefers a late I-column; MATLAB ``max`` keeps an early maximizer. When the
+    # would-be least-action index is in the last two rows, re-max after round-12
+    # (OPTIM1FULL call4 ledger ``G`` @ t=41 and late t≈115).
+    _last = int(G.shape[0]) - 1
+    if _last >= 0:
+        _mask0 = dmx > u_thr
+        if np.any(_mask0):
+            _n0 = nmx[_mask0]
+            _n_star = int(np.min(_n0)) if _n0.size else -1
+            if _n_star >= max(_last - 1, 0):
+                G = np.round(G, decimals=12)
+                dmx = np.max(G, axis=0)
+                nmx = np.argmax(G, axis=0)
     mask = dmx > u_thr
     if not np.any(mask):
         return np.array([]), np.asarray(hif_kept, dtype=np.int64)
@@ -1200,8 +1216,88 @@ def spm_forwards(
     _probe_parent = bool(
         os.getenv("RGMS_PROBE_12F_PARENT_T1") and t == 1 and m == 1 and nk >= 6 and _PROBE_12F_PARENT is not None
     )
+    _probe_t_raw = str(os.getenv("RGMS_OPTIM1FULL_PROBE_FORWARDS_T", "")).strip()
+    _probe_t = False
+    if _probe_t_raw:
+        try:
+            _probe_t = int(t) == int(_probe_t_raw) and int(m) == 1
+        except ValueError:
+            _probe_t = False
+    global _OPTIM1FULL_FORWARDS_T_PROBE
+    if _probe_t:
+        _OPTIM1FULL_FORWARDS_T_PROBE = {
+            "t": int(t),
+            "T": int(T),
+            "N": int(N),
+            "m": int(m),
+            "nk": int(nk),
+            "Ni": int(Ni),
+            "recursive": bool(t < N),
+            "id_fu": id_fu.tolist(),
+            "id_fp": id_fp.tolist(),
+            "id_iH": id_iH.tolist(),
+            "id_iI": id_iI.tolist(),
+            "policies": [],
+            "G_after_No_plus": None,
+            "G_after_select": None,
+            "G_after_plausible": None,
+            "G_final": None,
+            "k_plausible": None,
+        }
+        # Compact inputs for Phase C MATLAB/offline rematch (no nested MDP).
+        try:
+            import pickle as _pickle_ofp
+
+            _inp = {
+                "t": int(t),
+                "T": int(T),
+                "N": int(N),
+                "P": [np.asarray(P[mi][f][t - 1], dtype=np.float64).reshape(-1, 1, order="F") for f in range(nf)],
+                "BP": [
+                    [np.asarray(B_slice[f][k], dtype=np.float64) for k in range(nk)]
+                    for f in range(nf)
+                ],
+                "H": [np.asarray(H_slice[f], dtype=np.float64).reshape(-1, 1, order="F") for f in range(nf)],
+                "A": [np.asarray(A[mi][g], dtype=np.float64) for g in range(len(A[mi]))],
+                "C": [np.asarray(C[mi][g], dtype=np.float64) if _numel(C[mi][g]) else None for g in range(len(C[mi]))],
+                "K": [np.asarray(K[mi][g], dtype=np.float64) if _numel(K[mi][g]) else None for g in range(len(K[mi]))],
+                "W": [np.asarray(W[mi][g], dtype=np.float64) if _numel(W[mi][g]) else None for g in range(len(W[mi]))],
+                "I": [
+                    [
+                        np.asarray(I[mi][f][k], dtype=np.float64) if _numel(I[mi][f][k]) else None
+                        for k in range(len(I[mi][f]))
+                    ]
+                    for f in range(len(I[mi]))
+                ]
+                if _numel(I[mi])
+                else [],
+                "R": np.asarray(R, dtype=np.float64) if np.asarray(R).size else None,
+                "r": np.atleast_1d(np.asarray(r, dtype=np.int64)).ravel() if np.asarray(R).size else None,
+                "id_g": [np.atleast_1d(np.asarray(x, dtype=np.int64)).ravel() for x in idm["g"]],
+                "id_C": idm.get("C"),
+                "id_A": idm.get("A"),
+                "id_ff": idm.get("ff"),
+                "id_fg": idm.get("fg"),
+                "id_gg": idm.get("gg"),
+                "id_fu": id_fu.copy(),
+                "id_fp": id_fp.copy(),
+                "id_iH": id_iH.copy(),
+                "id_iI": id_iI.copy(),
+            }
+            with open(
+                r"C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_call4_forwards_t41_inputs.pkl",
+                "wb",
+            ) as _fh:
+                _pickle_ofp.dump(_inp, _fh, protocol=4)
+        except Exception as _e_ofp:  # noqa: BLE001 — probe must not abort VB
+            _OPTIM1FULL_FORWARDS_T_PROBE["inputs_dump_error"] = repr(_e_ofp)
 
     for k in range(nk):
+        _ofp_pol: dict[str, Any] | None = (
+            {"k": int(k), "stages": {}, "ih_sum": 0.0, "iI_sum": 0.0, "g_risk": None, "recursive_efe_added": 0.0}
+            if _probe_t
+            else None
+        )
         for f in id_fu.tolist():
             Bfk = np.asarray(B_slice[int(f) - 1][k], dtype=np.float64)
             Pf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(-1, 1, order="F")
@@ -1215,15 +1311,24 @@ def spm_forwards(
             Hf = np.asarray(H_slice[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
             ih_term = float((Qf.T @ (_spm_log(Qf) - _spm_log(Hf))).reshape(-1)[0])
             G[k, :] -= ih_term
+            if _ofp_pol is not None:
+                _ofp_pol["ih_sum"] = float(_ofp_pol["ih_sum"]) + ih_term
             if _probe_parent and k == 0:
                 _PROBE_12F_PARENT["ih_term"] = ih_term
                 _PROBE_12F_PARENT["G_after_iH"] = float(np.asarray(G[k, 0], dtype=np.float64))
+        if _ofp_pol is not None:
+            _ofp_pol["stages"]["after_iH"] = np.asarray(G[k, :], dtype=np.float64).ravel().tolist()
 
         for f in id_iI.tolist():
             Pmf = np.asarray(P[mi][int(f) - 1][t - 1], dtype=np.float64).reshape(1, -1, order="F")
             Iblk = np.asarray(I[mi][int(f) - 1][k], dtype=np.float64)
             Qf = np.asarray(Qp[int(f) - 1], dtype=np.float64).reshape(-1, 1, order="F")
-            G[k, :] += float(Pmf @ Iblk @ Qf)
+            iI_term = float(Pmf @ Iblk @ Qf)
+            G[k, :] += iI_term
+            if _ofp_pol is not None:
+                _ofp_pol["iI_sum"] = float(_ofp_pol["iI_sum"]) + iI_term
+        if _ofp_pol is not None:
+            _ofp_pol["stages"]["after_iI"] = np.asarray(G[k, :], dtype=np.float64).ravel().tolist()
 
         if _numel(R) > 0:
             q_cells = _cell_get_Qj(Qp, r)
@@ -1249,6 +1354,8 @@ def spm_forwards(
                     _PROBE_12F_PARENT[f"Qf_max_f{fi}"] = float(np.max(Qfi)) if Qfi.size else 0.0
                     _PROBE_12F_PARENT[f"Pf_sum_f{fi}"] = float(np.sum(Pfi))
             g_risk = np.asarray(spm_dot(R, q_cells), dtype=np.float64).reshape(-1)
+            if _ofp_pol is not None:
+                _ofp_pol["g_risk"] = np.asarray(g_risk, dtype=np.float64).ravel().tolist()
             if _probe_parent and k == 0:
                 _PROBE_12F_PARENT["spm_dot_R_Q"] = float(g_risk.reshape(-1)[0]) if g_risk.size else 0.0
                 _PROBE_12F_PARENT["G_after_dot"] = float(np.asarray(G[k, 0], dtype=np.float64))
@@ -1259,8 +1366,26 @@ def spm_forwards(
                 G[k, :] += g_risk
             else:
                 G[k, :] += float(g_risk[0])
+        if _ofp_pol is not None:
+            _ofp_pol["stages"]["after_risk"] = np.asarray(G[k, :], dtype=np.float64).ravel().tolist()
 
         No = np.zeros((1, Ni), dtype=np.float64)
+        if _ofp_pol is not None:
+            _ofp_pol["out_entropy"] = 0.0
+            _ofp_pol["out_cost"] = 0.0
+            _ofp_pol["out_amb"] = 0.0
+            _ofp_pol["out_W"] = 0.0
+            _ofp_pol["out_pA"] = 0.0
+            _ofp_pol["qo_H"] = []  # entropy H = -sum p log p per outcome factor
+            _ofp_pol["qo_peak"] = []
+            _ofp_pol["qo_numel"] = []
+            _ofp_pol["per_g"] = []  # modality-level (ent,cost,amb,W) for bisect
+            _ofp_pol["Qfu_peak"] = []
+            _ofp_pol["Qfu_entropy"] = []
+            for f in id_fu.tolist():
+                Qf = np.asarray(Qp[int(f) - 1], dtype=np.float64).reshape(-1, order="F")
+                _ofp_pol["Qfu_peak"].append(int(np.argmax(Qf)) + 1)
+                _ofp_pol["Qfu_entropy"].append(float(-(Qf @ np.log(np.maximum(Qf, 1e-300)))))
         for i_cov in range(Ni):
             gi = idm["g"][i_cov]
             if "ge" in idm:
@@ -1274,10 +1399,20 @@ def spm_forwards(
                     if callable(Amg):
                         raise NotImplementedError("spm_forwards: A{m,g} function_handle not translated")
                     qo = np.asarray(spm_dot(Amg, qj), dtype=np.float64).reshape(-1, 1, order="F")
+                    if _ofp_pol is not None:
+                        qor = qo.ravel()
+                        plogp = float((qo.T @ _spm_log(qo)).reshape(-1)[0])
+                        _ofp_pol["qo_H"].append(float(-plogp))
+                        _ofp_pol["qo_peak"].append(int(np.argmax(qor)) + 1)
+                        _ofp_pol["qo_numel"].append(int(np.size(qo)))
                     No[0, i_cov] += float(
                         np.asarray(_spm_log(np.array([[float(np.size(qo))]], dtype=np.float64)), dtype=np.float64).reshape(-1)[0]
                     )
-                    G[k, i_cov] -= float((qo.T @ _spm_log(qo)).reshape(-1)[0])
+                    ent = float((qo.T @ _spm_log(qo)).reshape(-1)[0])
+                    G[k, i_cov] -= ent
+                    if _ofp_pol is not None:
+                        _ofp_pol["out_entropy"] = float(_ofp_pol["out_entropy"]) + ent
+                    cost = 0.0
                     Cmg = C[mi][int(g) - 1]
                     if _numel(Cmg) > 0:
                         c_cells = idm.get("C", [])
@@ -1292,13 +1427,25 @@ def spm_forwards(
                             ).reshape(-1, 1, order="F")
                         else:
                             U = np.asarray(_spm_log(np.asarray(Cmg, dtype=np.float64)), dtype=np.float64).reshape(-1, 1, order="F")
-                        G[k, i_cov] += float((qo.T @ U).reshape(-1)[0])
+                        cost = float((qo.T @ U).reshape(-1)[0])
+                        G[k, i_cov] += cost
+                        if _ofp_pol is not None:
+                            _ofp_pol["out_cost"] = float(_ofp_pol["out_cost"]) + cost
+                    amb = 0.0
                     Kmg = K[mi][int(g) - 1]
                     if _numel(Kmg) > 0:
-                        G[k, i_cov] += float(np.asarray(spm_dot(Kmg, qj), dtype=np.float64).reshape(-1)[0])
+                        amb = float(np.asarray(spm_dot(Kmg, qj), dtype=np.float64).reshape(-1)[0])
+                        G[k, i_cov] += amb
+                        if _ofp_pol is not None:
+                            _ofp_pol["out_amb"] = float(_ofp_pol["out_amb"]) + amb
+                    wterm = 0.0
                     Wmg = W[mi][int(g) - 1]
                     if _numel(Wmg) > 0:
-                        G[k, i_cov] += float((qo.T @ np.asarray(spm_dot(Wmg, qj), dtype=np.float64).reshape(-1, 1)).reshape(-1)[0])
+                        wterm = float((qo.T @ np.asarray(spm_dot(Wmg, qj), dtype=np.float64).reshape(-1, 1)).reshape(-1)[0])
+                        G[k, i_cov] += wterm
+                        if _ofp_pol is not None:
+                            _ofp_pol["out_W"] = float(_ofp_pol["out_W"]) + wterm
+                    pAterm = 0.0
                     pAg = pA[mi][int(g) - 1]
                     if _numel(pAg) > 0:
                         if qa is None:
@@ -1308,11 +1455,37 @@ def spm_forwards(
                         Pg = spm_MDP_BMR(np.asarray(qa[mi][int(g) - 1], dtype=np.float64) + np.asarray(da, dtype=np.float64), pAg)
                         pal = np.asarray(Pa[int(g)], dtype=np.float64).reshape(-1, 1, order="F")
                         pgl = np.asarray(Pg, dtype=np.float64).reshape(-1, 1, order="F")
-                        G[k, i_cov] += float((pgl.T @ (_spm_log(pgl) - _spm_log(pal))).reshape(-1)[0])
+                        pAterm = float((pgl.T @ (_spm_log(pgl) - _spm_log(pal))).reshape(-1)[0])
+                        G[k, i_cov] += pAterm
+                        if _ofp_pol is not None:
+                            _ofp_pol["out_pA"] = float(_ofp_pol["out_pA"]) + pAterm
                     else:
                         Pa[int(g)] = {}
+                    if _ofp_pol is not None:
+                        _ofp_pol["per_g"].append(
+                            {
+                                "g": int(g),
+                                "ig": int(ig),
+                                "j": np.atleast_1d(np.asarray(j, dtype=np.int64)).ravel().tolist(),
+                                "ent": float(ent),
+                                "cost": float(cost),
+                                "amb": float(amb),
+                                "W": float(wterm),
+                                "pA": float(pAterm),
+                                "qo_peak": int(np.argmax(qo.ravel())) + 1,
+                                "qo_max": float(np.max(qo)),
+                                "net": float(-ent + cost + amb + wterm + pAterm),
+                            }
+                        )
+        if _ofp_pol is not None:
+            _ofp_pol["stages"]["after_outcomes"] = np.asarray(G[k, :], dtype=np.float64).ravel().tolist()
+            _ofp_pol["No_last_k"] = np.asarray(No, dtype=np.float64).ravel().tolist()
+            _OPTIM1FULL_FORWARDS_T_PROBE["policies"].append(_ofp_pol)
 
     G = G + No
+    if _probe_t and isinstance(_OPTIM1FULL_FORWARDS_T_PROBE, dict):
+        _OPTIM1FULL_FORWARDS_T_PROBE["G_after_No_plus"] = np.asarray(G, dtype=np.float64).ravel(order="F").tolist()
+        _OPTIM1FULL_FORWARDS_T_PROBE["No_broadcast"] = np.asarray(No, dtype=np.float64).ravel().tolist()
     if "i" in idm:
         col_max = np.max(G, axis=0)
         i_sel = int(np.argmax(col_max) + 1)
@@ -1321,6 +1494,9 @@ def spm_forwards(
     else:
         G = np.sum(G, axis=1, keepdims=True)
         i_sel = 1
+    if _probe_t and isinstance(_OPTIM1FULL_FORWARDS_T_PROBE, dict):
+        _OPTIM1FULL_FORWARDS_T_PROBE["G_after_select"] = np.asarray(G, dtype=np.float64).ravel().tolist()
+        _OPTIM1FULL_FORWARDS_T_PROBE["i_sel"] = int(i_sel)
 
     if t < N:
         ng = len(pA[mi])
@@ -1332,6 +1508,9 @@ def spm_forwards(
         k_plausible = u > mxu
         G = np.asarray(G, dtype=np.float64)
         G = np.where(k_plausible, G, float(np.max(G) - 512.0))
+        if _probe_t and isinstance(_OPTIM1FULL_FORWARDS_T_PROBE, dict):
+            _OPTIM1FULL_FORWARDS_T_PROBE["k_plausible"] = np.asarray(k_plausible, dtype=bool).ravel().tolist()
+            _OPTIM1FULL_FORWARDS_T_PROBE["G_after_plausible"] = np.asarray(G, dtype=np.float64).ravel().tolist()
 
         for k in range(nk):
             if not bool(np.asarray(k_plausible, dtype=bool).reshape(-1)[k]):
@@ -1397,7 +1576,16 @@ def spm_forwards(
                 Ea = np.asarray(E, dtype=np.float64).reshape(-1, 1, order="F")
                 EFE.ravel(order="F")[ii_lin] = float((Es.T @ Ea).reshape(-1)[0])
 
-            G[k, 0] += float(np.sum(EFE * q))
+            rec_add = float(np.sum(EFE * q))
+            G[k, 0] += rec_add
+            if _probe_t and isinstance(_OPTIM1FULL_FORWARDS_T_PROBE, dict):
+                for pol in _OPTIM1FULL_FORWARDS_T_PROBE["policies"]:
+                    if int(pol["k"]) == int(k):
+                        pol["recursive_efe_added"] = rec_add
+                        pol["stages"]["after_recursive"] = np.asarray(G[k, :], dtype=np.float64).ravel().tolist()
+
+    if _probe_t and isinstance(_OPTIM1FULL_FORWARDS_T_PROBE, dict):
+        _OPTIM1FULL_FORWARDS_T_PROBE["G_final"] = np.asarray(G, dtype=np.float64).ravel().tolist()
 
     return G, P, float(F_vbx_here), id_list, Pa
 
@@ -4401,14 +4589,27 @@ def _entry12_attach_phase_log_to_snap(
 _ENTRY12_T_BOUNDARY_KEYS = ("out_t1", "out_t2", "out_t3", "out_tT")
 
 
+def _entry12_call4_mid_horizon_boundaries() -> bool:
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_resolve_run_tag
+
+    return entry12_resolve_run_tag().strip() == "rgms_atari_optim1full_call4"
+
+
 def _entry12_assign_t_boundary(ws: dict[str, Any], snap: dict[str, Any], t_1based: int, t_int: int) -> None:
-    """Mirror ``entry12_assign_t_boundary`` in ``spm_MDP_VB_XXX_entry12_dump.m``."""
+    """Mirror ``entry12_assign_t_boundary`` in ``spm_MDP_VB_XXX_entry12_dump.m`` (call4 incl. t=10/20/30)."""
     if t_1based == 1:
         ws["out_t1"] = snap
     elif t_1based == 2:
         ws["out_t2"] = snap
     elif t_1based == 3:
         ws["out_t3"] = snap
+    elif _entry12_call4_mid_horizon_boundaries():
+        if t_1based == 10:
+            ws["out_t10"] = snap
+        elif t_1based == 20:
+            ws["out_t20"] = snap
+        elif t_1based == 30:
+            ws["out_t30"] = snap
     if t_1based == t_int:
         ws["out_tT"] = snap
 

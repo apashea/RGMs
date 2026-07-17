@@ -1,0 +1,6 @@
+OPTIM1FULL — MI-382 causal gate (``spm_RDP_MI`` steps B_ambig..R).
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_compare_mi382_causal_output.txt``
+
+[MI-382] causal steps B_ambig..R OK (n_C=60)
+OK: MI-382 causal gate

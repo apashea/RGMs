@@ -1,0 +1,278 @@
+{
+  "utc": "2026-06-06T19:11:10.224654+00:00",
+  "eig_md_section": "4.1 E3c-b-c-b1",
+  "backend": "lapack_vendored",
+  "summary": {
+    "four_tier_count": 4,
+    "order_ok_default": 0,
+    "greedy_min": 47,
+    "greedy_max": 83,
+    "wide_drift_count": 4
+  },
+  "rows": [
+    {
+      "sub_hash": "2d5f8b838be81f21",
+      "n": 90,
+      "jmax": 89,
+      "kmax_ref": 44,
+      "kmax_got": 44,
+      "kmax_match": true,
+      "order_mismatch_count_default": 86,
+      "order_ok_default": false,
+      "greedy_close_snap_count": 80,
+      "greedy_snap_rows_head": [
+        44,
+        13,
+        25,
+        23,
+        72,
+        21,
+        29,
+        50,
+        65,
+        53,
+        35,
+        46
+      ],
+      "plateau_ref_count": 14,
+      "plateau_snap_mismatch_count": 73,
+      "threshold_snaps": [
+        {
+          "threshold": 0.0,
+          "n_rows_snapped": 90,
+          "mismatch_count": 0
+        },
+        {
+          "threshold": 1e-17,
+          "n_rows_snapped": 42,
+          "mismatch_count": 46
+        },
+        {
+          "threshold": 1e-16,
+          "n_rows_snapped": 30,
+          "mismatch_count": 70
+        },
+        {
+          "threshold": 1e-15,
+          "n_rows_snapped": 13,
+          "mismatch_count": 84
+        },
+        {
+          "threshold": 1e-14,
+          "n_rows_snapped": 0,
+          "mismatch_count": 86
+        }
+      ],
+      "max_absv_diff": 2.7478019859472624e-15,
+      "n_rows_gt_1e-15": 13,
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 48,
+        "idx_got": 13,
+        "absv_ref": 0.22122683078232674,
+        "absv_got": 0.2212268307823286,
+        "absv_diff": 1.8596235662471372e-15
+      },
+      "oracle_kind": "wide_column_absv_drift",
+      "compute_patch_hint": "Head/plateau/tier snap alone insufficient; needs column-wide absv fidelity (greedy close count large). Not rank-1 demote class."
+    },
+    {
+      "sub_hash": "6abd2a358966b834",
+      "n": 108,
+      "jmax": 107,
+      "kmax_ref": 60,
+      "kmax_got": 60,
+      "kmax_match": true,
+      "order_mismatch_count_default": 49,
+      "order_ok_default": false,
+      "greedy_close_snap_count": 83,
+      "greedy_snap_rows_head": [
+        48,
+        36,
+        60,
+        96,
+        24,
+        2,
+        12,
+        0,
+        72,
+        105,
+        106,
+        1
+      ],
+      "plateau_ref_count": 1,
+      "plateau_snap_mismatch_count": 49,
+      "threshold_snaps": [
+        {
+          "threshold": 0.0,
+          "n_rows_snapped": 108,
+          "mismatch_count": 0
+        },
+        {
+          "threshold": 1e-17,
+          "n_rows_snapped": 54,
+          "mismatch_count": 47
+        },
+        {
+          "threshold": 1e-16,
+          "n_rows_snapped": 10,
+          "mismatch_count": 47
+        },
+        {
+          "threshold": 1e-15,
+          "n_rows_snapped": 0,
+          "mismatch_count": 49
+        },
+        {
+          "threshold": 1e-14,
+          "n_rows_snapped": 0,
+          "mismatch_count": 49
+        }
+      ],
+      "max_absv_diff": 3.885780586188048e-16,
+      "n_rows_gt_1e-15": 0,
+      "first_mismatch_default": {
+        "rank": 58,
+        "idx_ref": 105,
+        "idx_got": 1,
+        "absv_ref": 1.1102230246251565e-16,
+        "absv_got": 7.075511931046548e-17,
+        "absv_diff": 4.026718315205018e-17
+      },
+      "oracle_kind": "wide_column_absv_drift",
+      "compute_patch_hint": "Head/plateau/tier snap alone insufficient; needs column-wide absv fidelity (greedy close count large). Not rank-1 demote class."
+    },
+    {
+      "sub_hash": "7d978bc6b89bde7b",
+      "n": 81,
+      "jmax": 80,
+      "kmax_ref": 13,
+      "kmax_got": 13,
+      "kmax_match": true,
+      "order_mismatch_count_default": 72,
+      "order_ok_default": false,
+      "greedy_close_snap_count": 64,
+      "greedy_snap_rows_head": [
+        11,
+        29,
+        59,
+        21,
+        64,
+        45,
+        1,
+        15,
+        51,
+        48,
+        23,
+        27
+      ],
+      "plateau_ref_count": 5,
+      "plateau_snap_mismatch_count": 69,
+      "threshold_snaps": [
+        {
+          "threshold": 0.0,
+          "n_rows_snapped": 81,
+          "mismatch_count": 0
+        },
+        {
+          "threshold": 1e-17,
+          "n_rows_snapped": 32,
+          "mismatch_count": 47
+        },
+        {
+          "threshold": 1e-16,
+          "n_rows_snapped": 23,
+          "mismatch_count": 60
+        },
+        {
+          "threshold": 1e-15,
+          "n_rows_snapped": 0,
+          "mismatch_count": 72
+        },
+        {
+          "threshold": 1e-14,
+          "n_rows_snapped": 0,
+          "mismatch_count": 72
+        }
+      ],
+      "max_absv_diff": 8.326672684688674e-16,
+      "n_rows_gt_1e-15": 0,
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 23,
+        "idx_got": 25,
+        "absv_ref": 0.3268126918432574,
+        "absv_got": 0.3268126918432575,
+        "absv_diff": 1.1102230246251565e-16
+      },
+      "oracle_kind": "wide_column_absv_drift",
+      "compute_patch_hint": "Head/plateau/tier snap alone insufficient; needs column-wide absv fidelity (greedy close count large). Not rank-1 demote class."
+    },
+    {
+      "sub_hash": "7f1469f5003eebf1",
+      "n": 72,
+      "jmax": 71,
+      "kmax_ref": 51,
+      "kmax_got": 51,
+      "kmax_match": true,
+      "order_mismatch_count_default": 66,
+      "order_ok_default": false,
+      "greedy_close_snap_count": 47,
+      "greedy_snap_rows_head": [
+        30,
+        18,
+        22,
+        40,
+        37,
+        51,
+        43,
+        26,
+        69,
+        9,
+        5,
+        1
+      ],
+      "plateau_ref_count": 7,
+      "plateau_snap_mismatch_count": 61,
+      "threshold_snaps": [
+        {
+          "threshold": 0.0,
+          "n_rows_snapped": 72,
+          "mismatch_count": 0
+        },
+        {
+          "threshold": 1e-17,
+          "n_rows_snapped": 25,
+          "mismatch_count": 47
+        },
+        {
+          "threshold": 1e-16,
+          "n_rows_snapped": 16,
+          "mismatch_count": 53
+        },
+        {
+          "threshold": 1e-15,
+          "n_rows_snapped": 1,
+          "mismatch_count": 66
+        },
+        {
+          "threshold": 1e-14,
+          "n_rows_snapped": 0,
+          "mismatch_count": 66
+        }
+      ],
+      "max_absv_diff": 1.1102230246251565e-15,
+      "n_rows_gt_1e-15": 1,
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 30,
+        "idx_got": 37,
+        "absv_ref": 0.3711968769588864,
+        "absv_got": 0.37119687695888687,
+        "absv_diff": 4.440892098500626e-16
+      },
+      "oracle_kind": "wide_column_absv_drift",
+      "compute_patch_hint": "Head/plateau/tier snap alone insufficient; needs column-wide absv fidelity (greedy close count large). Not rank-1 demote class."
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "utc": "2026-06-04T21:47:07.318744+00:00",
+  "eig_md_section": "30.7",
+  "n_blocks": 58,
+  "known_fail_hashes": [
+    "2d5f8b838be81f21",
+    "4ab4f22de6228a3a",
+    "6abd2a358966b834",
+    "7d978bc6b89bde7b",
+    "7f1469f5003eebf1",
+    "866ab1a9b2265fd6",
+    "a03d7da5d5c09bab"
+  ],
+  "matlab_reference": "Intel oneMKL 2024.1 / LAPACK 3.11 (captured vals_mat/vecs_mat; \u00a729)",
+  "oss_netlib": "LAPACK 3.12 dgeevx subset, gfortran DLL (\u00a725)",
+  "backends": [
+    {
+      "label": "scipy_eig_raw",
+      "order_ok": 51,
+      "n": 58,
+      "stage_counts_all": {
+        "W_SPECTRUM": 8,
+        "OK": 50
+      },
+      "stage_counts_seven_fail_hashes": {
+        "W_SPECTRUM": 7
+      },
+      "raw_w_scores": {
+        "jmax_match": 50,
+        "w_elementwise_1e10": 50,
+        "n": 58
+      }
+    },
+    {
+      "label": "scipy_eig_postprocess",
+      "order_ok": 51,
+      "n": 58,
+      "stage_counts_all": {
+        "SORT_ABS": 7,
+        "OK": 51
+      },
+      "stage_counts_seven_fail_hashes": {
+        "SORT_ABS": 7
+      },
+      "raw_w_scores": null
+    },
+    {
+      "label": "vendored_dgeevx_raw",
+      "order_ok": 51,
+      "n": 58,
+      "stage_counts_all": {
+        "W_SPECTRUM": 8,
+        "OK": 50
+      },
+      "stage_counts_seven_fail_hashes": {
+        "W_SPECTRUM": 7
+      },
+      "raw_w_scores": {
+        "jmax_match": 50,
+        "w_elementwise_1e10": 50,
+        "n": 58
+      }
+    },
+    {
+      "label": "vendored_dgeevx_postprocess",
+      "order_ok": 51,
+      "n": 58,
+      "stage_counts_all": {
+        "SORT_ABS": 7,
+        "OK": 51
+      },
+      "stage_counts_seven_fail_hashes": {
+        "SORT_ABS": 7
+      },
+      "raw_w_scores": null
+    }
+  ],
+  "interpretation_guide": {
+    "W_SPECTRUM": "raw (w,V) layout / jmax differs before sort",
+    "PRINCIPAL_COL": "jmax matches but |V(:,jmax)| differs (ULP / phase)",
+    "SORT_ABS": "principal absv ties sort differently",
+    "OK": "full order matches MATLAB dump path"
+  }
+}

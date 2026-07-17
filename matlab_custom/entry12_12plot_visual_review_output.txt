@@ -1,0 +1,79 @@
+ENTRY 12PLOT — Phase 4 visual review (secondary; non-gating)
+Date: 2026-05-30 (post layout fix iteration)
+Tag: rgms_canonical (Call 1)
+
+Primary oracle (unchanged — must stay green):
+  pytest test_spm_show_RGB_entry12plot.py — 2/2 PASS (2026-05-30, ~116s)
+
+Layout / rendering fix iteration (Steps 1–4 plan):
+  - spm_show_RGB.py: GridSpec(Nm+3, Nt) — no mixed subplot(5,2)/subplot(5,4) grids
+  - _plot_raster: cmap gray, origin upper, (1-Q)*64
+  - _plot_matrix_panel: imagesc gray or spy origin=upper for large B; axis square on transitions
+  - Figure size ~10.6×15.2 in; entry12_plot savefig bbox_inches=tight
+  - Movie loop: pre-created axes; removed per-frame draw (J/K unchanged)
+
+Comparison artifacts (post-fix):
+  MATLAB: visualizations/AtariIII_12plot_2026-05-30-07-57-06.png
+  Python: visualizations/AtariIII_12plot_python_mat_pdp_2026-05-30-09-19-15.png
+  Side-by-side: visualizations/AtariIII_12plot_compare_mat_vs_python_2026-05-30-09-19-15.png
+  Python PNG size: 887×1270 (scaled to 1065×1526 in compare)
+
+User-issue checklist (2026-05-30 review):
+  [IMPROVED] Predictive posterior panels — now black/white (was yellow default colormap)
+  [IMPROVED] Transitions — sparse diagonal dot field visible; y-axis 0–400, origin top
+  [IMPROVED] Overall layout — no smashed/overlapping titles; subplots separated
+  [IMPROVED] Figure dimensions — comparable to MATLAB after scale (~887×1270 vs 1059×1526)
+  [PARTIAL] Posterior (states) level 2 — still narrower than MATLAB; readable but not identical aspect
+  [PARTIAL] ELBO panel — title/axis scaling differs (multiple y-scales visible); red hit markers present
+  [OK] Movie rows — Predicted/Generated frames at t=1,2,3,128 visually coherent
+
+Phase 4 verdict (2026-05-30):
+  Major fidelity gaps from 2026-05-28 review addressed. Remaining deltas are partial
+  (posterior column aspect, ELBO axis cosmetics). Primary J/K/h oracle remains sign-off bar.
+  User may accept visual review or request a follow-up polish pass on posterior width + ELBO axes.
+
+No spm_MDP_VB_XXX.py changes.
+
+---
+Phase B (.pkl) visual lane — 2026-05-30-12-20-27
+Tag: rgms_canonical (Call 1)
+
+Primary oracle:
+  pytest test_spm_show_RGB_entry12plot.py — 2/2 PASS (~97s)
+
+Phase B loader diagnostic (Q.E[0]):
+  pkl numel=64, mat numel=128; alignment pads trailing zeros only (pad_only=True)
+  overlapping pkl vs mat Q.E max_abs_diff=4.84 (ELBO visual may differ; not in J/K/h oracle)
+
+Plot outputs (mat vs pkl Python on same run):
+  J equal: True, K equal: True, h equal: True
+
+Artifacts:
+  Python .mat PDP: visualizations/AtariIII_12plot_python_mat_pdp_2026-05-30-12-20-27.png
+  Python .pkl PDP: visualizations/AtariIII_12plot_python_pkl_pdp_2026-05-30-12-20-27.png
+  mat vs pkl compare: visualizations/AtariIII_12plot_compare_matpdp_vs_pklpdp_2026-05-30-12-20-27.png
+  three-way: visualizations/AtariIII_12plot_compare_matlab_matpdp_pklpdp_2026-05-30-12-20-27.png
+
+Phase B verdict:
+  Numeric oracle green; movie/hits panels match between .mat and .pkl plot runs.
+  User visual review pending on pkl PNG and matpdp_vs_pklpdp compare.
+
+---
+Phase B Q.E plot-loader fix — 2026-05-30-13-24-48
+Tag: rgms_canonical (Call 1)
+
+Fix: entry12_plot._coerce_q_e_level_to_vector uses _entry12_flatten_Q_E_nested_for_compare
+(same as compare lane / MATLAB loadmat flat vector), not ravel()[0] per block.
+
+Post-fix diagnostic:
+  Q.E[0] numel mat=128 pkl=128 max_abs_diff ~8.88e-16
+  J/K/h mat vs pkl plot runs: identical
+  pytest test_spm_show_RGB_entry12plot.py: 2/2 PASS (~143s)
+
+Artifacts:
+  Python .pkl PDP: visualizations/AtariIII_12plot_python_pkl_pdp_2026-05-30-13-24-48.png
+  mat vs pkl compare: visualizations/AtariIII_12plot_compare_matpdp_vs_pklpdp_2026-05-30-13-24-48.png
+
+Phase B verdict (updated):
+  Q.E parity restored in plot lane; ELBO on .pkl plot should match .mat plot.
+  User visual review on compare PNG recommended.

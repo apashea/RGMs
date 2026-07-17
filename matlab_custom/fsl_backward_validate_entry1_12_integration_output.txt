@@ -1,0 +1,342 @@
+FSL backward Track A — validate integrated Entries 1–12.
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\fsl_backward_validate_entry1_12_integration_output.txt``
+
+[Track A validate] PKL=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry1_12_ctx.pkl
+[Track A validate] tag='rgms_canonical'
+[Track A validate] OK: dem_atari K_11 draw budget
+[Track A validate] SKIP: integrated RDP vs script-3 .mat (511/485 policy; Validation 12 is consumption gate)
+[entry12 signoff] tag='rgms_canonical'
+[entry12 signoff] rdp_mat: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rdp.mat (ok)
+[entry12 signoff] rdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_rdp.pkl (ok)
+[entry12 signoff] pdp_mat: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_pdp.mat (ok)
+[entry12 signoff] pdp_pkl: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_XXX_12_pdp.pkl (ok)
+[entry12 signoff] rand_k: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_vb_rand_K.mat (ok)
+[entry12 signoff] rand_buf: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_vb_matlab_rand_buf.mat (ok)
+[entry12 signoff] manifest: C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_signoff_manifest_rgms_canonical.json (ok)
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12A.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12B.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12C.pkl
+C:\Users\andre\.cursor\RGMs\python_src\toolbox\DEM\spm_VBX.py:41: RuntimeWarning: divide by zero encountered in log
+  return np.fmax(np.log(np.asarray(A, dtype=float)), -32.0)
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12D.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12E.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12F.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12G.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12H.pkl
+[XXX 12 dump] wrote C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_entry12_rgms_canonical_12I.pkl
+{
+  "tag": "rgms_canonical",
+  "K": 27263,
+  "buf_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf.mat",
+  "trace_path": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\entry12_sample_trace_rgms_canonical.json",
+  "replay": {
+    "total_draws": 27263,
+    "unused_draws": 0,
+    "spm_sample_calls": 27263,
+    "PDP_G1": -32.40546510803753
+  },
+  "native": {
+    "native_spm_sample_calls": 27263
+  },
+  "trace_summary": {
+    "by_site": {
+      "child_sample_column": 8960,
+      "control_P": 63,
+      "gp_path_E": 1,
+      "nested_child_sample_column": 14208,
+      "nested_policy": 64,
+      "nested_state_ps": 3840,
+      "policy": 63,
+      "state_ps": 64
+    },
+    "by_pattern": {
+      "N1": 27263
+    },
+    "pattern_draw_mismatch_count": 0,
+    "pattern_draw_mismatch_first10": [],
+    "policy_row_count": 63,
+    "policy_multi_pu_count": 63,
+    "first_policy_uniform_multi": {
+      "seq": 425,
+      "t_gen": 2,
+      "draw_start": 425,
+      "draw_end": 426,
+      "n_draws": 1,
+      "out": 3,
+      "pu_len": 6,
+      "r_at_draw_start": 0.4242777366580931,
+      "r_at_draw_start_plus_1": 0.031103795930620404,
+      "k_from_buf_at_start": 3,
+      "k_from_buf_at_start_plus_1": 1,
+      "mat_k_policy_t2_expected": 2
+    },
+    "pre_policy_draw_window": [
+      {
+        "seq": 413,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 413,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 414,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 414,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 415,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 415,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 416,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 416,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 417,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 417,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 418,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 418,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 419,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 419,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 420,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 420,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 421,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 421,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          5,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 422,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 422,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          2,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 423,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 423,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          2,
+          1
+        ],
+        "out": 1
+      },
+      {
+        "seq": 424,
+        "site": "nested_child_sample_column",
+        "pattern": "N1",
+        "draw_start": 424,
+        "n_draws": 1,
+        "depth": 2,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          9,
+          1
+        ],
+        "out": 5
+      },
+      {
+        "seq": 425,
+        "site": "policy",
+        "pattern": "N1",
+        "draw_start": 425,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 6,
+        "shape": [
+          6,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 426,
+        "site": "control_P",
+        "pattern": "N1",
+        "draw_start": 426,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          6,
+          1
+        ],
+        "out": 3
+      },
+      {
+        "seq": 427,
+        "site": "state_ps",
+        "pattern": "N1",
+        "draw_start": 427,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          485,
+          1
+        ],
+        "out": 35
+      },
+      {
+        "seq": 428,
+        "site": "child_sample_column",
+        "pattern": "N1",
+        "draw_start": 428,
+        "n_draws": 1,
+        "depth": 1,
+        "t_gen": 2,
+        "nz": 1,
+        "shape": [
+          41,
+          1
+        ],
+        "out": 9
+      }
+    ]
+  },
+  "coherence": {
+    "protocol": "entry12_v5_preamble_rewind (buf from MATLAB post-rewind rand(K,1))",
+    "note": "Replay injects MATLAB scalars through np.random.rand in _spm_sample. Fix site class (pattern/dtype/skip), not buffer index, when skew appears.",
+    "sample_calls_match": true,
+    "unused_draws_ok": true
+  }
+}
+wrote summary C:\Users\andre\.cursor\RGMs\matlab_custom\entry12_draw_index_audit_results.json
+wrote trace (27263 rows) C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\entry12_sample_trace_rgms_canonical.json
+[entry12 trace] first multi-action policy row: {
+  "seq": 425,
+  "t_gen": 2,
+  "draw_start": 425,
+  "draw_end": 426,
+  "n_draws": 1,
+  "out": 3,
+  "pu_len": 6,
+  "r_at_draw_start": 0.4242777366580931,
+  "r_at_draw_start_plus_1": 0.031103795930620404,
+  "k_from_buf_at_start": 3,
+  "k_from_buf_at_start_plus_1": 1,
+  "mat_k_policy_t2_expected": 2
+}
+[Track A validate] OK: vb_rand_buf draw audit
+[Track A validate] SKIP: Validation 12 on integrated PDP (511/485 — use Entry 11 isolated gate + quad-tag sign-off for MATLAB consumption; set RGMS_FSL_ENTRY1_12_RUN_VALIDATION12=1 to force)
+OK: Track A integrated 1–12 ledger validation

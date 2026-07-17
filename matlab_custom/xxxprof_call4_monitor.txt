@@ -1,0 +1,680 @@
+[VB monitor 12A] L=2 path=MDP(1) iter=once m=1 (MATLAB)
+[VB monitor 12A MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12A MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12A MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12A MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12A MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12A MAT field] path=MDP(1) G=list(len=1,elem=list(len=1,elem=ndarray[14 1]))
+[VB monitor 12A MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12A MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12A] L=1 path=MDP(1).MDP iter=once m=1 (MATLAB)
+[VB monitor 12A MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12A MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12A MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12A MAT field] path=MDP(1).MDP G=list(len=4,elem=list(len=57,elem=ndarray[9 1]))
+[VB monitor 12A MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12A MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12A MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12A MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12A MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12A MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12A MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12A MAT field] path=MDP(1).MDP U=ndarray[1 60]
+[VB monitor 12A MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12A MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12A MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12A MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12A MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12A MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12A MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12A MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12A MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12A MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12A MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12A MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12A MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12B] L=2 path=MDP(1) iter=first m=1 (MATLAB)
+[VB monitor 12B MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12B MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12B MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12B MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12B MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12B MAT field] path=MDP(1) G=list(len=1,elem=list(len=1,elem=ndarray[14 1]))
+[VB monitor 12B MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12B MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12B] L=1 path=MDP(1).MDP iter=first m=1 (MATLAB)
+[VB monitor 12B MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12B MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12B MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12B MAT field] path=MDP(1).MDP G=list(len=4,elem=list(len=57,elem=ndarray[9 1]))
+[VB monitor 12B MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12B MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12B MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12B MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12B MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1).MDP U=ndarray[1 60]
+[VB monitor 12B MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12B MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12B MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12B MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12B MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12B MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12B] L=2 path=MDP(1) iter=last m=1 (MATLAB)
+[VB monitor 12B MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12B MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12B MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12B MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12B MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12B MAT field] path=MDP(1) G=list(len=1,elem=list(len=1,elem=ndarray[14 1]))
+[VB monitor 12B MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12B MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12B] L=1 path=MDP(1).MDP iter=last m=1 (MATLAB)
+[VB monitor 12B MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12B MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12B MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12B MAT field] path=MDP(1).MDP G=list(len=4,elem=list(len=57,elem=ndarray[9 1]))
+[VB monitor 12B MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12B MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12B MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12B MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12B MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1).MDP U=ndarray[1 60]
+[VB monitor 12B MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12B MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12B MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12B MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12B MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12B MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12B MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12B MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12B MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12B MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12C] L=2 path=MDP(1) iter=once m=1 (MATLAB)
+[VB monitor 12C MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12C MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12C MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12C MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12C MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12C MAT field] path=MDP(1) G=list(len=1,elem=list(len=1,elem=ndarray[14 1]))
+[VB monitor 12C MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12C MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12C] L=1 path=MDP(1).MDP iter=once m=1 (MATLAB)
+[VB monitor 12C MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12C MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12C MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12C MAT field] path=MDP(1).MDP G=list(len=4,elem=list(len=57,elem=ndarray[9 1]))
+[VB monitor 12C MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12C MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12C MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12C MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12C MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12C MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12C MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12C MAT field] path=MDP(1).MDP U=ndarray[1 60]
+[VB monitor 12C MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12C MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12C MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12C MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12C MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12C MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12C MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12C MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12C MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12C MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12C MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12C MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12C MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12C MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12C MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12C MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12C MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12E] L=1 path=MDP(1).MDP iter=before m=1 t=1 (MATLAB)
+[VB monitor 12E MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12E MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12E MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP G=list(len=4,elem=list(len=57,elem=ndarray[9 1]))
+[VB monitor 12E MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12E MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12E MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP U=ndarray[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12E] L=1 path=MDP(1).MDP iter=after m=1 t=1 (MATLAB)
+[VB monitor 12E MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12E MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12E MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12E MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12E MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12E MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12E MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12E MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12F] L=2 path=MDP(1) iter=first m=1 t=1 (MATLAB)
+[VB monitor 12F MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12F MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12F MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12F MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12F MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1) G=list(len=1,elem=list(len=1,elem=ndarray[14 1]))
+[VB monitor 12F MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12F MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12F] L=1 path=MDP(1).MDP iter=first m=1 t=1 (MATLAB)
+[VB monitor 12F MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12F MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12F MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12F MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12F MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12F MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12F MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12F MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12F MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12F MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12F MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12F MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1) Q=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12F MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12F MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12F MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12F MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12F MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12E] L=1 path=MDP(1).MDP iter=before m=1 t=128 (MATLAB)
+[VB monitor 12E MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12E MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12E MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12E MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12E MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12E MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12E MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12E MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12E MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP s=ndarray[2 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP u=ndarray[2 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12E] L=1 path=MDP(1).MDP iter=after m=1 t=128 (MATLAB)
+[VB monitor 12E MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12E MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12E MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12E MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12E MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12E MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12E MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12E MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12E MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12E MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12E MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12E MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12E MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12E MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12E MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12F] L=2 path=MDP(1) iter=last m=1 t=128 (MATLAB)
+[VB monitor 12F MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12F MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12F MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12F MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12F MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1) F=ndarray[1 128]
+[VB monitor 12F MAT field] path=MDP(1) G=list(len=128,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12F MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12F] L=1 path=MDP(1).MDP iter=last m=1 t=128 (MATLAB)
+[VB monitor 12F MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12F MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12F MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12F MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12F MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12F MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12F MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12F MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12F MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12F MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12F MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12F MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12F MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12F MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12F MAT field] path=MDP(1) Q=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1) Z=ndarray[1 128]
+[VB monitor 12F MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12F MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12F MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12F MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12F MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12F MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12F MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12F MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12G] L=2 path=MDP(1) iter=first m=1 (MATLAB)
+[VB monitor 12G MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12G MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12G MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12G MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12G MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1) F=ndarray[1 128]
+[VB monitor 12G MAT field] path=MDP(1) G=list(len=128,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12G MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12G] L=1 path=MDP(1).MDP iter=first m=1 (MATLAB)
+[VB monitor 12G MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12G MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12G MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12G MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12G MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12G MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12G MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12G MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12G MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12G MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12G MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12G MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12G MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1) Pa=list(len=20,elem=list(len=0))
+[VB monitor 12G MAT field] path=MDP(1) Q=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1) Z=ndarray[1 128]
+[VB monitor 12G MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12G MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12G MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12G MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12G MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12G MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12G] L=2 path=MDP(1) iter=last m=1 (MATLAB)
+[VB monitor 12G MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12G MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12G MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12G MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12G MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1) F=ndarray[1 128]
+[VB monitor 12G MAT field] path=MDP(1) G=list(len=128,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12G MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12G] L=1 path=MDP(1).MDP iter=last m=1 (MATLAB)
+[VB monitor 12G MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12G MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12G MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12G MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12G MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12G MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12G MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12G MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12G MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12G MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12G MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12G MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12G MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12G MAT field] path=MDP(1) Pa=list(len=20,elem=list(len=0))
+[VB monitor 12G MAT field] path=MDP(1) Q=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1) Y=list(len=2560,elem=ndarray[10 1])
+[VB monitor 12G MAT field] path=MDP(1) Z=ndarray[1 128]
+[VB monitor 12G MAT field] path=MDP(1) i=list(len=2560,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1) j=list(len=2560,elem=ndarray[1 1])
+[VB monitor 12G MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12G MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12G MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12G MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12G MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12G MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12G MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12G MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12H] L=2 path=MDP(1) iter=first m=1 (MATLAB)
+[VB monitor 12H MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12H MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12H MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12H MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1) F=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) G=list(len=128,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12H MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12H] L=1 path=MDP(1).MDP iter=first m=1 (MATLAB)
+[VB monitor 12H MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12H MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12H MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12H MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12H MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12H MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12H MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12H MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12H MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12H MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12H MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12H MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12H MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1) Pa=list(len=20,elem=list(len=0))
+[VB monitor 12H MAT field] path=MDP(1) Q=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1) U=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1) Y=list(len=2560,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1) Z=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) i=list(len=2560,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1) j=list(len=2560,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12H MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12H MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12H MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12H MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12H] L=2 path=MDP(1) iter=last m=1 (MATLAB)
+[VB monitor 12H MAT field] path=MDP(1) A=list(len=20,elem=ndarray[10 183])
+[VB monitor 12H MAT field] path=MDP(1) B=list(len=1,elem=ndarray[183 183 5])
+[VB monitor 12H MAT field] path=MDP(1) C=list(len=20,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1) D=list(len=1,elem=ndarray[183 1])
+[VB monitor 12H MAT field] path=MDP(1) E=list(len=1,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1) F=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) G=list(len=128,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1) H=list(len=1,elem=sparse[183 1])
+[VB monitor 12H MAT field] path=MDP(1) L=ndarray[1 1]
+[VB monitor 12H] L=1 path=MDP(1).MDP iter=last m=1 (MATLAB)
+[VB monitor 12H MAT field] path=MDP(1).MDP A=list(len=111,elem=ndarray[5 10])
+[VB monitor 12H MAT field] path=MDP(1).MDP B=list(len=60,elem=ndarray[10 10 4])
+[VB monitor 12H MAT field] path=MDP(1).MDP C=list(len=111,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP D=list(len=60,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP E=list(len=60,elem=ndarray[4 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP F=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP G=list(len=4,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP GA=list(len=111,elem=ndarray[5 176 9])
+[VB monitor 12H MAT field] path=MDP(1).MDP GB=list(len=2,elem=ndarray[176 176])
+[VB monitor 12H MAT field] path=MDP(1).MDP GD=list(len=2,elem=ndarray[176 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP GE=list(len=2,elem=ndarray[0 0])
+[VB monitor 12H MAT field] path=MDP(1).MDP GU=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP GV=sparse[3 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP ID=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP L=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1).MDP O=list(len=222,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP P=list(len=60,elem=ndarray[4 2])
+[VB monitor 12H MAT field] path=MDP(1).MDP Pa=list(len=0)
+[VB monitor 12H MAT field] path=MDP(1).MDP Q=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP R=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP T=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1).MDP U=sparse[1 60]
+[VB monitor 12H MAT field] path=MDP(1).MDP X=list(len=60,elem=ndarray[10 2])
+[VB monitor 12H MAT field] path=MDP(1).MDP Y=list(len=222,elem=ndarray[5 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP Z=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP chi=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1).MDP i=list(len=222,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP id=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP j=list(len=222,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1).MDP n=ndarray[111 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP o=ndarray[111 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP s=ndarray[2 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP sA=ndarray[1 111]
+[VB monitor 12H MAT field] path=MDP(1).MDP sB=ndarray[1 60]
+[VB monitor 12H MAT field] path=MDP(1).MDP sC=ndarray[1 111]
+[VB monitor 12H MAT field] path=MDP(1).MDP ss=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1).MDP u=ndarray[2 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP v=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1).MDP w=ndarray[1 2]
+[VB monitor 12H MAT field] path=MDP(1) O=list(len=2560,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1) P=list(len=1,elem=ndarray[5 128])
+[VB monitor 12H MAT field] path=MDP(1) Pa=list(len=20,elem=list(len=0))
+[VB monitor 12H MAT field] path=MDP(1) Q=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1) R=ndarray[5 128]
+[VB monitor 12H MAT field] path=MDP(1) T=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1) U=sparse[5 1]
+[VB monitor 12H MAT field] path=MDP(1) X=list(len=1,elem=ndarray[183 128])
+[VB monitor 12H MAT field] path=MDP(1) Y=list(len=2560,elem=ndarray[10 1])
+[VB monitor 12H MAT field] path=MDP(1) Z=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) i=list(len=2560,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1) id=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1) j=list(len=2560,elem=ndarray[1 1])
+[VB monitor 12H MAT field] path=MDP(1) n=ndarray[20 128]
+[VB monitor 12H MAT field] path=MDP(1) o=ndarray[20 128]
+[VB monitor 12H MAT field] path=MDP(1) s=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) sA=ndarray[1 20]
+[VB monitor 12H MAT field] path=MDP(1) sB=ndarray[1 1]
+[VB monitor 12H MAT field] path=MDP(1) sC=ndarray[1 20]
+[VB monitor 12H MAT field] path=MDP(1) ss=struct(len=1)
+[VB monitor 12H MAT field] path=MDP(1) u=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) v=ndarray[1 128]
+[VB monitor 12H MAT field] path=MDP(1) w=ndarray[1 128]
+[xxxprof_vb_tag] monitor wall_s=9.908398
+[xxxprof_vb_tag] monitor log=C:\Users\andre\.cursor\RGMs\matlab_custom\xxxprof_call4_monitor.txt

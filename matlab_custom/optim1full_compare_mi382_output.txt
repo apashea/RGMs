@@ -1,0 +1,8 @@
+OPTIM1FULL — MI-382: compare Python ``spm_RDP_MI`` vs ``MDP_post_mi382`` authority.
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_compare_mi382_output.txt``
+
+[OPTIM1FULL MI-382] PKL=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_mi382_post.pkl
+[OPTIM1FULL MI-382] MAT=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_MDP_post_mi382.mat
+[OPTIM1FULL MI-382] levels py=2 mat=2
+OK: MDP parity (OPTIM1FULL MI-382)

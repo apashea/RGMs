@@ -1,0 +1,7 @@
+OPTIM1FULL — compare live Entries 1–11 ``MDP_pre`` vs authority.
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_compare_mdp_pre_output.txt``
+
+[OPTIM1FULL MDP_pre compare] PKL=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_mdp_pre.pkl
+[OPTIM1FULL MDP_pre compare] MAT=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_MDP_pre_active_inference.mat
+[OPTIM1FULL MDP_pre compare] PASS

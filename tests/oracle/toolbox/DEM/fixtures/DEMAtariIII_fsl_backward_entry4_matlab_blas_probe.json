@@ -1,0 +1,7 @@
+{
+  "utc": "2026-06-04T21:24:02.327718+00:00",
+  "blas": "Intel(R) oneAPI Math Kernel Library Version 2024.1-Product Build 20240215 for Intel(R) 64 architecture applications (CNR branch AVX2)",
+  "lapack": "Intel(R) oneAPI Math Kernel Library Version 2024.1-Product Build 20240215 for Intel(R) 64 architecture applications (CNR branch AVX2) supporting Linear Algebra PACKage (LAPACK 3.11.0)",
+  "release": "2024b",
+  "eig_which": "built-in (C:\\Program Files\\MATLAB\\R2024b\\toolbox\\matlab\\matfun\\eig)"
+}

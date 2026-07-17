@@ -1,0 +1,15 @@
+{
+  "utc": "2026-06-04T21:39:00+00:00",
+  "conda_env": "rgms-eig-mkl-probe",
+  "numpy_version": "2.4.6",
+  "scipy_version": "1.17.1",
+  "lapack_routines": {
+    "geev": true,
+    "geevx": false,
+    "gges": true
+  },
+  "vendored_dgeevx_built": false,
+  "install_note": "conda-forge libblas/liblapack *mkl + scipy 1.17.1; dgeevx not exposed to SciPy lapack wrapper",
+  "t0_scipy_eig_order": "51/58",
+  "mkl_probe_geevx_backend": "not_runnable"
+}

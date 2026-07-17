@@ -21,16 +21,21 @@ from typing import Any
 
 import numpy as np
 
-from python_src.toolbox.DEM.spm_faster_structure_learning import spm_faster_structure_learning
-from python_src.toolbox.DEM.spm_merge_structure_learning import spm_merge_structure_learning
-from python_src.toolbox.DEM.spm_MDP_generate import spm_MDP_generate
-from python_src.toolbox.DEM.spm_MDP_pong import spm_MDP_pong
-from python_src.toolbox.DEM.spm_RDP_basin import spm_RDP_basin
+from python_src.toolbox.DEM.dem_atariiii_entry5 import forget_parameters as _entry5_forget_parameters
+from python_src.toolbox.DEM.dem_atariiii_entry6 import find_events_and_windows as _entry6_find_events_and_windows
+from python_src.toolbox.DEM.dem_atariiii_entry7 import assimilate_hit_miss_sequences as _entry7_assimilate_sequences
+from python_src.toolbox.DEM.dem_atariiii_entry8 import (
+    entry8_outer_loop_count as _entry8_outer_loop_count,
+    training_window_assimilations as _entry8_training_assimilations_impl,
+)
+from python_src.toolbox.DEM.dem_atariiii_entry9 import basin_training_loop as _entry9_basin_training_loop_impl
+from python_src.toolbox.DEM.dem_atariiii_ledger_hooks import DemAtariLedgerHooks
 from python_src.toolbox.DEM.spm_mdp2rdp import spm_mdp2rdp
-from python_src.toolbox.DEM.spm_RDP_sort import spm_RDP_sort
 from python_src.toolbox.DEM.spm_MDP_VB_XXX import spm_MDP_VB_XXX
+from python_src.toolbox.DEM.dem_atariiii_paths import dem_atariiii_paths_to_hits_P
+from python_src.toolbox.DEM.fsl_backward_entry10 import run_entry10_from_mdp
+from python_src.toolbox.DEM.fsl_backward_entry11 import run_entry11_assembly_from_mdp
 from python_src.toolbox.DEM.spm_set_costs import spm_set_costs
-from python_src.toolbox.DEM.spm_set_goals import spm_set_goals
 
 
 def _repo_root() -> Path:
@@ -72,6 +77,7 @@ _RGMS_RUN_SEGMENT_T0 = 0.0
 # Lazy perf_counter ceiling when only ``RGMS_ATARI_RUN_DEADLINE_MINUTES`` is set (reset each ``run_dem_atariiii``).
 _RGMS_ACTIVE_DEADLINE_CUTOFF: float | None = None
 _RGMS_ACTIVE_DEADLINE_MINUTES_DISP: str = ""
+_RGMS_SCRIPT_T0: float | None = None
 
 
 def get_dem_atariiii_run_last_label() -> str:
@@ -161,6 +167,22 @@ def _rgms_entry_timing_print(entry: int, total_s: float) -> None:
     print(f"[DEM_AtariIII entry timing] ENTRY{entry} total_s={total_s:.6f}", file=sys.stderr, flush=True)
 
 
+def _rgms_script_t0_reset() -> None:
+    global _RGMS_SCRIPT_T0
+    _RGMS_SCRIPT_T0 = time.perf_counter()
+
+
+def _rgms_section_timing_print(section: str, section_start: float) -> None:
+    now = time.perf_counter()
+    script_t0 = _RGMS_SCRIPT_T0 if _RGMS_SCRIPT_T0 is not None else section_start
+    print(
+        f"[DEM_AtariIII timing] {section}: section_s={now - section_start:.6f} "
+        f"total_elapsed_s={now - script_t0:.6f}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+
 def _ck_path(entry: int, phase: str) -> Path:
     return _checkpoint_dir() / f"dem_atari_entry{int(entry)}_{phase}_{_tag()}.pkl"
 
@@ -190,99 +212,19 @@ def _load_context(entry: int, phase: str) -> dict[str, Any]:
         return pickle.load(f)
 
 
-def _entry5_forget_parameters(mdp: list[dict[str, Any]]) -> tuple[int, int, list[dict[str, Any]]]:
-    """ENTRY 5: clear `a{g}` and `b{f}` per model, preserving container structure."""
-    mdp_out = copy.deepcopy(mdp)
-    nm = len(mdp_out)
-    ne = max(2 ** (nm - 1), 1)
-    for n in range(nm):
-        for g in range(len(mdp_out[n]["a"])):
-            mdp_out[n]["a"][g] = []
-        for f in range(len(mdp_out[n]["b"])):
-            mdp_out[n]["b"][f] = []
-    return nm, ne, mdp_out
-
-
-def _entry6_find_events_and_windows(
-    pdp_o: np.ndarray, gdp_id: dict[str, Any], ne: int
-) -> tuple[np.ndarray, np.ndarray, list[dict[str, Any]]]:
-    """ENTRY 6: rewarded/costly event indices and assimilation windows."""
-    ridx = int(np.asarray(gdp_id["reward"], dtype=np.int64).reshape(-1)[0]) - 1
-    cidx = int(np.asarray(gdp_id["contraint"], dtype=np.int64).reshape(-1)[0]) - 1
-    r = np.flatnonzero(np.asarray(pdp_o[ridx, :], dtype=np.float64) > 1.0) + 1
-    c = np.flatnonzero(np.asarray(pdp_o[cidx, :], dtype=np.float64) > 1.0) + 1
-    windows: list[dict[str, Any]] = []
-    for i in range(r.size):
-        ri = int(r[i])
-        s = int(c[np.flatnonzero(c < ri)[-1]])
-        t = np.arange(s + int(ne), ri + int(ne) + 1, dtype=np.int64)
-        if t.size > 0:
-            windows.append({"reward": ri, "start": s, "t": t})
-    return r, c, windows
-
-
-def _entry7_assimilate_sequences(
-    pdp_o_cells: list[list[Any]], mdp: list[dict[str, Any]], entry6_windows: list[dict[str, Any]], ne: int
-) -> list[dict[str, Any]]:
-    mdp_out = copy.deepcopy(mdp)
-    ng = len(pdp_o_cells)
-    for rec in entry6_windows:
-        t = np.asarray(rec["t"], dtype=np.int64).ravel(order="F")
-        for s in range(1, int(ne) + 1):
-            cols = (t + int(s)).astype(np.int64)
-            o_seg = [[pdp_o_cells[g][int(c) - 1] for c in cols.tolist()] for g in range(ng)]
-            mdp_out = spm_merge_structure_learning(o_seg, mdp_out)
-    return mdp_out
-
-
-def _entry8_timing_enabled() -> bool:
-    """When true, `_entry8_training_assimilations` prints per-outer-iteration wall times to stderr."""
-    return _env_flag("RGMS_ATARI_ENTRY8_TIMING")
-
-
-def _entry8_outer_loop_count() -> int:
-    """MATLAB `for i = 1:128`; optional env override for harness speed only."""
-    raw = str(os.getenv("RGMS_ATARI_ENTRY8_OUTER", "128")).strip()
-    try:
-        n = int(raw)
-    except ValueError as exc:
-        raise ValueError(f"RGMS_ATARI_ENTRY8_OUTER must be int-like, got {raw!r}") from exc
-    return int(np.clip(n, 1, 128))
+def _dem_atari_ledger_hooks() -> DemAtariLedgerHooks:
+    return DemAtariLedgerHooks(
+        set_label=_rgms_run_set_last_label,
+        deadline_check=_rgms_run_deadline_check,
+    )
 
 
 def _entry8_training_assimilations(
     pdp_o_cells: list[list[Any]], mdp: list[dict[str, Any]], ne: int, nt: int = 100, n_outer: int = 128
 ) -> tuple[list[dict[str, Any]], float]:
-    """ENTRY 8: merge additional training windows under random play (no basin step).
-
-    Returns ``(mdp_out, total_merge_loop_s)`` — per-outer merge-loop wall times summed.
-    """
-    mdp_out = copy.deepcopy(mdp)
-    ng = len(pdp_o_cells)
-    ne_i = int(ne)
-    nt_i = int(nt)
-    timing = _entry8_timing_enabled()
-    total_merge_loop_s = 0.0
-    for i in range(1, int(n_outer) + 1):
-        _rgms_run_set_last_label(f"ENTRY8: outer i={i}/{int(n_outer)}")
-        _rgms_run_deadline_check()
-        t_outer = time.perf_counter()
-        offset = int(np.remainder(i, 100 - 1)) * nt_i
-        t = np.arange(0, nt_i + ne_i + 1, dtype=np.int64) + int(offset)
-        t_merge = time.perf_counter()
-        for s in range(1, ne_i + 1):
-            cols = (t + int(s)).astype(np.int64)
-            o_seg = [[pdp_o_cells[g][int(c) - 1] for c in cols.tolist()] for g in range(ng)]
-            mdp_out = spm_merge_structure_learning(o_seg, mdp_out)
-            _rgms_run_deadline_check()
-        total_merge_loop_s += time.perf_counter() - t_merge
-        if timing:
-            print(
-                f"[DEM_AtariIII entry8] outer {i}/{int(n_outer)} wall_s={time.perf_counter() - t_outer:.6f}",
-                file=sys.stderr,
-                flush=True,
-            )
-    return mdp_out, total_merge_loop_s
+    return _entry8_training_assimilations_impl(
+        pdp_o_cells, mdp, ne, nt=nt, n_outer=n_outer, hooks=_dem_atari_ledger_hooks()
+    )
 
 
 def _entry9_basin_training_loop(
@@ -293,91 +235,9 @@ def _entry9_basin_training_loop(
     nt: int = 100,
     n_outer: int = 128,
 ) -> dict[str, Any]:
-    """ENTRY 8+9 combined loop with basin reduction and counters."""
-    mdp_out = copy.deepcopy(mdp)
-    ng = len(pdp_o_cells)
-    ne_i = int(ne)
-    nt_i = int(nt)
-
-    ns_hist: list[int] = []
-    nu_hist: list[int] = []
-    na_hist: list[int] = []
-    no_hist: list[int] = []
-    nh_hist: list[int] = []
-    entry8_loop_s = 0.0
-    entry9_loop_s = 0.0
-
-    for i in range(1, int(n_outer) + 1):
-        _rgms_run_set_last_label(f"ENTRY9: outer i={i}/{int(n_outer)}")
-        _rgms_run_deadline_check()
-        offset = int(np.remainder(i, 100 - 1)) * nt_i
-        t = np.arange(0, nt_i + ne_i + 1, dtype=np.int64) + int(offset)
-        t_merge = time.perf_counter()
-        for s in range(1, ne_i + 1):
-            cols = (t + int(s)).astype(np.int64)
-            o_seg = [[pdp_o_cells[g][int(c) - 1] for c in cols.tolist()] for g in range(ng)]
-            mdp_out = spm_merge_structure_learning(o_seg, mdp_out)
-            _rgms_run_deadline_check()
-        entry8_loop_s += time.perf_counter() - t_merge
-
-        _rgms_run_set_last_label(f"ENTRY9: spm_RDP_basin outer i={i}/{int(n_outer)}")
-        _rgms_run_deadline_check()
-        t_basin = time.perf_counter()
-        mdp_out, d, o, h, _ = spm_RDP_basin(mdp_out, [2, 3], [float(c_value), -float(c_value)])
-        b1 = np.asarray(mdp_out[len(mdp_out) - 1]["b"][0][0], dtype=np.float64)
-        ns_hist.append(int(b1.shape[1]) if b1.ndim >= 2 else 1)
-        nu_hist.append(int(b1.shape[2]) if b1.ndim >= 3 else 1)
-        na_hist.append(int(np.sum(~np.asarray(d, dtype=bool).ravel(order="F"))))
-        no_hist.append(int(np.sum(~np.asarray(o, dtype=bool).ravel(order="F"))))
-        nh_hist.append(int(np.asarray(h, dtype=np.int64).ravel(order="F").size))
-        entry9_loop_s += time.perf_counter() - t_basin
-        if np.all(np.asarray(d, dtype=bool).ravel(order="F")):
-            break
-
-    return {
-        "MDP": mdp_out,
-        "NS": ns_hist,
-        "NU": nu_hist,
-        "NA": na_hist,
-        "NO": no_hist,
-        "NH": nh_hist,
-        "entry8_loop_s": entry8_loop_s,
-        "entry9_loop_s": entry9_loop_s,
-    }
-
-
-def dem_atariiii_paths_to_hits_P(
-    B_mask: np.ndarray, hid_1based: np.ndarray | list[int], nt: int
-) -> np.ndarray:
-    """Paths-to-hits matrix ``P`` (DEM_AtariIII ledger after ``spm_set_goals``).
-
-    MATLAB::
-
-        B = sum(MDP{Nm}.b{1},3) > 0;
-        h = sparse(1,hid,1,1,Ns);
-        for t = 1:Nt
-            P(t,:) = h;
-            h = (h + h*B) > 0;
-        end
-
-    ``hid_1based`` are 1-based state indices (``MDP{end}.id.hid`` layout).
-    """
-    B = np.asarray(B_mask, dtype=np.float64)
-    ns = int(B.shape[0])
-    if B.shape != (ns, ns):
-        raise ValueError("B_mask must be square")
-    hid = np.asarray(hid_1based, dtype=np.int64).ravel(order="F")
-    nt_i = int(nt)
-    h = np.zeros((1, ns), dtype=np.float64)
-    for idx in hid.tolist():
-        j0 = int(idx) - 1
-        if 0 <= j0 < ns:
-            h[0, j0] = 1.0
-    p_out = np.zeros((nt_i, ns), dtype=np.float64)
-    for t in range(nt_i):
-        p_out[t, :] = h[0, :]
-        h = ((h + (h @ B)) > 0).astype(np.float64)
-    return p_out
+    return _entry9_basin_training_loop_impl(
+        pdp_o_cells, mdp, ne, c_value, nt=nt, n_outer=n_outer, hooks=_dem_atari_ledger_hooks()
+    )
 
 
 def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
@@ -402,6 +262,7 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         raise NotImplementedError("entry_stop > 12 is not implemented in DEM_AtariIII.py")
 
     _rgms_deadline_reset_for_run()
+    _rgms_script_t0_reset()
 
     ctx: dict[str, Any] = {}
 
@@ -418,12 +279,9 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     else:
         if _capture_enabled(1, "pre"):
             _save_context(1, "pre", ctx)
-        # MATLAB snippet constants
-        ctx["Nr"] = 12
-        ctx["Nc"] = 9
-        ctx["Sc"] = 9
-        ctx["Nd"] = 4
-        ctx["C"] = 32
+        from python_src.toolbox.DEM.fsl_backward_entry1 import apply_entry1_constants
+
+        apply_entry1_constants(ctx)
     if _capture_enabled(1, "post"):
         _save_context(1, "post", ctx)
     _rgms_entry_timing_print(1, time.perf_counter() - _t_entry_wall)
@@ -438,17 +296,20 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(2, "pre")
     elif _capture_enabled(2, "pre"):
         _save_context(2, "pre", ctx)
-    _rgms_run_set_last_label("ENTRY2: spm_MDP_pong")
+    _rgms_run_set_last_label("ENTRY2: run_entry2_from_boundary")
     _rgms_run_deadline_check()
-    gdp, hid, cid, con, rgb, _ = spm_MDP_pong(ctx["Nr"], ctx["Nc"], ctx["Nd"], 1, 0)
-    s = np.ones((4, 3), dtype=np.float64)
-    s[0, :] = [ctx["Nr"], ctx["Nc"], 1]
-    ctx["GDP"] = gdp
-    ctx["hid"] = hid
-    ctx["cid"] = cid
-    ctx["con"] = con
-    ctx["RGB"] = rgb
-    ctx["S"] = s
+    from python_src.toolbox.DEM.fsl_backward_entry2 import (
+        entry2_boundary_from_driver_ctx,
+        run_entry2_from_boundary,
+    )
+
+    out2 = run_entry2_from_boundary(entry2_boundary_from_driver_ctx(ctx))
+    ctx["GDP"] = out2["gdp"]
+    ctx["hid"] = out2["hid"]
+    ctx["cid"] = out2["cid"]
+    ctx["con"] = out2["con"]
+    ctx["RGB"] = out2["rgb"]
+    ctx["S"] = out2["S"]
     if _capture_enabled(2, "post"):
         _save_context(2, "post", ctx)
     _rgms_entry_timing_print(2, time.perf_counter() - _t_entry_wall)
@@ -463,17 +324,20 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(3, "pre")
     elif _capture_enabled(3, "pre"):
         _save_context(3, "pre", ctx)
-    gdp = copy.deepcopy(ctx["GDP"])
-    gdp["tau"] = 1.0
-    gdp["T"] = float(_training_horizon())
-    _rgms_run_set_last_label("ENTRY3: spm_MDP_generate")
+    _rgms_run_set_last_label("ENTRY3: run_entry3_from_boundary")
     _rgms_run_deadline_check()
-    pdp = spm_MDP_generate(gdp)
-    ctx["GDP"] = gdp
-    ctx["PDP"] = pdp
+    from python_src.toolbox.DEM.fsl_backward_entry3 import (
+        entry3_boundary_from_driver_ctx,
+        run_entry3_from_boundary,
+    )
+
+    out3 = run_entry3_from_boundary(entry3_boundary_from_driver_ctx(ctx))
+    ctx["GDP"] = out3["gdp"]
+    ctx["PDP"] = out3["pdp"]
     if _capture_enabled(3, "post"):
         _save_context(3, "post", ctx)
     _rgms_entry_timing_print(3, time.perf_counter() - _t_entry_wall)
+    _rgms_section_timing_print("Data Generation", _t_entry_wall)
     if entry_stop == 3:
         _rgms_run_set_last_label("ENTRY3: return entry_stop=3")
         _rgms_run_deadline_check()
@@ -485,11 +349,15 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(4, "pre")
     elif _capture_enabled(4, "pre"):
         _save_context(4, "pre", ctx)
-    o_sl = [[ctx["PDP"]["O"][g][t] for t in range(1000)] for g in range(len(ctx["PDP"]["O"]))]
-    _rgms_run_set_last_label("ENTRY4: spm_faster_structure_learning")
+    _rgms_run_set_last_label("ENTRY4: run_entry4_from_boundary")
     _rgms_run_deadline_check()
-    mdp = spm_faster_structure_learning(o_sl, ctx["S"], ctx["Sc"])
-    ctx["MDP"] = mdp
+    from python_src.toolbox.DEM.fsl_backward_entry4 import (
+        entry4_boundary_from_driver_ctx,
+        run_entry4_from_boundary,
+    )
+
+    out4 = run_entry4_from_boundary(entry4_boundary_from_driver_ctx(ctx))
+    ctx["MDP"] = out4["mdp"]
     if _capture_enabled(4, "post"):
         _save_context(4, "post", ctx)
     _rgms_entry_timing_print(4, time.perf_counter() - _t_entry_wall)
@@ -504,12 +372,17 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(5, "pre")
     elif _capture_enabled(5, "pre"):
         _save_context(5, "pre", ctx)
-    _rgms_run_set_last_label("ENTRY5: _entry5_forget_parameters")
+    _rgms_run_set_last_label("ENTRY5: run_entry5_from_boundary")
     _rgms_run_deadline_check()
-    nm, ne, mdp = _entry5_forget_parameters(ctx["MDP"])
-    ctx["Nm"] = nm
-    ctx["Ne"] = ne
-    ctx["MDP"] = mdp
+    from python_src.toolbox.DEM.fsl_backward_entry5 import (
+        entry5_boundary_from_driver_ctx,
+        run_entry5_from_boundary,
+    )
+
+    out5 = run_entry5_from_boundary(entry5_boundary_from_driver_ctx(ctx))
+    ctx["Nm"] = out5["Nm"]
+    ctx["Ne"] = out5["Ne"]
+    ctx["MDP"] = out5["mdp"]
     if _capture_enabled(5, "post"):
         _save_context(5, "post", ctx)
     _rgms_entry_timing_print(5, time.perf_counter() - _t_entry_wall)
@@ -524,12 +397,17 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(6, "pre")
     elif _capture_enabled(6, "pre"):
         _save_context(6, "pre", ctx)
-    _rgms_run_set_last_label("ENTRY6: _entry6_find_events_and_windows")
+    _rgms_run_set_last_label("ENTRY6: run_entry6_from_boundary")
     _rgms_run_deadline_check()
-    r, c, windows = _entry6_find_events_and_windows(ctx["PDP"]["o"], ctx["GDP"]["id"], int(ctx["Ne"]))
-    ctx["r"] = r
-    ctx["c"] = c
-    ctx["entry6_windows"] = windows
+    from python_src.toolbox.DEM.fsl_backward_entry6 import (
+        entry6_boundary_from_driver_ctx,
+        run_entry6_from_boundary,
+    )
+
+    out6 = run_entry6_from_boundary(entry6_boundary_from_driver_ctx(ctx))
+    ctx["r"] = out6["r"]
+    ctx["c"] = out6["c"]
+    ctx["entry6_windows"] = out6["entry6_windows"]
     if _capture_enabled(6, "post"):
         _save_context(6, "post", ctx)
     _rgms_entry_timing_print(6, time.perf_counter() - _t_entry_wall)
@@ -544,11 +422,15 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(7, "pre")
     elif _capture_enabled(7, "pre"):
         _save_context(7, "pre", ctx)
-    _rgms_run_set_last_label("ENTRY7: _entry7_assimilate_sequences")
+    _rgms_run_set_last_label("ENTRY7: run_entry7_from_boundary")
     _rgms_run_deadline_check()
-    ctx["MDP"] = _entry7_assimilate_sequences(
-        ctx["PDP"]["O"], ctx["MDP"], ctx["entry6_windows"], int(ctx["Ne"])
+    from python_src.toolbox.DEM.fsl_backward_entry7 import (
+        entry7_boundary_from_driver_ctx,
+        run_entry7_from_boundary,
     )
+
+    out7 = run_entry7_from_boundary(entry7_boundary_from_driver_ctx(ctx))
+    ctx["MDP"] = out7["mdp"]
     if _capture_enabled(7, "post"):
         _save_context(7, "post", ctx)
     _rgms_entry_timing_print(7, time.perf_counter() - _t_entry_wall)
@@ -569,13 +451,16 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     total_entry8_time_sum = time.perf_counter() - _t8_setup
 
     if entry_stop == 8:
-        _rgms_run_set_last_label("ENTRY8: _entry8_training_assimilations")
+        _rgms_run_set_last_label("ENTRY8: run_entry8_from_boundary")
         _rgms_run_deadline_check()
-        mdp8, merge_loop_s = _entry8_training_assimilations(
-            ctx["PDP"]["O"], ctx["MDP"], int(ctx["Ne"]), nt=int(ctx["entry8_NT"]), n_outer=n_outer
+        from python_src.toolbox.DEM.fsl_backward_entry8 import (
+            entry8_boundary_from_driver_ctx,
+            run_entry8_from_boundary,
         )
-        ctx["MDP"] = mdp8
-        total_entry8_time_sum += merge_loop_s
+
+        out8 = run_entry8_from_boundary(entry8_boundary_from_driver_ctx(ctx, n_outer=n_outer))
+        ctx["MDP"] = out8["mdp"]
+        total_entry8_time_sum += float(out8["entry8_merge_loop_s"])
         if _capture_enabled(8, "post"):
             _save_context(8, "post", ctx)
         _rgms_entry_timing_print(8, total_entry8_time_sum)
@@ -584,21 +469,20 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         return ctx
 
     # %%% ENTRY 9 (inside Entry 8 outer loop in the MATLAB snippet)
+    _t_merge_structure_learning = time.perf_counter()
     if _use_checkpoint(9):
         ctx = _load_context(9, "pre")
     elif _capture_enabled(9, "pre"):
         _save_context(9, "pre", ctx)
-    _rgms_run_set_last_label("ENTRY9: _entry9_basin_training_loop")
+    _rgms_run_set_last_label("ENTRY9: run_entry9_from_boundary")
     _rgms_run_deadline_check()
-    out9 = _entry9_basin_training_loop(
-        ctx["PDP"]["O"],
-        ctx["MDP"],
-        int(ctx["Ne"]),
-        float(ctx["C"]),
-        nt=int(ctx["entry8_NT"]),
-        n_outer=n_outer,
+    from python_src.toolbox.DEM.fsl_backward_entry9 import (
+        entry9_boundary_from_driver_ctx,
+        run_entry9_from_boundary,
     )
-    ctx["MDP"] = out9["MDP"]
+
+    out9 = run_entry9_from_boundary(entry9_boundary_from_driver_ctx(ctx, n_outer=n_outer))
+    ctx["MDP"] = out9["mdp"]
     ctx["NS"] = out9["NS"]
     ctx["NU"] = out9["NU"]
     ctx["NA"] = out9["NA"]
@@ -608,6 +492,7 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     total_entry9_time_sum = float(out9["entry9_loop_s"])
     _rgms_entry_timing_print(8, total_entry8_time_sum)
     _rgms_entry_timing_print(9, total_entry9_time_sum)
+    _rgms_section_timing_print("Merge Structure Learning", _t_merge_structure_learning)
     if _capture_enabled(9, "post"):
         _save_context(9, "post", ctx)
     if entry_stop == 9:
@@ -621,28 +506,14 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
         ctx = _load_context(10, "pre")
     elif _capture_enabled(10, "pre"):
         _save_context(10, "pre", ctx)
-    _rgms_run_set_last_label("ENTRY10: spm_RDP_sort")
+    _rgms_run_set_last_label("ENTRY10: run_entry10_from_mdp")
     _rgms_run_deadline_check()
-    mdp10, j10 = spm_RDP_sort(copy.deepcopy(ctx["MDP"]))
-    ctx["entry10_j"] = j10
-    c_val = float(ctx["C"])
-    _rgms_run_set_last_label("ENTRY10: spm_set_goals")
-    _rgms_run_deadline_check()
-    mdp10 = spm_set_goals(
-        mdp10,
-        np.array([2, 3], dtype=np.int64),
-        np.array([c_val, -c_val], dtype=np.float64),
-    )
-    ctx["MDP"] = mdp10
-    nm = len(mdp10)
-    b1 = np.asarray(mdp10[nm - 1]["b"][0][0], dtype=np.float64)
-    bp = (np.sum(b1, axis=2) > 0).astype(np.float64)
-    hid_list = mdp10[nm - 1]["id"].get("hid", [])
-    hid_arr = np.asarray(hid_list, dtype=np.int64).ravel() if hid_list else np.zeros(0, dtype=np.int64)
-    nt_p = 32
-    ctx["P"] = dem_atariiii_paths_to_hits_P(bp, hid_arr, nt_p)
-    ctx["hid"] = hid_arr
-    ctx["entry10_Nt"] = nt_p
+    out10 = run_entry10_from_mdp(ctx["MDP"], c_val=float(ctx["C"]))
+    ctx["MDP"] = out10["mdp"]
+    ctx["entry10_j"] = out10["entry10_j"]
+    ctx["P"] = out10["P"]
+    ctx["hid"] = out10["hid"]
+    ctx["entry10_Nt"] = out10["entry10_Nt"]
     if _capture_enabled(10, "post"):
         _save_context(10, "post", ctx)
     _rgms_entry_timing_print(10, time.perf_counter() - _t_entry_wall)
@@ -658,29 +529,9 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     elif _capture_enabled(11, "pre"):
         _save_context(11, "pre", ctx)
 
-    mdp_e11 = ctx["MDP"]
-    c_val = float(ctx["C"])
-    _rgms_run_set_last_label("ENTRY11: spm_set_goals")
+    _rgms_run_set_last_label("ENTRY11: assemble RDP")
     _rgms_run_deadline_check()
-    mdp_e11 = spm_set_goals(
-        mdp_e11,
-        np.array([2, 3], dtype=np.int64),
-        np.array([c_val, -c_val], dtype=np.float64),
-    )
-    ctx["MDP"] = mdp_e11
-    _rgms_run_set_last_label("ENTRY11: spm_set_costs")
-    _rgms_run_deadline_check()
-    mdp_e11 = spm_set_costs(
-        mdp_e11,
-        np.array([2.0, 3.0], dtype=np.float64),
-        np.array([c_val, -c_val], dtype=np.float64),
-    )
-    ctx["MDP"] = mdp_e11
-    _rgms_run_set_last_label("ENTRY11: spm_mdp2rdp")
-    _rgms_run_deadline_check()
-    rdp = spm_mdp2rdp(mdp_e11)
-    rdp["T"] = 64.0
-    ctx["RDP"] = rdp
+    ctx["RDP"] = run_entry11_assembly_from_mdp(ctx["MDP"], c_val=float(ctx["C"]))
 
     if _capture_enabled(11, "post"):
         _save_context(11, "post", ctx)
@@ -708,6 +559,7 @@ def run_dem_atariiii(entry_stop: int = 5) -> dict[str, Any]:
     _rgms_run_set_last_label("run_dem_atariiii: complete")
     _rgms_run_deadline_check()
     return ctx
+
 
 __all__ = [
     "run_dem_atariiii",

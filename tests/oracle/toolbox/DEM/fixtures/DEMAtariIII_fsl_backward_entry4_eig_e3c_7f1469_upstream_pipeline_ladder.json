@@ -1,0 +1,199 @@
+{
+  "utc": "2026-06-06T20:55:35.801417+00:00",
+  "eig_md_section": "4.2 E3c-b-c-b2-a",
+  "sub_hash": "7f1469f5003eebf1",
+  "backend": "lapack_vendored",
+  "row_pair_0based": [
+    30,
+    37
+  ],
+  "fortran_dbg_col": 2,
+  "raw_col_for_jref_0based": 1,
+  "j_ref_0based": 71,
+  "order_mismatch_count": 66,
+  "greedy_close_snap_count_k80": 47,
+  "first_mismatch_default": {
+    "rank": 1,
+    "idx_ref": 30,
+    "idx_got": 37,
+    "absv_ref": 0.3711968769588864,
+    "absv_got": 0.37119687695888687,
+    "absv_diff": 4.440892098500626e-16
+  },
+  "kmax_ref": 51,
+  "kmax_got": 51,
+  "kmax_match": true,
+  "ref_pair_at_jmax": {
+    "abs_lo": 0.3711968769588864,
+    "abs_hi": 0.37119687695888637,
+    "row_lo_0based": 30,
+    "row_hi_0based": 37,
+    "leader_0based": 30,
+    "diff_lo_minus_hi": 5.551115123125783e-17
+  },
+  "py_pair_at_jmax": {
+    "abs_lo": 0.3711968769588853,
+    "abs_hi": 0.37119687695888687,
+    "row_lo_0based": 30,
+    "row_hi_0based": 37,
+    "leader_0based": 37,
+    "diff_lo_minus_hi": -1.5543122344752192e-15
+  },
+  "pipeline_ladder_rank1_pair": {
+    "1_post_DGEHRD": {
+      "abs_lo": 0.29669015614129096,
+      "abs_hi": 0.29669015614129096,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": 30,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2_post_DORGHR": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2a_post_DLAQR0_in_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2b_post_DLAQR0_out_schur_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "3_post_DHSEQR": {
+      "abs_lo": 0.3711968769588851,
+      "abs_hi": 0.3711968769588866,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": 37,
+      "diff_lo_minus_hi": -1.4988010832439613e-15
+    },
+    "4_DTREVC3_pre_IDAMAX": {
+      "abs_lo": 0.3711968769588851,
+      "abs_hi": 0.3711968769588866,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": 37,
+      "diff_lo_minus_hi": -1.4988010832439613e-15
+    },
+    "5_DTREVC3_post_normalize": {
+      "abs_lo": 0.9999999999999917,
+      "abs_hi": 0.9999999999999958,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": 37,
+      "diff_lo_minus_hi": -4.107825191113079e-15
+    },
+    "6_final_pp": {
+      "abs_lo": 0.3711968769588853,
+      "abs_hi": 0.37119687695888687,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": 37,
+      "diff_lo_minus_hi": -1.5543122344752192e-15
+    }
+  },
+  "first_leader_flip_py": {
+    "site": "3_post_DHSEQR",
+    "from_leader_0based": 30,
+    "to_leader_0based": 37,
+    "ref_leader_0based": 30,
+    "matches_ref": false
+  },
+  "first_abs_divergence_from_ref_final": {
+    "site": "3_post_DHSEQR",
+    "delta_diff_minus_ref_final": -1.5543122344752192e-15,
+    "stage": {
+      "abs_lo": 0.3711968769588851,
+      "abs_hi": 0.3711968769588866,
+      "row_lo_0based": 30,
+      "row_hi_0based": 37,
+      "leader_0based": 37,
+      "diff_lo_minus_hi": -1.4988010832439613e-15
+    }
+  },
+  "order_row_table": [
+    {
+      "index": 30,
+      "abs_ref": 0.3711968769588864,
+      "abs_py": 0.3711968769588853,
+      "delta_py_minus_ref": -1.1102230246251565e-15
+    },
+    {
+      "index": 37,
+      "abs_ref": 0.37119687695888637,
+      "abs_py": 0.37119687695888687,
+      "delta_py_minus_ref": 4.996003610813204e-16
+    },
+    {
+      "index": 18,
+      "abs_ref": 0.17873635350504827,
+      "abs_py": 0.17873635350504927,
+      "delta_py_minus_ref": 9.992007221626409e-16
+    },
+    {
+      "index": 22,
+      "abs_ref": 0.37119687695888487,
+      "abs_py": 0.37119687695888415,
+      "delta_py_minus_ref": -7.216449660063518e-16
+    },
+    {
+      "index": 40,
+      "abs_ref": 0.37119687695888587,
+      "abs_py": 0.3711968769588866,
+      "delta_py_minus_ref": 7.216449660063518e-16
+    },
+    {
+      "index": 51,
+      "abs_ref": 0.3711968769588879,
+      "abs_py": 0.3711968769588884,
+      "delta_py_minus_ref": 4.996003610813204e-16
+    },
+    {
+      "index": 43,
+      "abs_ref": 0.3711968769588863,
+      "abs_py": 0.3711968769588866,
+      "delta_py_minus_ref": 2.7755575615628914e-16
+    },
+    {
+      "index": 26,
+      "abs_ref": 0.37119687695888487,
+      "abs_py": 0.37119687695888515,
+      "delta_py_minus_ref": 2.7755575615628914e-16
+    }
+  ],
+  "replay_oracles": [
+    {
+      "replay": "live_py",
+      "mismatch_count": 66,
+      "rank1_got": 37,
+      "rank1_ref": 30
+    },
+    {
+      "replay": "snap_pair_30_37_to_ref",
+      "mismatch_count": 67,
+      "rank1_got": 40,
+      "rank1_ref": 30
+    },
+    {
+      "replay": "snap_order_rows_to_ref",
+      "mismatch_count": 61,
+      "rank1_got": 30,
+      "rank1_ref": 30
+    }
+  ],
+  "oracle_kind": "wide_column_absv_drift",
+  "compute_patch_hint": "K84 P1: locate first upstream stage for rank-1 pair 30/37; compare to 866 DHSEQR pattern; multi-row fidelity likely."
+}

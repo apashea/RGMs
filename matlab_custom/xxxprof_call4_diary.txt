@@ -1,0 +1,4 @@
+[xxxprof_vb_tag] tag=call4 mode=monitor matlab=24.2.0.3157250 (R2024b) Update 8
+[xxxprof_vb_tag] rdp=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_XXX_12_rgms_atari_optim1full_call4_rdp.mat
+[xxxprof_vb_tag] rng=2 dump_subentries=false
+[xxxprof_vb_tag] monitoring=true (12A–12H inventory)

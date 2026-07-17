@@ -1,0 +1,68 @@
+{
+  "record_schema": 1,
+  "record_id": "optim1full_entry12_vb_authority_lane_2026-06-27",
+  "frozen_at": "2026-06-27 11:22:50",
+  "lane": "OPTIM1FULL Product B — Entry 12 VB (authority fixtures)",
+  "authority_mdp_mats": {
+    "pre": "DEMAtariIII_optim1full_MDP_pre_active_inference.mat",
+    "post_nr": "DEMAtariIII_optim1full_MDP_post_nr.mat",
+    "capture_mode": "capture_optim1full_python_product_b"
+  },
+  "capture_orchestrator": "tests/demo1/optim1full/optim1full_capture_entry12_from_authority.py",
+  "capture_notes": {
+    "phase_1": "RDP assembly from Python authority MDP mats",
+    "phase_2": "MATLAB VB dump — capture_optim1full_entry12_from_authority (call2/3/4)",
+    "phase_2b": "call4 re-dump — capture_optim1full_call4_extended_boundaries (optim1full dump fork; 8 lean boundaries)",
+    "phase_3": "lean v7 sidecar rewrite (all tags; call4 again after 2b)"
+  },
+  "prior_sidecar_backup": "fixtures/deprecated/entry12_pre_authority_recapture_2026-06-27_103842",
+  "capture_log": "logs/optim1full_entry12_authority_recapture_2026-06-20.log",
+  "call4_extended_log": "logs/optim1full_entry12_call4_extended_phase2b_2026-06-27.log",
+  "gate_passes": {
+    "tier3a": {
+      "tag": "rgms_atari_optim1full_call2",
+      "log": "logs/optim1full_tier3a_authority_recapture_2026-06-27.log",
+      "wall_s": 605.916,
+      "causal_steps": 15
+    },
+    "tier3e": {
+      "tag": "rgms_atari_optim1full_call3",
+      "log": "logs/optim1full_tier3e_authority_recapture_2026-06-27.log",
+      "wall_s": 667.197,
+      "causal_steps": 15
+    },
+    "tier3f": {
+      "tag": "rgms_atari_optim1full_call4",
+      "log": "logs/optim1full_tier3f_authority_recapture_2026-06-27.log",
+      "wall_s": 564.929,
+      "causal_steps": 24,
+      "draw_audit": {
+        "unused_draws": 0,
+        "sample_calls_match": true,
+        "K": 32256
+      }
+    }
+  },
+  "manifests": {
+    "rgms_atari_optim1full_call2": "entry12_signoff_manifest_rgms_atari_optim1full_call2.json",
+    "rgms_atari_optim1full_call3": "entry12_signoff_manifest_rgms_atari_optim1full_call3.json",
+    "rgms_atari_optim1full_call4": "entry12_signoff_manifest_rgms_atari_optim1full_call4.json"
+  },
+  "supersedes": [
+    "Prior Entry 12 sidecars in entry12_pre_authority_recapture_2026-06-27_103842",
+    "2026-06-27 extended-only tier3f PASS without authority 1b (capture_optim1full_call4_extended_boundaries standalone)"
+  ],
+  "does_not_certify": [
+    "OPTIM1FULL Product B full sign-off (4b pending)",
+    "tier1 MI boundaries on Python authority (stale PASS)",
+    "Full-field dump parity on raw 12D/E/F lean snaps (witness parity only)"
+  ],
+  "next_ladder_steps": [
+    "optim1full_parity_gate.py --full-replay (4b)"
+  ],
+  "tier1_pass": {
+    "date": "2026-06-27",
+    "log": "logs/optim1full_tier1_authority_session_2026-06-27.log",
+    "wall_s": 76.413,
+    "caveat": "MI .mat authority dated 2026-06-23; not re-captured from Python MDP_post_nr (2026-06-26)"
+  }

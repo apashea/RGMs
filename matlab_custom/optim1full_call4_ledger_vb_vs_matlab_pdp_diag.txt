@@ -1,0 +1,8 @@
+RDP=DEMAtariIII_optim1full_call4_rdp.pkl  MATLAB_PDP=DEMAtariIII_optim1full_dem_with_compression_rgb_matlab_pdp.mat
+vb_call4 segment start=202432 k=4096
+--- lane=optim ---
+PDP.F max abs diff vs MATLAB fence = 8.035638616871331
+RESULT optim: FAIL — call4 ledger VB (optim) vs matlab_pdp: keys py=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'L', 'MDP', 'O', 'P', 'Pa', 'Q', 'R', 'T', 'U', 'X', 'Y', 'Z', 'entry12_VBX', 'entry12_Yfill', 'i', 'id', 'j', 'n', 'o', 's', 'sA', 'sB', 'sC', 'ss', 'u', 'v', 'w'] mat=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'L', 'MDP', 'O', 'P', 'Pa', 'Q', 'R', 'T', 'U', 'X', 'Y', 'Z', 'i', 'id', 'j', 'n', 'o', 's', 'sA', 'sB', 'sC', 'ss', 'u', 'v', 'w']
+--- lane=fidelity ---
+PDP.F max abs diff vs MATLAB fence = 8.035638616871331
+RESULT fidelity: FAIL — call4 ledger VB (fidelity) vs matlab_pdp: keys py=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'L', 'MDP', 'O', 'P', 'Pa', 'Q', 'R', 'T', 'U', 'X', 'Y', 'Z', 'entry12_VBX', 'entry12_Yfill', 'i', 'id', 'j', 'n', 'o', 's', 'sA', 'sB', 'sC', 'ss', 'u', 'v', 'w'] mat=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'L', 'MDP', 'O', 'P', 'Pa', 'Q', 'R', 'T', 'U', 'X', 'Y', 'Z', 'i', 'id', 'j', 'n', 'o', 's', 'sA', 'sB', 'sC', 'ss', 'u', 'v', 'w']

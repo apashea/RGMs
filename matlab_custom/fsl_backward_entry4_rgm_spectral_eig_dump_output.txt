@@ -1,0 +1,208 @@
+=== MATLAB eig records dump 2026-06-04 12:04:28 ===
+records=0 Nm=2
+wrote_mat=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_matlab_eig_records.mat
+=== MATLAB eig records dump 2026-06-04 12:04:54 ===
+records=58 Nm=2
+wrote_mat=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_matlab_eig_records.mat
+=== Python engine probe dump 2026-06-04T17:16:45.905526+00:00 ===
+records=58 blocks=58 Nm=2
+wrote_probe=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_python_engine_probe.pkl
+wrote_blocks=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_oracle_blocks.pkl
+matlab_records_mat_present=True path=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_matlab_eig_records.mat
+=== Entry 4 eig diagnosis 2026-06-04T17:26:21.925925+00:00 ===
+backend=numpy geevx=False
+probe_records=58 oracle_blocks=58
+probe: mat_capture_order_ok=58/58 scipy_vs_matlab_order=51/58
+vs_matlab_ref: eig_nobalance order_ok=51/58 jmax_ok=50/58
+vs_matlab_ref: scipy.linalg.eig order_ok=51/58
+matlab .mat cross-check: unavailable (re-save .mat with -v7 or install h5py)
+first_eig_nobalance_order_fail: hash=6abd2a358966b834 n=108 jmax_ref=107 jmax_got=0 max_abs_w_diff=3.809031e+00 max_abs_principal_col_diff=6.661338e-16
+wrote_json=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_diagnosis.json
+=== MATLAB eig records dump 2026-06-04 12:26:45 ===
+records=58 Nm=2
+wrote_mat=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_matlab_eig_records.mat
+=== Entry 4 eig diagnosis 2026-06-04T17:26:56.673968+00:00 ===
+backend=numpy geevx=False
+probe_records=58 oracle_blocks=58
+probe: mat_capture_order_ok=58/58 scipy_vs_matlab_order=51/58
+vs_matlab_ref: eig_nobalance order_ok=51/58 jmax_ok=50/58
+vs_matlab_ref: scipy.linalg.eig order_ok=51/58
+matlab .mat cross-check: loaded
+first_eig_nobalance_order_fail: hash=6abd2a358966b834 n=108 jmax_ref=107 jmax_got=0 max_abs_w_diff=3.809031e+00 max_abs_principal_col_diff=6.661338e-16
+wrote_json=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_diagnosis.json
+=== Entry 4 eig diagnosis (granular) 2026-06-04T18:33:49.368420+00:00 ===
+backend=numpy geevx=False
+blocks=58 probe_records=58
+stages_eig_nobalance={'W_SPECTRUM': 8, 'OK': 50}
+fail_w_spectrum=8 fail_sort_abs_with_jmax_ok=0
+order_ok=51/58 jmax_ok=50/58
+wrote_granular=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_diagnosis_granular.json
+wrote_summary=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_diagnosis.json
+first_fail: stage=W_SPECTRUM hash=6abd2a358966b834 n=108 lev=1 stream=1 iter=1 jmax 107->0 sort_rank0 mismatch={'rank': 58, 'idx_ref': 105, 'idx_got': 1, 'absv_ref': 1.1102230246251565e-16, 'absv_got': 0.0, 'absv_diff': 1.1102230246251565e-16}
+=== Entry 4 deep inspection 2026-06-04T18:52:32.569283+00:00 ===
+backend=numpy geevx=False
+n_fail=8/58 by_stage={'W_SPECTRUM': ['6abd2a358966b834', 'a03d7da5d5c09bab', '2d5f8b838be81f21', '7d978bc6b89bde7b', '7f1469f5003eebf1', '866ab1a9b2265fd6', '4ab4f22de6228a3a', 'cec96c2aaf1b1fc0']}
+wrote_deep=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_inspection_deep.json
+wrote_index=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_failure_index.json
+wrote_replay=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_failure_replay.pkl n_entries=8
+  fail 6abd2a358966b834 n=108 stage=W_SPECTRUM lev=1 iter=1 jmax 107->0 max_w_diff=3.8090306423665066 greedy_match=2.4424906541753444e-15 cyclic_best_shift=-1 order_mismatch_ranks=49
+  fail a03d7da5d5c09bab n=99 stage=W_SPECTRUM lev=1 iter=2 jmax 98->0 max_w_diff=0.12737199090314205 greedy_match=2.498001805406602e-16 cyclic_best_shift=-3 order_mismatch_ranks=93
+  fail 2d5f8b838be81f21 n=90 stage=W_SPECTRUM lev=1 iter=3 jmax 89->0 max_w_diff=0.12139835243195873 greedy_match=2.5673907444456745e-16 cyclic_best_shift=-3 order_mismatch_ranks=85
+  fail 7d978bc6b89bde7b n=81 stage=W_SPECTRUM lev=1 iter=4 jmax 80->0 max_w_diff=0.11559263572637207 greedy_match=2.636779683484747e-16 cyclic_best_shift=-2 order_mismatch_ranks=74
+  fail 7f1469f5003eebf1 n=72 stage=W_SPECTRUM lev=1 iter=5 jmax 71->2 max_w_diff=0.10907423876736544 greedy_match=9.71445146547012e-17 cyclic_best_shift=-3 order_mismatch_ranks=65
+  fail 866ab1a9b2265fd6 n=63 stage=W_SPECTRUM lev=1 iter=6 jmax 62->0 max_w_diff=0.0657490743412128 greedy_match=9.71445146547012e-17 cyclic_best_shift=-3 order_mismatch_ranks=60
+  fail 4ab4f22de6228a3a n=54 stage=W_SPECTRUM lev=1 iter=7 jmax 53->1 max_w_diff=0.060914781985884264 greedy_match=1.3877787807814457e-17 cyclic_best_shift=-3 order_mismatch_ranks=50
+  fail cec96c2aaf1b1fc0 n=7 stage=W_SPECTRUM lev=2 iter=1 jmax 6->0 max_w_diff=3.507900457337858 greedy_match=1.7763568394002505e-15 cyclic_best_shift=-1 order_mismatch_ranks=0
+=== Entry 4 replay experiments 2026-06-04T18:59:56.866499+00:00 ===
+backend=numpy pass_raw=51/58 fail=8
+classification: 0 ulp_sort 7 layout_w
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_experiments.json
+  6abd2a358966b834 n=108 raw=False greedy=False ulp_max_absv_diff=6.661e-16 rank_mismatch=49
+  a03d7da5d5c09bab n=99 raw=False greedy=False ulp_max_absv_diff=3.303e-15 rank_mismatch=93
+  2d5f8b838be81f21 n=90 raw=False greedy=False ulp_max_absv_diff=3.580e-15 rank_mismatch=85
+  7d978bc6b89bde7b n=81 raw=False greedy=False ulp_max_absv_diff=1.582e-15 rank_mismatch=74
+  7f1469f5003eebf1 n=72 raw=False greedy=False ulp_max_absv_diff=6.550e-15 rank_mismatch=65
+  866ab1a9b2265fd6 n=63 raw=False greedy=False ulp_max_absv_diff=6.617e-14 rank_mismatch=60
+  4ab4f22de6228a3a n=54 raw=False greedy=False ulp_max_absv_diff=1.332e-14 rank_mismatch=50
+  cec96c2aaf1b1fc0 n=7 raw=True greedy=True ulp_max_absv_diff=4.441e-16 rank_mismatch=0
+=== Entry 4 replay experiments 2026-06-04T19:00:38.536589+00:00 ===
+backend=numpy pass_raw=51/58 fail=8
+classification: ulp_sort=7 layout_w=0 pass=1
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_experiments.json
+  6abd2a358966b834 n=108 raw=False greedy=False ulp_max_absv_diff=6.661e-16 rank_mismatch=49
+  a03d7da5d5c09bab n=99 raw=False greedy=False ulp_max_absv_diff=3.303e-15 rank_mismatch=93
+  2d5f8b838be81f21 n=90 raw=False greedy=False ulp_max_absv_diff=3.580e-15 rank_mismatch=85
+  7d978bc6b89bde7b n=81 raw=False greedy=False ulp_max_absv_diff=1.582e-15 rank_mismatch=74
+  7f1469f5003eebf1 n=72 raw=False greedy=False ulp_max_absv_diff=6.550e-15 rank_mismatch=65
+  866ab1a9b2265fd6 n=63 raw=False greedy=False ulp_max_absv_diff=6.617e-14 rank_mismatch=60
+  4ab4f22de6228a3a n=54 raw=False greedy=False ulp_max_absv_diff=1.332e-14 rank_mismatch=50
+  cec96c2aaf1b1fc0 n=7 raw=True greedy=True ulp_max_absv_diff=4.441e-16 rank_mismatch=0
+=== Entry 4 MATLAB sort probe 2026-06-04T19:16:37.498770+00:00 ===
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_matlab_sort_probe.json
+  6abd2a358966b834 n=108 mat_sort_on_py=True mat_sort_recovers_order=False
+  a03d7da5d5c09bab n=99 mat_sort_on_py=True mat_sort_recovers_order=False
+  2d5f8b838be81f21 n=90 mat_sort_on_py=True mat_sort_recovers_order=False
+  7d978bc6b89bde7b n=81 mat_sort_on_py=True mat_sort_recovers_order=False
+  7f1469f5003eebf1 n=72 mat_sort_on_py=True mat_sort_recovers_order=False
+  866ab1a9b2265fd6 n=63 mat_sort_on_py=True mat_sort_recovers_order=False
+  4ab4f22de6228a3a n=54 mat_sort_on_py=True mat_sort_recovers_order=False
+  cec96c2aaf1b1fc0 n=7 mat_sort_on_py=True mat_sort_recovers_order=True
+=== Entry 4 replay experiments 2026-06-04T19:16:54.053141+00:00 ===
+backend=numpy pass_raw=51/58 fail=8
+classification: ulp_sort=7 layout_w=0 pass=1
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_experiments.json
+  6abd2a358966b834 n=108 raw=False greedy=False ulp_max_absv_diff=6.661e-16 rank_mismatch=49
+  a03d7da5d5c09bab n=99 raw=False greedy=False ulp_max_absv_diff=3.303e-15 rank_mismatch=93
+  2d5f8b838be81f21 n=90 raw=False greedy=False ulp_max_absv_diff=3.580e-15 rank_mismatch=85
+  7d978bc6b89bde7b n=81 raw=False greedy=False ulp_max_absv_diff=1.582e-15 rank_mismatch=74
+  7f1469f5003eebf1 n=72 raw=False greedy=False ulp_max_absv_diff=6.550e-15 rank_mismatch=65
+  866ab1a9b2265fd6 n=63 raw=False greedy=False ulp_max_absv_diff=6.617e-14 rank_mismatch=60
+  4ab4f22de6228a3a n=54 raw=False greedy=False ulp_max_absv_diff=1.332e-14 rank_mismatch=50
+  cec96c2aaf1b1fc0 n=7 raw=True greedy=True ulp_max_absv_diff=4.441e-16 rank_mismatch=0
+=== Entry 4 principal absv probe 2026-06-04T19:36:44.443070+00:00 ===
+order_match=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_principal_absv_probe.json
+=== Entry 4 eig native status 2026-06-04T19:51:48.400545+00:00 ===
+order=51/58 jmax=58/58 backend=numpy
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_native_status.json
+=== Entry 4 geevx vendored gate 2026-06-04T20:50:52.115069+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 eig native status 2026-06-04T21:23:30.664916+00:00 ===
+order=51/58 jmax=58/58 backend=scipy
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_native_status.json
+=== Entry 4 eig native status 2026-06-04T21:40:14.518720+00:00 ===
+order=51/58 jmax=58/58 backend=scipy
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_native_status.json
+=== Entry 4 geevx vendored gate 2026-06-04T23:59:25.602723+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 eig native status 2026-06-04T23:59:26.060212+00:00 ===
+order=51/58 jmax=58/58 backend=scipy
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_native_status.json
+=== Entry 4 geevx vendored gate 2026-06-05T01:23:22.451673+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-05T03:00:51.567652+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-05T13:16:09.792370+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T04:20:40.218375+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T04:22:51.857974+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T04:25:20.512195+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T04:41:14.800292+00:00 ===
+seven_fail order=4/7 jmax=7/7
+full order=55/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T14:02:27.447239+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T17:06:18.665462+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T17:07:21.772683+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T17:09:28.242358+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T17:17:20.966168+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T18:08:49.113410+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T18:21:07.830854+00:00 ===
+seven_fail order=0/7 jmax=7/7
+full order=51/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T19:03:06.541657+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T19:11:11.081011+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T19:45:50.305136+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T19:46:33.183642+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T19:47:32.919406+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T19:48:54.165398+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json
+=== Entry 4 geevx vendored gate 2026-06-06T20:55:35.205312+00:00 ===
+seven_fail order=1/7 jmax=7/7
+full order=52/58
+wrote=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_fsl_backward_entry4_rgm_spectral_geevx_vendored_gate.json

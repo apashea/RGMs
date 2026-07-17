@@ -1,0 +1,10 @@
+# xxxprof VB-related functions (TotalTime desc)
+   10.723568   10.723568       129  spm_MDP_VB_XXX
+    5.000653    5.000653       384  spm_MDP_VB_XXX>spm_forwards
+    2.395933    2.395933       384  spm_VBX
+    1.879957    1.879957       128  spm_MDP_VB_XXX>spm_induction
+    0.730638    0.730638     93413  spm_dot
+    0.304116    0.304116     78332  spm_parents
+    0.471641    0.471641       129  spm_MDP_checkX
+    0.132624    0.132624     32256  spm_MDP_VB_XXX>spm_sample
+    0.095352    0.095352       255  spm_MDP_VB_XXX>spm_action

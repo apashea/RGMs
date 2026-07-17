@@ -1,0 +1,7 @@
+wrote C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_call4_forwards_t41_inputs.mat
+wrote C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full\diag_call4_efe_from_py_inputs.m
+MATLAB-on-py-inputs G=[81.44880484102066, 78.6407738176483, 78.64077381768536, 78.6407738176483]
+python_G         =[-26.55729055047906, -29.36532157385193, -29.36532157381481, -29.36532157385193]
+fence matlab_G   =[-36.7786396005819, -29.602188814778557, -29.602188814604503, -29.602188814778557]
+vs python maxabs=108.00609539150022
+vs fence  maxabs=118.22744444160256

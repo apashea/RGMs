@@ -1,0 +1,186 @@
+{
+  "utc": "2026-06-06T20:04:45.396752+00:00",
+  "eig_md_section": "4.1 E3c-b-b3",
+  "sub_hash": "866ab1a9b2265fd6",
+  "backend": "lapack_vendored",
+  "row_pair_0based": [
+    1,
+    52
+  ],
+  "fortran_dbg_col": 2,
+  "order_mismatch_count": 57,
+  "rank1_ref": 28,
+  "rank1_py": 28,
+  "rank1_match": true,
+  "first_mismatch_default": {
+    "rank": 2,
+    "idx_ref": 1,
+    "idx_got": 52,
+    "absv_ref": 0.4389968340923684,
+    "absv_got": 0.4389968340923776,
+    "absv_diff": 9.2148511043888e-15
+  },
+  "kmax_ref": 58,
+  "kmax_got": 58,
+  "kmax_match": true,
+  "ref_pair_at_jmax": {
+    "abs_lo": 0.4389968340923684,
+    "abs_hi": 0.4389968340923684,
+    "row_lo_0based": 1,
+    "row_hi_0based": 52,
+    "leader_0based": 1,
+    "diff_lo_minus_hi": 0.0
+  },
+  "py_pair_at_jmax": {
+    "abs_lo": 0.43899683409233864,
+    "abs_hi": 0.4389968340923776,
+    "row_lo_0based": 1,
+    "row_hi_0based": 52,
+    "leader_0based": 52,
+    "diff_lo_minus_hi": -3.8968828164342995e-14
+  },
+  "pipeline_ladder_rank2_pair": {
+    "1_post_DGEHRD": {
+      "abs_lo": 0.06500189380978766,
+      "abs_hi": 0.3054892064412932,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": 52,
+      "diff_lo_minus_hi": -0.24048731263150552
+    },
+    "2_post_DORGHR": {
+      "abs_lo": 1.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": 1,
+      "diff_lo_minus_hi": 1.0
+    },
+    "2a_post_DLAQR0_in_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2b_post_DLAQR0_out_schur_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "3_post_DHSEQR": {
+      "abs_lo": 0.43899683409233553,
+      "abs_hi": 0.43899683409237983,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": 52,
+      "diff_lo_minus_hi": -4.4297898682543746e-14
+    },
+    "4_DTREVC3_pre_IDAMAX": {
+      "abs_lo": 0.43899683409233553,
+      "abs_hi": 0.43899683409237983,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": 52,
+      "diff_lo_minus_hi": -4.4297898682543746e-14
+    },
+    "5_DTREVC3_post_normalize": {
+      "abs_lo": 0.9999999999998992,
+      "abs_hi": 0.999999999999988,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": 52,
+      "diff_lo_minus_hi": -8.881784197001252e-14
+    },
+    "6_final_pp": {
+      "abs_lo": 0.43899683409233864,
+      "abs_hi": 0.4389968340923776,
+      "row_lo_0based": 1,
+      "row_hi_0based": 52,
+      "leader_0based": 52,
+      "diff_lo_minus_hi": -3.8968828164342995e-14
+    }
+  },
+  "first_leader_flip_py": {
+    "site": "2_post_DORGHR",
+    "from_leader_0based": 52,
+    "to_leader_0based": 1,
+    "ref_leader_0based": 1,
+    "matches_ref": true
+  },
+  "order_row_table": [
+    {
+      "index": 1,
+      "abs_ref": 0.4389968340923684,
+      "abs_py": 0.43899683409233864,
+      "delta_py_minus_ref": -2.9753977059954195e-14
+    },
+    {
+      "index": 7,
+      "abs_ref": 0.4389968340923684,
+      "abs_py": 0.43899683409237716,
+      "delta_py_minus_ref": 8.770761894538737e-15
+    },
+    {
+      "index": 28,
+      "abs_ref": 0.4389968340923707,
+      "abs_py": 0.4389968340923776,
+      "delta_py_minus_ref": 6.8833827526759706e-15
+    },
+    {
+      "index": 52,
+      "abs_ref": 0.4389968340923684,
+      "abs_py": 0.4389968340923776,
+      "delta_py_minus_ref": 9.2148511043888e-15
+    },
+    {
+      "index": 58,
+      "abs_ref": 0.4389968340923798,
+      "abs_py": 0.4389968340923829,
+      "delta_py_minus_ref": 3.1086244689504383e-15
+    }
+  ],
+  "replay_oracles": [
+    {
+      "replay": "live_py",
+      "mismatch_count": 57,
+      "rank2_got": 52,
+      "rank2_ref": 1
+    },
+    {
+      "replay": "snap_row1_to_ref",
+      "mismatch_count": 57,
+      "rank2_got": 52,
+      "rank2_ref": 1
+    },
+    {
+      "replay": "boost_row1_above_row52",
+      "mismatch_count": 59,
+      "rank2_got": 28,
+      "rank2_ref": 1
+    },
+    {
+      "replay": "snap_row52_to_ref",
+      "mismatch_count": 58,
+      "rank2_got": 7,
+      "rank2_ref": 1
+    },
+    {
+      "replay": "demote_row52_below_row1",
+      "mismatch_count": 57,
+      "rank2_got": 7,
+      "rank2_ref": 1
+    },
+    {
+      "replay": "snap_order_rows_to_ref",
+      "mismatch_count": 55,
+      "rank2_got": 1,
+      "rank2_ref": 1
+    }
+  ],
+  "compute_patch_hint": "K83: DLAQR0 zero for 1/52; DHSEQR first sustained py leader 52. Single-row snap/boost/demote closed (replay); need multi-row dust fidelity (snap ORDER_ROWS \u2192 55/63 mm)."
+}

@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 
 from python_src.spm_dir_norm import spm_dir_norm
+from python_src.toolbox.DEM.spm_MDP_checkX import spm_mdp_normalize_rdp_matlab_containers
 
 
 def spm_mdp2rdp_a(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
@@ -33,6 +34,7 @@ def spm_mdp2rdp_a(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
         rdp = copy.deepcopy(mdp[0])
         rdp["L"] = 1
         rdp["T"] = T
+        spm_mdp_normalize_rdp_matlab_containers(rdp)
         return rdp
 
     # --- trim trailing factors at last level (MATLAB n = Nm) ---
@@ -40,14 +42,9 @@ def spm_mdp2rdp_a(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
     if len(mdp[n_last]["b"]) > 1:
         mdp[n_last]["b"] = [mdp[n_last]["b"][0]]
         if "G" in mdp[n_last]:
-            g = mdp[n_last]["G"]
-            if isinstance(g, dict):
-                mdp[n_last]["G"] = {1: g[1]} if 1 in g else {min(g.keys()): g[min(g.keys())]}
-            else:
-                mdp[n_last]["G"] = [g[0]]
+            mdp[n_last]["G"] = _matlab_index_one(mdp[n_last]["G"])
         if "sB" in mdp[n_last]:
-            sb = mdp[n_last]["sB"]
-            mdp[n_last]["sB"] = [sb[0]] if isinstance(sb, list) else [int(np.asarray(sb).ravel()[0])]
+            mdp[n_last]["sB"] = _matlab_index_one(mdp[n_last]["sB"])
 
         na = len(mdp[n_last]["a"])
         d_la = np.zeros(na, dtype=bool)
@@ -216,6 +213,7 @@ def spm_mdp2rdp_a(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
         out["T"] = T
         out["L"] = n
     out["L"] = nm
+    spm_mdp_normalize_rdp_matlab_containers(out)
     return out
 
 
@@ -262,6 +260,20 @@ def _expand_param(val, n_needed: int) -> np.ndarray:
     if arr.size:
         out[: arr.size] = arr
     return out
+
+
+def _matlab_index_one(x: Any) -> Any:
+    """MATLAB ``x(1)`` on cell / struct-array group fields (e.g. ``G``, ``sB``)."""
+    if isinstance(x, dict):
+        if 1 in x:
+            x = x[1]
+        elif x:
+            x = x[min(x.keys())]
+    if isinstance(x, (list, tuple)) and len(x) >= 1:
+        x = x[0]
+    while isinstance(x, list) and len(x) == 1:
+        x = x[0]
+    return x
 
 
 def _unwrap_cell(x):

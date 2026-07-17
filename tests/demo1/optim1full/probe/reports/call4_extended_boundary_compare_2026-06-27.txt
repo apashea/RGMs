@@ -1,0 +1,20 @@
+OPTIM1FULL call4 extended boundary compare (script 4 causal lane)
+tag=rgms_atari_optim1full_call4
+keys=['out_t10', 'out_t20', 'out_t30']
+
+=== out_t10 ===
+  12D.out_t10 OK
+  12E.out_t10 OK
+  12F.out_t10 OK
+=== out_t20 ===
+  12D.out_t20 OK
+  12E.out_t20 OK
+  12F.out_t20 OK
+=== out_t30 ===
+  12D.out_t30 OK
+  12E.out_t30 OK
+  12F.out_t30 OK
+
+=== summary ===
+extended causal reds: 0
+  all extended probe boundaries OK (script 4 causal)

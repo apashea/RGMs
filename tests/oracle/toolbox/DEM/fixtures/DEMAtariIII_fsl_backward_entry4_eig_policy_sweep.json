@@ -1,0 +1,35 @@
+{
+  "utc": "2026-06-04T21:13:31.896616+00:00",
+  "policies": [
+    {
+      "label": "baseline_asc_l2",
+      "n": 58,
+      "order_ok": 51,
+      "jmax_ok": 58,
+      "ascending_w": true,
+      "canonicalize_columns": false,
+      "l2_principal": true,
+      "principal_refine": false
+    },
+    {
+      "label": "canonicalize_all_cols",
+      "n": 58,
+      "order_ok": 51,
+      "jmax_ok": 58,
+      "ascending_w": true,
+      "canonicalize_columns": true,
+      "l2_principal": true,
+      "principal_refine": false
+    },
+    {
+      "label": "degenerate_span_refine",
+      "n": 58,
+      "order_ok": 51,
+      "jmax_ok": 58,
+      "ascending_w": true,
+      "canonicalize_columns": true,
+      "l2_principal": true,
+      "principal_refine": true
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+# xxxprof params — RDP structure (no VB execution)
+rdp_T=128
+mdp_N_policy_depth=0
+# n_horiz at parent t = min(T, t+N); spm_forwards runs deep search when t < n_horiz
+# columns: t  n_horiz  t_lt_n_horiz (deep_search_would_run)
+t=  1  n_horiz=  1  deep_search=0
+t=  2  n_horiz=  2  deep_search=0
+t=  3  n_horiz=  3  deep_search=0
+t=  4  n_horiz=  4  deep_search=0
+t=  5  n_horiz=  5  deep_search=0
+t=  6  n_horiz=  6  deep_search=0
+t=  7  n_horiz=  7  deep_search=0
+t=  8  n_horiz=  8  deep_search=0
+t=  9  n_horiz=  9  deep_search=0
+t= 10  n_horiz= 10  deep_search=0
+t= 11  n_horiz= 11  deep_search=0
+t= 12  n_horiz= 12  deep_search=0
+t= 13  n_horiz= 13  deep_search=0
+t= 14  n_horiz= 14  deep_search=0
+t= 15  n_horiz= 15  deep_search=0
+t= 16  n_horiz= 16  deep_search=0
+t= 17  n_horiz= 17  deep_search=0
+t= 18  n_horiz= 18  deep_search=0
+t= 19  n_horiz= 19  deep_search=0
+t= 20  n_horiz= 20  deep_search=0
+t= 21  n_horiz= 21  deep_search=0
+t= 22  n_horiz= 22  deep_search=0
+t= 23  n_horiz= 23  deep_search=0
+t= 24  n_horiz= 24  deep_search=0
+t= 25  n_horiz= 25  deep_search=0
+t= 26  n_horiz= 26  deep_search=0
+t= 27  n_horiz= 27  deep_search=0
+t= 28  n_horiz= 28  deep_search=0
+t= 29  n_horiz= 29  deep_search=0
+t= 30  n_horiz= 30  deep_search=0
+t= 31  n_horiz= 31  deep_search=0
+t= 32  n_horiz= 32  deep_search=0
+t= 33  n_horiz= 33  deep_search=0
+t= 34  n_horiz= 34  deep_search=0
+t= 35  n_horiz= 35  deep_search=0
+t= 36  n_horiz= 36  deep_search=0
+t= 37  n_horiz= 37  deep_search=0
+t= 38  n_horiz= 38  deep_search=0
+t= 39  n_horiz= 39  deep_search=0
+t= 40  n_horiz= 40  deep_search=0
+t= 41  n_horiz= 41  deep_search=0
+t= 42  n_horiz= 42  deep_search=0
+t= 43  n_horiz= 43  deep_search=0
+t= 44  n_horiz= 44  deep_search=0
+t= 45  n_horiz= 45  deep_search=0
+t= 46  n_horiz= 46  deep_search=0
+t= 47  n_horiz= 47  deep_search=0
+t= 48  n_horiz= 48  deep_search=0
+t= 49  n_horiz= 49  deep_search=0
+t= 50  n_horiz= 50  deep_search=0
+t= 51  n_horiz= 51  deep_search=0
+t= 52  n_horiz= 52  deep_search=0
+t= 53  n_horiz= 53  deep_search=0
+t= 54  n_horiz= 54  deep_search=0
+t= 55  n_horiz= 55  deep_search=0
+t= 56  n_horiz= 56  deep_search=0
+t= 57  n_horiz= 57  deep_search=0
+t= 58  n_horiz= 58  deep_search=0
+t= 59  n_horiz= 59  deep_search=0
+t= 60  n_horiz= 60  deep_search=0
+t= 61  n_horiz= 61  deep_search=0
+t= 62  n_horiz= 62  deep_search=0
+t= 63  n_horiz= 63  deep_search=0
+t= 64  n_horiz= 64  deep_search=0
+t= 65  n_horiz= 65  deep_search=0
+t= 66  n_horiz= 66  deep_search=0
+t= 67  n_horiz= 67  deep_search=0
+t= 68  n_horiz= 68  deep_search=0
+t= 69  n_horiz= 69  deep_search=0
+t= 70  n_horiz= 70  deep_search=0
+t= 71  n_horiz= 71  deep_search=0
+t= 72  n_horiz= 72  deep_search=0
+t= 73  n_horiz= 73  deep_search=0
+t= 74  n_horiz= 74  deep_search=0
+t= 75  n_horiz= 75  deep_search=0
+t= 76  n_horiz= 76  deep_search=0
+t= 77  n_horiz= 77  deep_search=0
+t= 78  n_horiz= 78  deep_search=0
+t= 79  n_horiz= 79  deep_search=0
+t= 80  n_horiz= 80  deep_search=0
+t= 81  n_horiz= 81  deep_search=0
+t= 82  n_horiz= 82  deep_search=0
+t= 83  n_horiz= 83  deep_search=0
+t= 84  n_horiz= 84  deep_search=0
+t= 85  n_horiz= 85  deep_search=0
+t= 86  n_horiz= 86  deep_search=0
+t= 87  n_horiz= 87  deep_search=0
+t= 88  n_horiz= 88  deep_search=0
+t= 89  n_horiz= 89  deep_search=0
+t= 90  n_horiz= 90  deep_search=0
+t= 91  n_horiz= 91  deep_search=0
+t= 92  n_horiz= 92  deep_search=0
+t= 93  n_horiz= 93  deep_search=0
+t= 94  n_horiz= 94  deep_search=0
+t= 95  n_horiz= 95  deep_search=0
+t= 96  n_horiz= 96  deep_search=0
+t= 97  n_horiz= 97  deep_search=0
+t= 98  n_horiz= 98  deep_search=0
+t= 99  n_horiz= 99  deep_search=0
+t=100  n_horiz=100  deep_search=0
+t=101  n_horiz=101  deep_search=0
+t=102  n_horiz=102  deep_search=0
+t=103  n_horiz=103  deep_search=0
+t=104  n_horiz=104  deep_search=0
+t=105  n_horiz=105  deep_search=0
+t=106  n_horiz=106  deep_search=0
+t=107  n_horiz=107  deep_search=0
+t=108  n_horiz=108  deep_search=0
+t=109  n_horiz=109  deep_search=0
+t=110  n_horiz=110  deep_search=0
+t=111  n_horiz=111  deep_search=0
+t=112  n_horiz=112  deep_search=0
+t=113  n_horiz=113  deep_search=0
+t=114  n_horiz=114  deep_search=0
+t=115  n_horiz=115  deep_search=0
+t=116  n_horiz=116  deep_search=0
+t=117  n_horiz=117  deep_search=0
+t=118  n_horiz=118  deep_search=0
+t=119  n_horiz=119  deep_search=0
+t=120  n_horiz=120  deep_search=0
+t=121  n_horiz=121  deep_search=0
+t=122  n_horiz=122  deep_search=0
+t=123  n_horiz=123  deep_search=0
+t=124  n_horiz=124  deep_search=0
+t=125  n_horiz=125  deep_search=0
+t=126  n_horiz=126  deep_search=0
+t=127  n_horiz=127  deep_search=0
+t=128  n_horiz=128  deep_search=0
+deep_search_timesteps=0 of 128

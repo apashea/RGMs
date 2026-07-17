@@ -1,0 +1,27 @@
+# xxxprof_vb_tag VB-hot filter (sort=TotalTime desc)
+# wall_s=10.020993 matlab_release=24.2.0.3157250 (R2024b) Update 8
+# rdp_mat=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_XXX_12_rgms_atari_optim1full_call2_rdp.mat
+#
+# rank     total_s        self_s         ncalls      function
+  1        9.924937       9.924937       129         spm_MDP_VB_XXX
+  2        4.203772       4.203772       384         spm_MDP_VB_XXX>spm_forwards
+  3        2.106335       2.106335       384         spm_VBX
+  4        1.498178       1.498178       30976       spm_VBX>spm_VBX_update
+  5        1.186262       1.186262       128         spm_MDP_VB_XXX>spm_induction
+  6        0.989874       0.989874       88393       spm_dot
+  7        0.436801       0.436801       129         spm_MDP_checkX
+  8        0.354073       0.354073       14701       spm_VBX>spm_margin
+  9        0.289992       0.289992       74568       spm_MDP_VB_XXX>spm_norm
+  10       0.264188       0.264188       80892       spm_parents
+  11       0.182596       0.182596       58132       spm_MDP_VB_XXX>spm_log
+  12       0.154282       0.154282       30976       spm_VBX>spm_VBX_sparse
+  13       0.120155       0.120155       32256       spm_MDP_VB_XXX>spm_sample
+  14       0.080411       0.080411       45677       spm_VBX>spm_log
+  15       0.080353       0.080353       255         spm_MDP_VB_XXX>spm_action
+  16       0.068362       0.068362       14701       spm_VBX>spm_times
+  17       0.067590       0.067590       129         spm_MDP_VB_XXX>spm_MDP_get_M
+  18       0.062543       0.062543       3456        spm_kron
+  19       0.034242       0.034242       2560        spm_MDP_VB_XXX>spm_multiply
+  20       0.022646       0.022646       5374        spm_softmax
+  21       0.013670       0.013670       20          spm_MDP_VB_XXX>spm_hnorm
+  22       0.003271       0.003271       257         spm_MDP_VB_XXX>spm_is_process

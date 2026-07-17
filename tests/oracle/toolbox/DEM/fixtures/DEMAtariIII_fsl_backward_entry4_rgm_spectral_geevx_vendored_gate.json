@@ -1,0 +1,37 @@
+{
+  "utc": "2026-06-06T20:55:35.205312+00:00",
+  "backend": "lapack_vendored",
+  "lapack_nobalance_available": true,
+  "seven_fail_gate": {
+    "label": "seven_fail_hashes",
+    "n": 7,
+    "order_ok": 1,
+    "jmax_ok": 7,
+    "order_fail_hashes": [
+      "6abd2a358966b834",
+      "a03d7da5d5c09bab",
+      "2d5f8b838be81f21",
+      "7d978bc6b89bde7b",
+      "7f1469f5003eebf1",
+      "866ab1a9b2265fd6"
+    ]
+  },
+  "full_corpus": {
+    "label": "all_58",
+    "n": 58,
+    "order_ok": 52,
+    "jmax_ok": 58,
+    "order_fail_hashes": [
+      "6abd2a358966b834",
+      "a03d7da5d5c09bab",
+      "2d5f8b838be81f21",
+      "7d978bc6b89bde7b",
+      "7f1469f5003eebf1",
+      "866ab1a9b2265fd6"
+    ]
+  },
+  "pass_criteria": {
+    "seven_fail_order_ok": 7,
+    "full_order_ok": 58
+  }
+}

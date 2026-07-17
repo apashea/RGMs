@@ -1,0 +1,30 @@
+{
+  "manifest_schema": 2,
+  "tag": "rgms_atari_call2_g14",
+  "matlab_release": "24.2.0.3157250 (R2024b) Update 8",
+  "capture_mode": "refresh_optim1full_call2_nr",
+  "timestamp": "2026-06-23 21:41:39",
+  "K": 4096,
+  "vb_rand_buf_len": 4096,
+  "paths": {
+    "rdp_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\demo1\\optim1full\\fixtures\\DEMAtariIII_XXX_12_rgms_atari_call2_g14_rdp.mat",
+    "pdp_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\demo1\\optim1full\\fixtures\\DEMAtariIII_XXX_12_rgms_atari_call2_g14_pdp.mat",
+    "rand_buf_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\demo1\\optim1full\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_call2_g14.mat"
+  },
+  "checksums": {
+    "rdp_mat_sha256": "67a35d67657b72266b1ff418fcab39db1a0248ee5fd0c735d916d48c902a8e96",
+    "pdp_mat_sha256": "0a7ded43da4224671ca720e6ef8bacd8c30fda332cfbd0baf83e6cec4d1b29b8",
+    "rand_buf_mat_sha256": "3dc502c8265fdfa378a30629ec194789c03e7ad613d95f2c25b43407424b1a12",
+    "subentry_mat": {
+      "12A": "f0ac813ce6e21a9aa306c7ce13059f9e9865ecd4f77dbcf60cfef7cb155da08b",
+      "12B": "ea98a736e06588d36cc83de2ca4487a84840fd8f4f4efdaac054245b4ac29cb7",
+      "12C": "60215785653b5a8f3f5d9dc4eabb412ca0d9180f2ea79ac172d0efc024d10ab2",
+      "12D": "80df9fed31cf8ba595e52bcd996b6ddc0828a6f198c18b8dac6696c2e7988b2b",
+      "12E": "16ef855885fd5287f77973e8980b98393e484146ea0f0c2cc88dc7d513bd0021",
+      "12F": "ff11003d633412a2e07d754870cd55f7c4a9baa7df1a3df8fd3fe9b9dd423671",
+      "12G": "97e4ff1ebedcf12ac2e5ab1b2eebdcc236b185cb87b8e0b946192db2cd3b7f00",
+      "12H": "02d93a5cf23ca2ed59385541b6c832d1b318806e9ae33d9a030a975435991494",
+      "12I": "d74c1e882e9dd477f2dc6d62f5454dbece172365785f7eaf1f4735fe574eca36"
+    }
+  }
+}

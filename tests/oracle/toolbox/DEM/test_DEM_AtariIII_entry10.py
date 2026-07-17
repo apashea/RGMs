@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from python_src.toolbox.DEM.DEM_AtariIII import dem_atariiii_paths_to_hits_P
+from python_src.toolbox.DEM.dem_atariiii_paths import dem_atariiii_paths_to_hits_P
 from python_src.toolbox.DEM.spm_set_goals import spm_set_goals
 from tests.oracle.toolbox.DEM.test_DEM_AtariIII_entry8 import (
     _assert_mdp_full_equal,

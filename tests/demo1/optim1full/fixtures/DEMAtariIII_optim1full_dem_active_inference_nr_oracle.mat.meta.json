@@ -1,0 +1,11 @@
+{
+  "matlab_pdp": {
+    "mtime_ns": 1783989883936956600,
+    "name": "DEMAtariIII_optim1full_dem_active_inference_nr_matlab_pdp.mat",
+    "nbytes": 1058133,
+    "path_rel": "tests/demo1/optim1full/fixtures/DEMAtariIII_optim1full_dem_active_inference_nr_matlab_pdp.mat"
+  },
+  "oracle_source": "capture_optim1full_plot_fence",
+  "schema": "optim1full_oracle_v1",
+  "site_id": "dem_active_inference_nr"
+}

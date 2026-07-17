@@ -511,9 +511,15 @@ def _summarize_one_side(label: str, x: Any, preview_k: int = 8) -> str:
     return f"{label} type={type(x).__name__} repr={repr(x)[:200]}"
 
 
-def _mismatch_value_summary_lines(path: str, py: Any, mat: Any) -> list[str]:
+def _mismatch_value_summary_lines(
+    path: str,
+    py: Any,
+    mat: Any,
+    *,
+    accept_ledger_dim_511_vs_485: bool = True,
+) -> list[str]:
     tag = ""
-    if _is_accepted_ledger_dim_mismatch(path, py, mat):
+    if accept_ledger_dim_511_vs_485 and _is_accepted_ledger_dim_mismatch(path, py, mat):
         tag = "[accepted ledger dim 511 vs 485 - upstream Py/MATLAB; ENTRY 1-11 policy] "
     py_l = _summarize_one_side("PKL", py)
     mat_l = _summarize_one_side("MAT", mat)
@@ -1307,6 +1313,7 @@ def _emit_nested_type_walk(
     mat_rdp: Any,
     *,
     lane: str = "FSL 1-11 validation",
+    accept_ledger_dim_511_vs_485: bool = True,
 ) -> None:
     """Always-on nested Python vs MATLAB ``RDP`` type / shape drift plus PKL/MAT detail lines (stderr + report file)."""
     lines: list[str] = []
@@ -1319,7 +1326,12 @@ def _emit_nested_type_walk(
             continue
         py_val = _norm_leaf(_get_at_rdp_path(py_rdp, path))
         mat_val = _norm_leaf(_get_at_rdp_path(mat_rdp, path))
-        for dl in _mismatch_value_summary_lines(path, py_val, mat_val)[:2]:
+        for dl in _mismatch_value_summary_lines(
+            path,
+            py_val,
+            mat_val,
+            accept_ledger_dim_511_vs_485=accept_ledger_dim_511_vs_485,
+        )[:2]:
             print(dl, file=sys.stderr)
 
 
@@ -1332,6 +1344,7 @@ def compare_nested_rdp_oracle_lane(
     report_only: bool = False,
     coerce_sparse: bool = False,
     schema_only: bool = False,
+    accept_ledger_dim_511_vs_485: bool = True,
 ) -> int:
     """
     FSL 1–11-style nested ``RDP`` validation (schema, key diff, type walk, focused probes, assert).
@@ -1353,7 +1366,12 @@ def compare_nested_rdp_oracle_lane(
     mat_schema_err = _run_checkx_schema_phase("MATLAB", mat_rdp, strict=strict, lane=lane)
 
     _emit_rdp_top_level_key_diff(py_rdp, mat_rdp, lane=lane)
-    _emit_nested_type_walk(py_rdp, mat_rdp, lane=lane)
+    _emit_nested_type_walk(
+        py_rdp,
+        mat_rdp,
+        lane=lane,
+        accept_ledger_dim_511_vs_485=accept_ledger_dim_511_vs_485,
+    )
     _emit_rdp_focused_probes(py_rdp, mat_rdp, lane=lane)
 
     if mat_schema_err:

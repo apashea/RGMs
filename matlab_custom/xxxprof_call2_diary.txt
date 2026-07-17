@@ -1,0 +1,9 @@
+[xxxprof_vb_tag] tag=call2 mode=profile matlab=24.2.0.3157250 (R2024b) Update 8
+[xxxprof_vb_tag] rdp=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_XXX_12_rgms_atari_optim1full_call2_rdp.mat
+[xxxprof_vb_tag] rng=2 dump_subentries=false
+[xxxprof_vb_tag] monitoring=false
+[xxxprof_vb_tag] spm_MDP_VB_XXX wall_s=10.020993
+[xxxprof_vb_tag] wrote C:\Users\andre\.cursor\RGMs\matlab_custom\xxxprof_call2_top40.txt
+[xxxprof_vb_tag] wrote C:\Users\andre\.cursor\RGMs\matlab_custom\xxxprof_call2_functions.txt
+[xxxprof_vb_tag] wrote C:\Users\andre\.cursor\RGMs\matlab_custom\xxxprof_call2_vb_hot.txt
+[xxxprof_vb_tag] wrote html C:\Users\andre\.cursor\RGMs\matlab_custom\xxxprof_call2_html

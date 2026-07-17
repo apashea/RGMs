@@ -6,6 +6,7 @@ from typing import Any, List, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.gridspec import GridSpec
 from scipy import sparse
 
 from python_src.spm_cat import spm_cat
@@ -39,33 +40,43 @@ def spm_show_RGB(
     Y.append(MDP["Y"])
 
     Nm = len(O)
+    fig = plt.gcf()
+    _ensure_figure_size(fig)
+
+    gs = _build_gridspec(fig, Nm=Nm, Nt=Nt)
+
     B = spm_cat(MDP["X"])
-    plt.subplot(Nm + 3, 2, 1)
-    _plot_matrix_panel(B, title=f"Posterior (states) level {Nm}")
+    _plot_matrix_panel(B, title=f"Posterior (states) level {Nm}", ax=_ax_diag(gs, 0, 0))
 
     Nf = _factor_count(MDP)
     if Nf > 1:
         for f in range(1, Nf + 1):
             Bf = _transition_matrix(MDP, f)
-            plt.subplot(Nm + 3, 2 * Nf, Nf + f)
             Bplot = np.sum(Bf, axis=2) > (1.0 / 16.0)
-            _plot_matrix_panel(Bplot, title=f"Transitions (f = {f})")
-            plt.axis("square")
+            _plot_matrix_panel(
+                Bplot,
+                title=f"Transitions (f = {f})",
+                ax=_ax_diag(gs, 0, min(f, 1)),
+                axis_square=True,
+            )
     else:
         Bf = _transition_matrix(MDP, 1)
         Nu = int(Bf.shape[2]) if Bf.ndim == 3 else 1
         if Nu < 4:
             for u in range(1, Nu + 1):
-                plt.subplot(Nm + 3, 2 * Nu, Nu + u)
                 slice_u = Bf[:, :, u - 1] if Bf.ndim == 3 else Bf
                 panel = slice_u > (1.0 / 16.0)
-                _plot_matrix_panel(panel, title=f"Transitions (u = {u})")
-                plt.axis("square")
+                col_slice = slice(2 + (u - 1) * 2 // Nu, 2 + u * 2 // Nu) if Nu > 1 else slice(2, 4)
+                ax_t = fig.add_subplot(gs[0, col_slice])
+                _plot_matrix_panel(panel, title=f"Transitions (u = {u})", ax=ax_t, axis_square=True)
         else:
-            plt.subplot(Nm + 3, 2, 2)
             Bplot = np.sum(Bf, axis=2) > (1.0 / 16.0)
-            _plot_matrix_panel(Bplot, title=f"Transitions (Nu = {Nu})")
-            plt.axis("square")
+            _plot_matrix_panel(
+                Bplot,
+                title=f"Transitions (Nu = {Nu})",
+                ax=_ax_diag(gs, 0, 1),
+                axis_square=True,
+            )
 
     mdp = MDP
     for n in range(1, Nm + 1):
@@ -82,32 +93,46 @@ def spm_show_RGB(
                 i_d = np.arange(1, y_arr.shape[0] + 1, dtype=int)
             i_e = np.array([], dtype=int)
 
-        plt.subplot(Nm + 3, 2, (n - 1) * 2 + 3)
+        # ``subplot(Nm+3,2,(n-1)*2+3)`` → row ``n`` (0-based) in the 2-column diagnostic block
+        diag_row = n
         q_states = spm_cat(_subset_rows(y_level, i_d))
-        _plot_raster(q_states, title=f"Predictive posterior (states) level {L}")
+        _plot_raster(
+            q_states,
+            title=f"Predictive posterior (states) level {L}",
+            ax=_ax_diag(gs, diag_row, 0),
+        )
 
         if L > 1:
-            plt.subplot(Nm + 3, 2, (n - 1) * 2 + 4)
             q_paths = spm_cat(_subset_rows(y_level, i_e))
-            _plot_raster(q_paths, title=f"Predictive posterior (paths) level {L}")
+            _plot_raster(
+                q_paths,
+                title=f"Predictive posterior (paths) level {L}",
+                ax=_ax_diag(gs, diag_row, 1),
+            )
 
         if n < Nm:
             mdp = mdp["MDP"]
 
-    plt.subplot(Nm + 3, 2, 2 * (Nm + 1))
+    ax_elbo = _ax_diag(gs, Nm, 1)
     q_e_series = _elbo_q_e_series(MDP["Q"]["E"])
     T = len(q_e_series[0]) if q_e_series else 1
     t_horizon = int(np.asarray(MDP["T"], dtype=int).ravel()[0])
     t_line = np.linspace(1, T, t_horizon)
-    plt.plot(t_line, np.asarray(MDP["F"], dtype=np.float64).ravel())
+    plt.sca(ax_elbo)
+    ax_elbo.plot(t_line, np.asarray(MDP["F"], dtype=np.float64).ravel())
     for qen in q_e_series:
         t_n = np.linspace(1, T, len(qen))
-        plt.plot(t_n, qen)
-    plt.title("ELBO")
-    _spm_axis_tight()
+        ax_elbo.plot(t_n, qen)
+    ax_elbo.set_title("ELBO")
+    _spm_axis_tight(ax_elbo)
+    fig._rgms_elbo_ax = ax_elbo  # ENTRY 12PLOT fence: hits overlay on same axes (not ``plt.subplot``)
 
     frames_j: list[np.ndarray] = []
     frames_k: list[np.ndarray] = []
+    movie_row_pred = Nm + 1
+    movie_row_gen = Nm + 2
+    movie_pred_axes = [fig.add_subplot(gs[movie_row_pred, c]) for c in range(Nt)]
+    movie_gen_axes = [fig.add_subplot(gs[movie_row_gen, c]) for c in range(Nt)]
     for t in range(1, T + 1):
         if not MOVIE and t > Nt:
             return _stack_frames_list(frames_j), _stack_frames_list(frames_k)
@@ -117,18 +142,23 @@ def spm_show_RGB(
         x_rgb = spm_O2rgb(o_col, RGB)
         p_rgb = spm_O2rgb(y_col, RGB)
 
-        plt.subplot(Nm + 3, Nt, Nt * (Nm + 1) + min(Nt, t))
+        t_col = min(Nt, t) - 1
+        ax_pred = movie_pred_axes[t_col]
+        plt.sca(ax_pred)
         spm_imshow(p_rgb)
-        plt.title(f"Predicted: t = {t}")
+        ax_pred.set_title(f"Predicted: t = {t}")
 
-        plt.subplot(Nm + 3, Nt, Nt * (Nm + 2) + min(Nt, t))
+        ax_gen = movie_gen_axes[t_col]
+        plt.sca(ax_gen)
         spm_imshow(x_rgb)
         if isinstance(mdp, dict) and "S" in mdp:
-            plt.title("Stimulus")
+            ax_gen.set_title("Stimulus")
         else:
-            plt.title("Generated")
+            ax_gen.set_title("Generated")
 
-        plt.draw()
+        _hide_image_axis_ticks(ax_pred)
+        _hide_image_axis_ticks(ax_gen)
+
         n_frames = int(p_rgb.shape[3]) if p_rgb.ndim == 4 else 1
         for fi in range(n_frames):
             frames_j.append(
@@ -139,6 +169,40 @@ def spm_show_RGB(
             )
 
     return _stack_frames_list(frames_j), _stack_frames_list(frames_k)
+
+
+def _ensure_figure_size(fig: Any) -> None:
+    """MATLAB ``saveas`` scale (~1059×1526 px at 100 dpi) — avoid default 640×480 crush."""
+    w, h = fig.get_size_inches()
+    if w < 9.0 or h < 13.0:
+        fig.set_size_inches(10.6, 15.2)
+
+
+def _build_gridspec(fig: Any, *, Nm: int, Nt: int) -> GridSpec:
+    """
+    One layout for diagnostic (half-width pairs) + movie (``Nt`` columns).
+
+    Mirrors ``subplot(Nm+3,2,…)`` top rows and ``subplot(Nm+3,Nt,…)`` movie rows
+    without mixing incompatible ``plt.subplot`` grid shapes on one figure.
+    """
+    n_rows = Nm + 3
+    return GridSpec(
+        n_rows,
+        Nt,
+        figure=fig,
+        hspace=0.55,
+        wspace=0.35,
+        height_ratios=[1.0] * (Nm + 1) + [0.85, 0.85],
+    )
+
+
+def _ax_diag(gs: GridSpec, row: int, side: int) -> Any:
+    """Diagnostic panel: ``side`` 0 = left half, 1 = right half (2×``Nt`` col span)."""
+    half = gs.ncols // 2
+    fig = gs.figure
+    if side == 0:
+        return fig.add_subplot(gs[row, 0:half])
+    return fig.add_subplot(gs[row, half : gs.ncols])
 
 
 def _spm_cat_index_vector(field: Any) -> np.ndarray:
@@ -249,23 +313,75 @@ def _q_hier_list(field: Any) -> List[Any]:
     return [field]
 
 
-def _plot_matrix_panel(B: Any, title: str) -> None:
+def _hide_image_axis_ticks(ax: Any) -> None:
+    """MATLAB ``imshow`` — image + title only, no axis ticks or values."""
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.tick_params(axis="both", which="both", length=0, labelbottom=False, labelleft=False)
+
+
+def _plot_matrix_panel(
+    B: Any,
+    title: str,
+    *,
+    ax: Any | None = None,
+    axis_square: bool = False,
+) -> None:
+    """``imagesc(1-B)`` / ``spm_spy(B)`` per ``spm_show_RGB.m``."""
+    if ax is None:
+        ax = plt.gca()
     arr = np.asarray(B.todense() if sparse.issparse(B) else B, dtype=np.float64)
-    if arr.shape[0] > 128:
-        plt.spy(arr > 0, markersize=0.5)
+    if arr.dtype == bool or np.issubdtype(arr.dtype, np.bool_):
+        spy_m = arr
+    elif arr.max() <= 1.0 + 1e-12:
+        spy_m = arr > 0.5
     else:
-        plt.imshow(1.0 - arr, aspect="auto")
-    plt.title(title)
+        spy_m = arr > 0
+
+    used_spy = arr.shape[0] > 128
+    if used_spy:
+        ax.spy(spy_m, markersize=1.6, origin="upper", color="k")
+        ax.xaxis.tick_bottom()
+        ax.xaxis.set_label_position("bottom")
+        ax.tick_params(axis="x", top=False, labeltop=False, bottom=True, labelbottom=True)
+    else:
+        img = 1.0 - arr
+        ax.imshow(
+            img,
+            cmap="gray",
+            vmin=0.0,
+            vmax=1.0,
+            aspect="auto",
+            origin="upper",
+            interpolation="nearest",
+        )
+    ax.set_title(title)
+    if axis_square:
+        ax.set_aspect("equal", adjustable="box")
+    elif used_spy:
+        ax.set_aspect("auto")
 
 
-def _plot_raster(Q: Any, title: str) -> None:
+def _plot_raster(Q: Any, title: str, *, ax: Any | None = None) -> None:
+    """MATLAB ``image((1 - Q) * 64)`` — grayscale raster, not default colormap."""
+    if ax is None:
+        ax = plt.gca()
     arr = np.asarray(Q.todense() if sparse.issparse(Q) else Q, dtype=np.float64)
-    plt.imshow((1.0 - arr) * 64.0, aspect="auto")
-    plt.title(title)
+    ax.imshow(
+        (1.0 - arr) * 64.0,
+        cmap="gray",
+        vmin=0.0,
+        vmax=64.0,
+        aspect="auto",
+        origin="upper",
+        interpolation="nearest",
+    )
+    ax.set_title(title)
 
 
-def _spm_axis_tight() -> None:
-    ax = plt.gca()
+def _spm_axis_tight(ax: Any | None = None) -> None:
+    if ax is None:
+        ax = plt.gca()
     ylim = ax.get_ylim()
     if abs(ylim[1] - ylim[0]) < 1e-12:
         ax.set_ylim(ylim[0] - 1.0, ylim[1] + 1.0)

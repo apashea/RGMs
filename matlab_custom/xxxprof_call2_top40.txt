@@ -1,0 +1,45 @@
+# xxxprof_vb_tag top-40 (sort=TotalTime desc)
+# wall_s=10.020993 matlab_release=24.2.0.3157250 (R2024b) Update 8
+# rdp_mat=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_XXX_12_rgms_atari_optim1full_call2_rdp.mat
+#
+# rank     total_s        self_s         ncalls      function
+  1        10.054093      10.054093      1           xxxprof_vb_tag
+  2        10.053862      10.053862      1           xxxprof_vb_tag>xxxprof_run_profile_
+  3        9.924937       9.924937       129         spm_MDP_VB_XXX
+  4        4.203772       4.203772       384         spm_MDP_VB_XXX>spm_forwards
+  5        2.106335       2.106335       384         spm_VBX
+  6        1.498178       1.498178       30976       spm_VBX>spm_VBX_update
+  7        1.186262       1.186262       128         spm_MDP_VB_XXX>spm_induction
+  8        0.989874       0.989874       88393       spm_dot
+  9        0.436801       0.436801       129         spm_MDP_checkX
+  10       0.354073       0.354073       14701       spm_VBX>spm_margin
+  11       0.289992       0.289992       74568       spm_MDP_VB_XXX>spm_norm
+  12       0.264188       0.264188       80892       spm_parents
+  13       0.182596       0.182596       58132       spm_MDP_VB_XXX>spm_log
+  14       0.180376       0.180376       31360       spm_edges
+  15       0.178963       0.178963       29402       spm_sum
+  16       0.168786       0.168786       61952       num2cell
+  17       0.154282       0.154282       30976       spm_VBX>spm_VBX_sparse
+  18       0.153062       0.153062       36139       spm_dir_norm
+  19       0.120155       0.120155       32256       spm_MDP_VB_XXX>spm_sample
+  20       0.080411       0.080411       45677       spm_VBX>spm_log
+  21       0.080353       0.080353       255         spm_MDP_VB_XXX>spm_action
+  22       0.076461       0.076461       3           spm_check_version
+  23       0.068362       0.068362       14701       spm_VBX>spm_times
+  24       0.067922       0.067922       15360       deal
+  25       0.067590       0.067590       129         spm_MDP_VB_XXX>spm_MDP_get_M
+  26       0.062543       0.062543       3456        spm_kron
+  27       0.047109       0.047109       258         mode
+  28       0.038058       0.038058       3586        kron
+  29       0.034242       0.034242       2560        spm_MDP_VB_XXX>spm_multiply
+  30       0.033323       0.033323       254         rmfield
+  31       0.029150       0.029150       258         spm_combinations
+  32       0.024916       0.024916       384         repmat
+  33       0.022646       0.022646       5374        spm_softmax
+  34       0.016631       0.016631       384         repmat
+  35       0.013670       0.013670       20          spm_MDP_VB_XXX>spm_hnorm
+  36       0.012022       0.012022       2           str2num
+  37       0.011459       0.011459       128         spm_MDP_size
+  38       0.009671       0.009671       387         shiftdim
+  39       0.005358       0.005358       1           strtok
+  40       0.003271       0.003271       257         spm_MDP_VB_XXX>spm_is_process

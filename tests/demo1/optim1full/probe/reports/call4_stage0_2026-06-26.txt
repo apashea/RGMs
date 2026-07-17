@@ -1,0 +1,41 @@
+OPTIM1FULL call4 VB investigation — Stage 0 (read-only)
+tag=rgms_atari_optim1full_call4
+fixtures=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures
+
+=== Causal boundary witness: parent MDP.F (py PKL vs MAT lean snap) ===
+12D.in t=0: F unavailable py=None mat=None
+12D.out_t1 t=1: F unavailable py=None mat=None
+12D.out_t2 t=2: F unavailable py=0.0 mat=None
+12D.out_t3 t=3: F unavailable py=0.0 mat=None
+12D.out_tT t=128: F unavailable py=None mat=None
+12E.in t=0: F unavailable py=None mat=None
+12E.out_t1 t=1: F unavailable py=None mat=None
+12E.out_t2 t=2: F unavailable py=None mat=None
+12E.out_t3 t=3: F unavailable py=None mat=None
+12E.out_tT t=128: F unavailable py=None mat=None
+12F.in t=0: F unavailable py=None mat=None
+12F.out_t1 t=1: MDP.F py=-39.4159 mat=-39.4159 diff=0 [OK]
+--- 12F.out_t1 phase_log detail ---
+  phase_log entries: py=7 mat=9
+  MDP.F at t=1: py=-39.41588910912055 mat=-39.41588910912055 diff=0.0
+12F.out_t2 t=2: MDP.F py=-43.3332 mat=-43.3332 diff=-2.13163e-14 [OK]
+--- 12F.out_t2 phase_log detail ---
+  phase_log entries: py=8 mat=12
+  MDP.F at t=2: py=-43.33321792091339 mat=-43.33321792091337 diff=-2.1316282072803006e-14
+12F.out_t3 t=3: MDP.F py=-83.1744 mat=-83.1744 diff=0 [OK]
+--- 12F.out_t3 phase_log detail ---
+  phase_log entries: py=8 mat=8
+  MDP.F at t=3: py=-83.17444940616893 mat=-83.17444940616893 diff=0.0
+12F.out_tT t=128: MDP.F py=-33.431 mat=-12.4682 diff=-20.9628 [RED]
+--- 12F.out_tT phase_log detail ---
+  phase_log entries: py=8 mat=8
+  MDP.F at t=128: py=-33.43099184774556 mat=-12.468217835862815 diff=-20.962774011882743
+
+=== 12E.out_tT O[0] spot check ===
+12E.out_tT O[0] max|diff|=None
+
+=== Stage 0 summary ===
+Causal MDP.F reds (1): 12F.out_tT
+First F red (by scan order): 12F.out_tT max|diff|~20.9628
+Temporal gap: lean snaps only at t in {0,1,2,3,128} - Stage 1 T_stop bisection needed if no intermediate t in phase_log shows divergence onset.
+Next: if t=2,3 OK and t=128 RED only -> run Stage 1 (optim1full_call4_vb_timestep_witness.py) one T_stop at a time.

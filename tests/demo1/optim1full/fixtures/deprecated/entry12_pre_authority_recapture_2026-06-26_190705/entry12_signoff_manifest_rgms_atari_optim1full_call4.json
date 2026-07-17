@@ -1,0 +1,46 @@
+{
+  "manifest_schema": 2,
+  "tag": "rgms_atari_optim1full_call4",
+  "matlab_release": "24.2.0.3157250 (R2024b) Update 8",
+  "capture_mode": "capture_optim1full_parity",
+  "timestamp": "2026-06-23 17:44:30",
+  "K": 4096,
+  "vb_rand_buf_len": 4096,
+  "paths": {
+    "rdp_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\demo1\\optim1full\\fixtures\\DEMAtariIII_XXX_12_rgms_atari_optim1full_call4_rdp.mat",
+    "pdp_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\demo1\\optim1full\\fixtures\\DEMAtariIII_XXX_12_rgms_atari_optim1full_call4_pdp.mat",
+    "rand_buf_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\demo1\\optim1full\\fixtures\\DEMAtariIII_entry12_vb_matlab_rand_buf_rgms_atari_optim1full_call4.mat"
+  },
+  "checksums": {
+    "rdp_mat_sha256": "d67a53318ff7134d11e1350b287746cc1c2ca0f44cad036dc4de8435f1dfd80d",
+    "pdp_mat_sha256": "af28c4e0829d137acc8ce57457ba048e10a26505fb7cdbdc7f4d89602cc57626",
+    "rand_buf_mat_sha256": "15d700017e4d9add069e6f68613fd522f931daeb87b2fd9e1d1ee8bb208fca32",
+    "subentry_mat": {
+      "12A": "519782e4f948bb7b4d665a8c6f7eda7024583a47c09234c95745f668550c8ed9",
+      "12B": "14e1c4330f06ccb67bb9d15555a193bc84ac09dcd40caa5cca1747aac708a06f",
+      "12C": "52fdc654d00f352a7925b213dc4ac78f3b2b155778a1429a3f44ccd8a641f17b",
+      "12D": "475a8f4d829a6e9ab698b1d5d0dc6e7cf612b35208bc0767e57be2654ee8d2ad",
+      "12E": "c8db22823a03c488fcd8dc8f5f28d976343c9a78cc29f2a0009ddedaef59e0a7",
+      "12F": "d077af764e534194930b4edbcb0313d5c1b7a9c5f370f3a7fcb52ff7ea4aa67b",
+      "12G": "a37ba1013ff53744379c4a63eeb0bf00c55746a315570368fa98d5c5d5d4d899",
+      "12H": "6a84a6634fe9a7849d6b5ba32465508af2eaa69ea97ae211ff76fe75dc232f8c",
+      "12I": "1169cb2d9ff8503249e4eb0d7b198824977ec2dfd7bd13c630747fa0169a747b"
+    },
+    "subentry_pkl": {
+      "12A": "007e08cad5a6e152dac8097e385e5599883e15550314c9121509175c43d5cf82",
+      "12B": "f9ed57e5365ac37450595ac7026e01175e09e8e60b7f50e4994cf1be287b88f6",
+      "12C": "41c4c10d5707bdf68293d77aaa42ccf52d4b0dbda2d3f742f349ed1852ab80cc",
+      "12D": "bcbc22303915124ad3fa5574f057cec4f2edee1d71747a4776a123698e970165",
+      "12E": "379add4768d266a8e0ff6b709c04f5d6c778f6290c487289c3352e2bc35030fd",
+      "12F": "0843b2d6dc96e619cd382595a8eaf243a2d1fc6c73108f6dc31265b744ee0098",
+      "12G": "5ed1f8855a29e50bd1407f3f68bdd69f1deea1acbed0de8e85a08f87ae35a145",
+      "12H": "094b19182ed228af2e6381da37cce1b00c995d37a043684c25741aec55891c8d",
+      "12I": "40a31244a159c0c1d95b89d4b8146c5ba9f26cd84168f4feab744e5b0b01dcad"
+    },
+    "rdp_pkl_sha256": "17acc72520497ee981b2d2a17eecfdce161e0dc6ebebb657526ffd882c8fe13f",
+    "pdp_pkl_sha256": "e5a4e801077467258183c38c19e46ca22a09069cf4d237831f2c35f050226a6d"
+  },
+  "script3": {
+    "timestamp": "2026-06-23T22:56:44Z"
+  }
+}

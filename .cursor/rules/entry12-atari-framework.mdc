@@ -1,0 +1,28 @@
+---
+description: Entry 12 Phase 1 — mandatory Atari_example.md framework (scripts, RNG, causal order). Applies when Entry 12 / spm_MDP_VB_XXX / Validation 12 is in scope.
+globs: RGMs/**/*
+alwaysApply: true
+---
+
+# Entry 12 — Atari_example.md framework
+
+**Authoritative doc:** `C:\Users\andre\.cursor\RGMs\Atari_example.md`
+
+**When triggered** (user says Entry 12, Atari_example, Validation 12, XXX 12, `spm_MDP_VB_XXX`, 12D–12F, or you touch Entry 12 paths):
+
+**Read in order (every session — do not skip):**
+
+1. **§ Entry 12 — Phase 1 framework (single page)**
+2. **§ Entry 12 — universal probe (core reading)**
+3. **§ Phase 1 oracle RNG — mandatory policy**
+4. **§ Entry 12 — causal boundary validation order**
+
+**Pillar A — scripts:** Sign-off only **1a → 1b → 3 → 4** (`entry12_preflight_vb_rand_k.py`, `DEMAtariIII_entry12_dump_all_subentries.m`, `test_DEM_AtariIII_XXX_12.py`, `XXX_12_compare_pdp_pkl_to_mat.py`). No ad-hoc VB runners or mixed `tag`.
+
+**Pillar B — RNG:** Replay `vb_rand_buf` from 1b; preflight `K` via 1a; `entry12_draw_index_audit.py` (`unused_draws=0`). Stochastic change → full chain 1a→1b→3→4.
+
+**Pillar C — causal:** 12D→12E→12F per boundary; time `in`→`out_t1`→…→`out_tT`; stop at first failure. **Universal parity probe:** script **4** (`XXX_12_compare_pdp_pkl_to_mat.py`); fast: `--entry12-causal-only`. **Do not** add new `_diag_*` probes — accumulate inspections in script **4** tee via `entry12_matlab_capture.py`.
+
+**Translation:** `python_src/toolbox/DEM/spm_MDP_VB_XXX.py` — fix **first red** causal step only; then 3→4 (1b if MATLAB dump schema changes).
+
+Duplicate of `C:\Users\andre\.cursor\rules\rgms-rules.mdc` § **Entry 12 — Atari_example.md framework**.

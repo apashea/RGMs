@@ -1,0 +1,16 @@
+DEMO2 lane B — compare Python post–NR ``MDP`` vs ``MDP_pre_post_nr`` authority.
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\demo2_compare_post_nr_mdp_output.txt``
+
+[DEMO2 post-NR compare] PKL=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_demo2_post_nr_mdp.pkl
+[DEMO2 post-NR compare] MAT authority=C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\fixtures\DEMAtariIII_demo2_MDP_pre_call3_post_nr.mat
+[DEMO2 post-NR compare] levels py=2 mat=2 lane_b_vb_replay_call2=False
+Traceback (most recent call last):
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\demo2_compare_post_nr_mdp_pkl_to_mat.py", line 159, in main
+    return _execute(args)
+           ^^^^^^^^^^^^^^
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\demo2_compare_post_nr_mdp_pkl_to_mat.py", line 131, in _execute
+    _assert_mdp_full_equal(py_mdp, mat_mdp, k=0)
+  File "C:\Users\andre\.cursor\RGMs\tests\oracle\toolbox\DEM\test_DEM_AtariIII_entry8.py", line 212, in _assert_mdp_full_equal
+    raise AssertionError(f"call={k} lev={n+1} id.{field} mismatch")
+AssertionError: call=0 lev=1 id.A mismatch

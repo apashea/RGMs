@@ -1,0 +1,247 @@
+{
+  "utc": "2026-06-06T04:39:13.614221+00:00",
+  "eig_md_section": "30.8",
+  "known_fail_hashes": [
+    "2d5f8b838be81f21",
+    "4ab4f22de6228a3a",
+    "6abd2a358966b834",
+    "7d978bc6b89bde7b",
+    "7f1469f5003eebf1",
+    "866ab1a9b2265fd6",
+    "a03d7da5d5c09bab"
+  ],
+  "backends": [
+    {
+      "label": "scipy_postprocess",
+      "fail_blocks": [
+        {
+          "sub_hash": "6abd2a358966b834",
+          "jmax_ref": 107,
+          "jmax_got": 107,
+          "jmax_match": true,
+          "max_abs_diff": 6.661338147750939e-16,
+          "mean_abs_diff": 3.01571336241441e-17,
+          "l2_ref": 0.9999999999999997,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "a03d7da5d5c09bab",
+          "jmax_ref": 98,
+          "jmax_got": 98,
+          "jmax_match": true,
+          "max_abs_diff": 3.3584246494910985e-15,
+          "mean_abs_diff": 1.085866807308265e-16,
+          "l2_ref": 0.9999999999999999,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "2d5f8b838be81f21",
+          "jmax_ref": 89,
+          "jmax_got": 89,
+          "jmax_match": true,
+          "max_abs_diff": 3.635980405647388e-15,
+          "mean_abs_diff": 1.6422048905913775e-16,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "7d978bc6b89bde7b",
+          "jmax_ref": 80,
+          "jmax_got": 80,
+          "jmax_match": true,
+          "max_abs_diff": 1.5265566588595902e-15,
+          "mean_abs_diff": 1.3158198810372227e-16,
+          "l2_ref": 1.0,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "7f1469f5003eebf1",
+          "jmax_ref": 71,
+          "jmax_got": 71,
+          "jmax_match": true,
+          "max_abs_diff": 6.6059834077737165e-15,
+          "mean_abs_diff": 3.0942671785636346e-16,
+          "l2_ref": 0.9999999999999997,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "866ab1a9b2265fd6",
+          "jmax_ref": 62,
+          "jmax_got": 62,
+          "jmax_match": true,
+          "max_abs_diff": 6.616929226765933e-14,
+          "mean_abs_diff": 2.1404956009190123e-15,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "4ab4f22de6228a3a",
+          "jmax_ref": 53,
+          "jmax_got": 53,
+          "jmax_match": true,
+          "max_abs_diff": 1.3322676295501878e-14,
+          "mean_abs_diff": 4.996003610813204e-16,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        }
+      ],
+      "fail_max_abs_diff_mean": 1.3612149642815442e-14,
+      "pass_max_abs_diff_max": 4.567186019232813e-16
+    },
+    {
+      "label": "eig_nobalance_default",
+      "fail_blocks": [
+        {
+          "sub_hash": "6abd2a358966b834",
+          "jmax_ref": 107,
+          "jmax_got": 107,
+          "jmax_match": true,
+          "max_abs_diff": 3.885780586188048e-16,
+          "mean_abs_diff": 2.6557389333292723e-17,
+          "l2_ref": 0.9999999999999997,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "a03d7da5d5c09bab",
+          "jmax_ref": 98,
+          "jmax_got": 98,
+          "jmax_match": true,
+          "max_abs_diff": 1.8041124150158794e-15,
+          "mean_abs_diff": 2.8690337053582004e-16,
+          "l2_ref": 0.9999999999999999,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "2d5f8b838be81f21",
+          "jmax_ref": 89,
+          "jmax_got": 89,
+          "jmax_match": true,
+          "max_abs_diff": 2.7478019859472624e-15,
+          "mean_abs_diff": 3.191001417433726e-16,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "7d978bc6b89bde7b",
+          "jmax_ref": 80,
+          "jmax_got": 80,
+          "jmax_match": true,
+          "max_abs_diff": 8.052847876597282e-16,
+          "mean_abs_diff": 9.632471697860696e-17,
+          "l2_ref": 1.0,
+          "l2_got": 0.9999999999999999
+        },
+        {
+          "sub_hash": "7f1469f5003eebf1",
+          "jmax_ref": 71,
+          "jmax_got": 71,
+          "jmax_match": true,
+          "max_abs_diff": 1.1102230246251565e-15,
+          "mean_abs_diff": 9.384253001762595e-17,
+          "l2_ref": 0.9999999999999997,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "866ab1a9b2265fd6",
+          "jmax_ref": 62,
+          "jmax_got": 62,
+          "jmax_match": true,
+          "max_abs_diff": 3.2862601528904634e-14,
+          "mean_abs_diff": 1.1345103964851268e-15,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "4ab4f22de6228a3a",
+          "jmax_ref": 53,
+          "jmax_got": 53,
+          "jmax_match": true,
+          "max_abs_diff": 1.8041228062437976e-14,
+          "mean_abs_diff": 6.746207054292251e-16,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        }
+      ],
+      "fail_max_abs_diff_mean": 8.251404266172777e-15,
+      "pass_max_abs_diff_max": 3.6183838914316756e-16
+    },
+    {
+      "label": "vendored_dgeevx_postprocess",
+      "fail_blocks": [
+        {
+          "sub_hash": "6abd2a358966b834",
+          "jmax_ref": 107,
+          "jmax_got": 107,
+          "jmax_match": true,
+          "max_abs_diff": 3.885780586188048e-16,
+          "mean_abs_diff": 2.6557389333292723e-17,
+          "l2_ref": 0.9999999999999997,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "a03d7da5d5c09bab",
+          "jmax_ref": 98,
+          "jmax_got": 98,
+          "jmax_match": true,
+          "max_abs_diff": 1.8041124150158794e-15,
+          "mean_abs_diff": 2.8690337053582004e-16,
+          "l2_ref": 0.9999999999999999,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "2d5f8b838be81f21",
+          "jmax_ref": 89,
+          "jmax_got": 89,
+          "jmax_match": true,
+          "max_abs_diff": 2.7478019859472624e-15,
+          "mean_abs_diff": 3.191001417433726e-16,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "7d978bc6b89bde7b",
+          "jmax_ref": 80,
+          "jmax_got": 80,
+          "jmax_match": true,
+          "max_abs_diff": 8.052847876597282e-16,
+          "mean_abs_diff": 9.632471697860696e-17,
+          "l2_ref": 1.0,
+          "l2_got": 0.9999999999999999
+        },
+        {
+          "sub_hash": "7f1469f5003eebf1",
+          "jmax_ref": 71,
+          "jmax_got": 71,
+          "jmax_match": true,
+          "max_abs_diff": 1.1102230246251565e-15,
+          "mean_abs_diff": 9.384253001762595e-17,
+          "l2_ref": 0.9999999999999997,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "866ab1a9b2265fd6",
+          "jmax_ref": 62,
+          "jmax_got": 62,
+          "jmax_match": true,
+          "max_abs_diff": 3.2862601528904634e-14,
+          "mean_abs_diff": 1.1345103964851268e-15,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        },
+        {
+          "sub_hash": "4ab4f22de6228a3a",
+          "jmax_ref": 53,
+          "jmax_got": 53,
+          "jmax_match": true,
+          "max_abs_diff": 1.8041228062437976e-14,
+          "mean_abs_diff": 6.746207054292251e-16,
+          "l2_ref": 1.0000000000000002,
+          "l2_got": 1.0
+        }
+      ],
+      "fail_max_abs_diff_mean": 8.251404266172777e-15,
+      "pass_max_abs_diff_max": 3.6183838914316756e-16
+    }
+  ],
+  "use": "Target edits in tools/eig_lapack_nobalance/src/ or vendor/ to reduce fail_max on seven hashes."
+}

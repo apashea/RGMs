@@ -1,0 +1,17 @@
+probe MATLAB t=41 lane=fidelity k=4096
+N=42 T=128 recursive=True
+G_final=[-47.66956562421714, -538.557290550479, -538.557290550479, -538.557290550479]
+matlab_G_cell40=[-36.7786396005819, -29.602188814778557, -29.602188814604503, -29.602188814778557]
+python_stored_G_cell40=[-47.66956562421714, -538.557290550479, -538.557290550479, -538.557290550479]
+--- per-policy stages (scalar G[:,0] after select usually) ---
+  k=0 ih_sum=31.17374643285308 iI_sum=0.0 g_risk=[31.992141453827696] rec=-21.112275073738083 stages={'after_iH': -31.17374643285308, 'after_iI': -31.17374643285308, 'after_risk': 0.8183950209746165, 'after_outcomes': -62.55932234764577, 'after_recursive': -47.66956562421714}
+  k=1 ih_sum=31.701775091858522 iI_sum=0.0 g_risk=[31.98853868194652] rec=0.0 stages={'after_iH': -31.701775091858522, 'after_iI': -31.701775091858522, 'after_risk': 0.2867635900879968, 'after_outcomes': -65.36735337101864}
+  k=2 ih_sum=31.70177509183365 iI_sum=0.0 g_risk=[31.988538681942867] rec=0.0 stages={'after_iH': -31.70177509183365, 'after_iI': -31.70177509183365, 'after_risk': 0.28676359010921715, 'after_outcomes': -65.36735337098152}
+  k=3 ih_sum=31.701775091858522 iI_sum=0.0 g_risk=[31.98853868194652] rec=0.0 stages={'after_iH': -31.701775091858522, 'after_iI': -31.701775091858522, 'after_risk': 0.2867635900879968, 'after_outcomes': -65.36735337101864}
+--- stage after_outcomes vs after_recursive (policy0 vs policy1) ---
+  after_iH: k0=[-31.17374643285308] k1=[-31.701775091858522] d0_1=[0.52802866]
+  after_iI: k0=[-31.17374643285308] k1=[-31.701775091858522] d0_1=[0.52802866]
+  after_risk: k0=[0.8183950209746165] k1=[0.2867635900879968] d0_1=[0.53163143]
+  after_outcomes: k0=[-62.55932234764577] k1=[-65.36735337101864] d0_1=[2.80803102]
+  after_recursive: missing
+wrote C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_call4_forwards_t40_terms.json

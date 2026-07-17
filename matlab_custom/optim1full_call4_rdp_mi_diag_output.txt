@@ -1,0 +1,23 @@
+[call4 RDP_MI diag] MDP_post_nr authority = C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_MDP_post_nr.mat
+[call4 RDP_MI diag] spm_RDP_sort done; levels=2 j(len)=311
+
+==================== RDP OUTPUT COMPARISON ====================
+--- per-level shape / count summary (py vs mat) ---
+  lev=1: na py=111 mat=111 | nb py=60 mat=60 | sB py=[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4] mat=[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 4]
+  lev=2: na py=26 mat=26 | nb py=4 mat=4 | sB py=[1, 2, 3, 4] mat=[1, 2, 3, 4]
+[a/b tensor scan] max abs diff = 0.0 at none
+[full compare] EQUAL — Python spm_RDP_MI output == MATLAB spm_RDP_MI output
+
+==================== spm_dir_reduce ISOLATION ====================
+[python] C_n=48  R.shape=(311, 184)  R.nnz=311
+[matlab] C_n=48  R.shape=(311, 184)  R.nnz=311
+[R compare] shapes match; max abs diff = 0.0; identical=True
+
+[D matrix] shape py=(311, 311) mat=(311, 311)  sqrt(2)=1.4142135623730951
+[D compare] max abs diff (same C input) = 0.0
+  [matlab] min|D-sqrt2|=1.41421356237308  #(|D-sqrt2|<1e-6)=0  #(<1e-3)=0
+  [python] min|D-sqrt2|=1.41421356237308  #(|D-sqrt2|<1e-6)=0  #(<1e-3)=0
+[threshold mask] #(D<sqrt2) py=817 mat=817 disagreeing entries=0
+
+==================== VERDICT ====================
+Python spm_RDP_MI output == MATLAB spm_RDP_MI output : YES

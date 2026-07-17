@@ -1,0 +1,38 @@
+FSL Entry 10 eigen/prune instrument
+B shape=(2657, 2657)
+geevx_available=False
+
+[MATLAB eig nobalance]
+  jj=1 distinct_p=2150
+  prune_removals=2172 n_keep=485
+  authority_MDP_pre_entry11_width=485
+  prune_masks_identical n_keep=485
+  vs native principal='min_tie' (j=34): prune_masks_identical n_keep=485
+  vs native principal='closest_unity' (j=34): prune_masks_identical n_keep=485
+  vs native principal='argmax' (j=34): prune_masks_identical n_keep=485
+  full_spm_RDP_sort(Engine eig) width=485 j_out_len=485
+
+[numpy] principal_env='argmax'
+  j_argmax=34 j_principal=34 max_real_ev=1.000000000000004
+  distinct_p=2170 prune_removals=2173 n_keep=484
+  full_spm_RDP_sort width=484 j_out_len=484
+[numpy+min_tie] principal_env='min_tie'
+  j_argmax=34 j_principal=34 max_real_ev=1.000000000000004
+  distinct_p=2170 prune_removals=2173 n_keep=484
+  full_spm_RDP_sort width=484 j_out_len=484
+[numpy+closest_unity] principal_env='closest_unity'
+  j_argmax=34 j_principal=34 max_real_ev=1.000000000000004
+  distinct_p=2170 prune_removals=2173 n_keep=484
+  full_spm_RDP_sort width=484 j_out_len=484
+[eig_matlab_nobalance] principal_env='argmax'
+  j_argmax=34 j_principal=34 max_real_ev=1.000000000000004
+  distinct_p=2170 prune_removals=2173 n_keep=484
+  full_spm_RDP_sort width=484 j_out_len=484
+[eig_matlab_nobalance+min_tie] principal_env='min_tie'
+  j_argmax=34 j_principal=34 max_real_ev=1.000000000000004
+  distinct_p=2170 prune_removals=2173 n_keep=484
+  full_spm_RDP_sort width=484 j_out_len=484
+[lapack_dgeev(exp)] principal_env='argmax'
+  j_argmax=118 j_principal=118 max_real_ev=1.00000000000001
+  distinct_p=2152 prune_removals=2168 n_keep=489
+  full_spm_RDP_sort width=489 j_out_len=489

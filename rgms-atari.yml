@@ -1,0 +1,15 @@
+# DEMO1 shipped conda environment (see DEMO1.md §5).
+# MATLAB 2024b + MATLAB Engine for Python are installed separately for parity.
+name: rgms-atari
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10,<3.13
+  - numpy
+  - scipy
+  - matplotlib
+  - pillow
+  - pytest
+  - pip
+  - pip:
+      - matlabengine

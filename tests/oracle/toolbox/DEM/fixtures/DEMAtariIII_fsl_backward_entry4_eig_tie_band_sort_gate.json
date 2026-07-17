@@ -1,0 +1,17 @@
+{
+  "utc": "2026-06-06T04:42:16.120086+00:00",
+  "env": "RGMS_EIG_SPECTRAL_ABS_TIE_BAND_SORT=1",
+  "order_ok": 55,
+  "n_blocks": 58,
+  "seven_fail_order_ok": 4,
+  "fail_hashes": [
+    "a03d7da5d5c09bab",
+    "866ab1a9b2265fd6",
+    "4ab4f22de6228a3a"
+  ],
+  "known_fail_matches": [
+    "4ab4f22de6228a3a",
+    "866ab1a9b2265fd6",
+    "a03d7da5d5c09bab"
+  ]
+}

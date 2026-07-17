@@ -1,0 +1,20 @@
+# xxxprof key call counts from MATLAB profiler (same run as profile mode)
+# wall_s=10.978948
+spm_MDP_VB_XXX_ncalls=129
+spm_MDP_VB_XXX_total_s=10.723568
+spm_forwards_ncalls=384
+spm_forwards_total_s=5.000653
+spm_VBX_ncalls=384
+spm_VBX_total_s=2.395933
+spm_induction_ncalls=128
+spm_induction_total_s=1.879957
+spm_dot_ncalls=93413
+spm_dot_total_s=0.730638
+spm_parents_ncalls=78332
+spm_parents_total_s=0.304116
+spm_MDP_checkX_ncalls=129
+spm_MDP_checkX_total_s=0.471641
+spm_sample_ncalls=32256
+spm_sample_total_s=0.132624
+spm_action_ncalls=255
+spm_action_total_s=0.095352

@@ -1,0 +1,19 @@
+﻿{
+    "retrieved_utc":  "2026-06-05T02:54:42.6674149Z",
+    "method":  "nuget",
+    "devel_package":  "intelmkl.devel.win-x64/2024.2.2.14",
+    "redist_package":  "intelmkl.redist.win-x64/2024.2.2.14",
+    "mkl_rt_lib":  "C:\\Users\\andre\\.cursor\\RGMs\\tools\\eig_mkl_staging\\nuget\\devel\\extracted\\build\\native\\win-x64\\mkl_rt.lib",
+    "mkl_lib_dir":  "C:\\Users\\andre\\.cursor\\RGMs\\tools\\eig_mkl_staging\\nuget\\devel\\extracted\\build\\native\\win-x64",
+    "mkl_rt_dlls":  [
+                        "C:\\Users\\andre\\.cursor\\RGMs\\tools\\eig_mkl_staging\\nuget\\redist\\extracted\\runtimes\\win-x64\\native\\mkl_rt.2.dll"
+                    ],
+    "runtime_copy_dir":  "C:\\Users\\andre\\.cursor\\RGMs\\tools\\eig_mkl_staging\\runtime",
+    "include_dir":  "C:\\Users\\andre\\.cursor\\RGMs\\tools\\eig_mkl_staging\\nuget\\devel\\extracted\\build\\native\\include",
+    "mklroot_for_build":  "C:\\Users\\andre\\.cursor\\RGMs\\tools\\eig_mkl_staging\\nuget\\devel\\extracted",
+    "acceptance":  {
+                       "mkl_rt_lib_present":  true,
+                       "mkl_rt_dll_present":  true,
+                       "runtime_copied":  true
+                   }
+}

@@ -1,0 +1,9 @@
+OPTIM1FULL — spine fence PDP pairing compare (`.pkl` vs `.mat`).
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_compare_spine_fence_pdp_output.txt``
+
+[OPTIM1FULL spine structure compare] site=dem_structure_learning boundary=nr_game_32
+[OPTIM1FULL spine structure compare] PKL=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_dem_structure_learning_input.pkl
+[OPTIM1FULL spine structure compare] MAT=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_dem_structure_learning_matlab_payload.mat
+[OPTIM1FULL spine structure compare] F OK shape=(6, 32)
+[OPTIM1FULL spine structure compare] PASS

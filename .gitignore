@@ -8,6 +8,25 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+*.pkl
+*.mat
+
+# COLAB1 / public GitHub — do not publish local docs, figures, or runtime trees
+# (see OPTIM1FULL.md § COLAB1 — What is published vs ignored)
+*.md
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.tif
+*.tiff
+*.bmp
+logs/
+misc/
+tools/eig_mkl_link_prefix/
+tools/eig_lapack_nobalance/build_mkl/
 
 # Type/lint caches
 .mypy_cache/
@@ -27,3 +46,44 @@ desktop.ini
 # MATLAB editor autosaves
 *.asv
 *.m~
+
+# Entry 4 Option B — vendored LAPACK extract + build tree (see tools/eig_lapack_nobalance/)
+tools/eig_lapack_nobalance/vendor/
+tools/eig_lapack_nobalance/build/
+python_src/utils/eig_lapack_nobalance/_eig_lapack_nobalance.dll
+python_src/utils/eig_lapack_nobalance/mkl*.dll
+python_src/utils/eig_lapack_nobalance/libimalloc.dll
+python_src/utils/eig_lapack_nobalance/eig_lapack_nobalance.dll
+python_src/utils/eig_lapack_nobalance/_eig_lapack_nobalance.so
+python_src/utils/eig_lapack_nobalance/libeig_lapack_nobalance.so
+python_src/utils/eig_lapack_nobalance/_eig_lapack_nobalance.dylib
+
+# DEMO1 — generated fixtures and runtime manifests (see DEMO1.md §4.3)
+tests/demo1/fixtures/
+tests/demo1/fixtures/**/*.json
+tests/demo1/python_native/
+
+# DEMO1 — parity tee logs and generated compare reports
+matlab_custom/demo1_parity_*_output.txt
+matlab_custom/fsl_backward_compare_entry*_output.txt
+matlab_custom/fsl_backward_entry11_entry12_validation12_output.txt
+matlab_custom/XXX_12_compare_pdp_pkl_to_mat_output.txt
+matlab_custom/entry12_draw_index_audit_results.json
+
+# DEMO1 / OPTIM1 — generated visualizations (COLAB1: no images on public GitHub)
+visualizations/
+
+# OPTIM1 — generated checkpoints and native artifacts (see OPTIM1.md §13.1)
+tests/demo1/optim1/fixtures/
+tests/demo1/optim1/python_native/
+visualizations/optim1/
+matlab_custom/optim1_parity_*_output.txt
+
+# Entry 4 B5.1 — staged Intel MKL NuGet unpack (see tools/eig_mkl_staging/)
+tools/eig_mkl_staging/nuget/
+tools/eig_mkl_staging/runtime/
+tools/eig_mkl_staging/oneapi_mkl/
+
+tools/eig_mkl_staging/nuget/
+tools/eig_mkl_staging/runtime/
+tools/eig_mkl_staging/oneapi_mkl/

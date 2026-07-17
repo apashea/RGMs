@@ -19,17 +19,10 @@ from python_src.spm_MDP_MI import spm_MDP_MI
 
 
 def _sort_abs_descend_matlab_like(absv: np.ndarray) -> np.ndarray:
-    """Row order after MATLAB ``sort(abs(e(:,jmax)),'descend')`` on a column vector.
+    """MATLAB ``sort(abs(e(:,jmax)),'descend')`` — ``eig_spectral_policy`` (optional tie-band §4.1 B5.3)."""
+    from python_src.utils.eig_spectral_policy import sort_abs_descend_for_spm_rgm
 
-    Verified against MATLAB Engine on the structure-learning exhaustive
-    checkpoint: MATLAB's permutation matches NumPy
-    ``argsort(-abs(x), kind='mergesort')``.
-    """
-    a = np.asarray(absv, dtype=np.float64).ravel()
-    n = int(a.size)
-    if n == 0:
-        return np.zeros(0, dtype=np.int64)
-    return np.argsort(-a, kind="mergesort").astype(np.int64, copy=False)
+    return sort_abs_descend_for_spm_rgm(absv)
 
 
 def _spm_mdp_mi_scalar(p: np.ndarray) -> float:

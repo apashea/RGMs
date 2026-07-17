@@ -1,0 +1,162 @@
+{
+  "utc": "2026-06-06T18:08:50.906740+00:00",
+  "eig_md_section": "4.1 E3d",
+  "backend": "lapack_vendored",
+  "hashes": [
+    "4ab4f22de6228a3a",
+    "a03d7da5d5c09bab",
+    "7d978bc6b89bde7b"
+  ],
+  "rows": [
+    {
+      "sub_hash": "4ab4f22de6228a3a",
+      "n": 54,
+      "jmax": 53,
+      "kmax_ref": 2,
+      "kmax_py": 2,
+      "kmax_match": true,
+      "plateau_ref": [
+        2,
+        4,
+        48
+      ],
+      "plateau_py": [
+        2,
+        4,
+        48,
+        51
+      ],
+      "spurious_py_plateau": [
+        51
+      ],
+      "missing_py_plateau": [],
+      "oracle_kind": "spurious_plateau_inflation",
+      "row_table": [
+        {
+          "index": 2,
+          "abs_ref": 0.5000000000000046,
+          "abs_py": 0.5000000000000016,
+          "delta_py_minus_ref": -2.9976021664879227e-15,
+          "on_plateau_ref": true,
+          "on_plateau_py": true
+        },
+        {
+          "index": 2,
+          "abs_ref": 0.5000000000000046,
+          "abs_py": 0.5000000000000016,
+          "delta_py_minus_ref": -2.9976021664879227e-15,
+          "on_plateau_ref": true,
+          "on_plateau_py": true
+        }
+      ],
+      "replay_demote": [
+        {
+          "demote_indices": [
+            51
+          ],
+          "replay_kmax": 2
+        },
+        {
+          "demote_indices": [
+            51
+          ],
+          "replay_kmax": 2
+        }
+      ]
+    },
+    {
+      "sub_hash": "a03d7da5d5c09bab",
+      "n": 99,
+      "jmax": 98,
+      "kmax_ref": 57,
+      "kmax_py": 57,
+      "kmax_match": true,
+      "plateau_ref": [
+        37,
+        57,
+        73
+      ],
+      "plateau_py": [
+        37,
+        57,
+        73
+      ],
+      "spurious_py_plateau": [],
+      "missing_py_plateau": [],
+      "oracle_kind": "kmax_ok",
+      "row_table": [
+        {
+          "index": 57,
+          "abs_ref": 0.22792911068453287,
+          "abs_py": 0.2279291106845331,
+          "delta_py_minus_ref": 2.220446049250313e-16,
+          "on_plateau_ref": true,
+          "on_plateau_py": true
+        },
+        {
+          "index": 57,
+          "abs_ref": 0.22792911068453287,
+          "abs_py": 0.2279291106845331,
+          "delta_py_minus_ref": 2.220446049250313e-16,
+          "on_plateau_ref": true,
+          "on_plateau_py": true
+        }
+      ],
+      "replay_demote": [
+        {
+          "demote_indices": [],
+          "replay_kmax": 57
+        }
+      ]
+    },
+    {
+      "sub_hash": "7d978bc6b89bde7b",
+      "n": 81,
+      "jmax": 80,
+      "kmax_ref": 13,
+      "kmax_py": 13,
+      "kmax_match": true,
+      "plateau_ref": [
+        13,
+        23,
+        25,
+        29,
+        42
+      ],
+      "plateau_py": [
+        13,
+        23,
+        25,
+        29,
+        42
+      ],
+      "spurious_py_plateau": [],
+      "missing_py_plateau": [],
+      "oracle_kind": "kmax_ok",
+      "row_table": [
+        {
+          "index": 13,
+          "abs_ref": 0.3268126918432574,
+          "abs_py": 0.3268126918432575,
+          "delta_py_minus_ref": 1.1102230246251565e-16,
+          "on_plateau_ref": true,
+          "on_plateau_py": true
+        },
+        {
+          "index": 13,
+          "abs_ref": 0.3268126918432574,
+          "abs_py": 0.3268126918432575,
+          "delta_py_minus_ref": 1.1102230246251565e-16,
+          "on_plateau_ref": true,
+          "on_plateau_py": true
+        }
+      ],
+      "replay_demote": [
+        {
+          "demote_indices": [],
+          "replay_kmax": 13
+        }
+      ]
+    }
+  ]
+}

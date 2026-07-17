@@ -1,0 +1,11 @@
+[OPTIM1FULL sort split] MAT=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_MDP_post_nr.mat
+[OPTIM1FULL sort split] Nm=2
+[A] flow B: shape py=(634, 634) mat=(634, 634) max_abs_diff=0.0 PASS=True
+[B1] eigenvalues w: max_abs_diff=0.0 PASS=True
+[B2] principal column: py=59 mat=59 (0-based) PASS=True
+[B3] NESS p: len=634 distinct py=505 mat=505 max_abs_diff=0.0 PASS=True
+[B4] full spm_RDP_sort j: len py=311 mat=311 PASS=True
+[C] compressed MDP after sort: PASS=False
+    first assert: only 0-dimensional arrays can be converted to Python scalars
+--- summary ---
+FIRST_RED: stage C (spm_RDP_compress / post-sort MDP)

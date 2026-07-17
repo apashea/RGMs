@@ -9,6 +9,7 @@ import numpy as np
 
 from python_src.spm_dir_norm import spm_dir_norm
 from python_src.toolbox.DEM.spm_mdp2rdp_a import spm_mdp2rdp_a
+from python_src.toolbox.DEM.spm_MDP_checkX import spm_mdp_normalize_rdp_matlab_containers
 
 
 def spm_mdp2rdp(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
@@ -35,16 +36,16 @@ def spm_mdp2rdp(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
         rdp = copy.deepcopy(mdp[0])
         rdp["L"] = 1
         rdp["T"] = T
+        spm_mdp_normalize_rdp_matlab_containers(rdp)
         return rdp
 
     n_last = nm - 1
     if len(mdp[n_last]["B"]) > 1:
         mdp[n_last]["B"] = [mdp[n_last]["B"][0]]
-        g = mdp[n_last]["G"]
-        if isinstance(g, dict):
-            mdp[n_last]["G"] = {1: g[1]} if 1 in g else {min(g.keys()): g[min(g.keys())]}
-        else:
-            mdp[n_last]["G"] = [g[0]]
+        from python_src.toolbox.DEM.spm_mdp2rdp_a import _matlab_index_one
+
+        if "G" in mdp[n_last]:
+            mdp[n_last]["G"] = _matlab_index_one(mdp[n_last]["G"])
 
         na = len(mdp[n_last]["A"])
         d_la = np.zeros(na, dtype=bool)
@@ -196,6 +197,7 @@ def spm_mdp2rdp(MDP: list[dict[str, Any]], p=None, q=None, T=None, FIX=None):
         out["T"] = T
         out["L"] = n
     out["L"] = nm
+    spm_mdp_normalize_rdp_matlab_containers(out)
     return out
 
 

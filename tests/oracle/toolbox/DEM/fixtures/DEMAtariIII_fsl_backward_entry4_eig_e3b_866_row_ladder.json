@@ -1,0 +1,200 @@
+{
+  "utc": "2026-06-06T19:10:50.383271+00:00",
+  "eig_md_section": "4.1 E3b-b (column index corrected E3b-b3)",
+  "sub_hash": "866ab1a9b2265fd6",
+  "row_pair_0based": [
+    7,
+    58
+  ],
+  "row_pair_1based": [
+    8,
+    59
+  ],
+  "fortran_dbg_col": 2,
+  "fortran_dbg_col_note": "LAPACK KI=raw_col_for_jref+1 (idx[j_ref] before ascending-|w| pp)",
+  "ref_jmax_0based": 62,
+  "raw_jmax_0based": 1,
+  "raw_col_for_jref_0based": 1,
+  "ki_jref_eq_raw_jmax": true,
+  "wrong_index_j_ref_on_raw_v": true,
+  "kmax_ref": 58,
+  "kmax_py": 58,
+  "kmax_match": true,
+  "ref_pair_at_jmax": {
+    "abs_lo": 0.4389968340923684,
+    "abs_hi": 0.4389968340923798,
+    "row_lo_0based": 7,
+    "row_hi_0based": 58,
+    "leader_0based": 58,
+    "diff_lo_minus_hi": -1.1379786002407855e-14
+  },
+  "py_pair_at_jmax": {
+    "abs_lo": 0.4389968340923775,
+    "abs_hi": 0.43899683409238277,
+    "row_lo_0based": 7,
+    "row_hi_0based": 58,
+    "leader_0based": 58,
+    "diff_lo_minus_hi": -5.2735593669694936e-15
+  },
+  "ref_leader_on_pair": 58,
+  "py_leader_on_pair": 58,
+  "dbg_hit": 1,
+  "dbg_path_code": 2,
+  "dbg_path": "dgemm",
+  "dbg_idamax_ii_1based": 0,
+  "ladder_ordered": {
+    "1_post_DGEHRD_hessenberg_H_col": {
+      "abs_lo": 0.3054892064412932,
+      "abs_hi": 0.3054892064412932,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 7,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2_post_DORGHR_orthogonal_Q_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2a_post_DLAQR0_in_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2b_post_DLAQR0_out_schur_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "3_post_DHSEQR_schur_VR_col": {
+      "abs_lo": 0.43899683409237983,
+      "abs_hi": 0.43899683409237983,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 7,
+      "diff_lo_minus_hi": 0.0
+    },
+    "4_DTREVC3_at_KI_vr_col": {
+      "abs_lo": 0.43899683409237983,
+      "abs_hi": 0.43899683409237983,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 7,
+      "diff_lo_minus_hi": 0.0
+    },
+    "5_DTREVC3_post_DGEMM_pre_IDAMAX": {
+      "abs_lo": 0.43899683409237983,
+      "abs_hi": 0.43899683409237983,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 7,
+      "diff_lo_minus_hi": 0.0
+    },
+    "6_DTREVC3_post_IDAMAX_normalize": {
+      "abs_lo": 0.999999999999988,
+      "abs_hi": 1.0,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 58,
+      "diff_lo_minus_hi": -1.199040866595169e-14
+    },
+    "7_final_raw_lapack_col": {
+      "abs_lo": 0.4389968340923775,
+      "abs_hi": 0.43899683409238277,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 58,
+      "diff_lo_minus_hi": -5.2735593669694936e-15
+    },
+    "8_final_pp_eig_col": {
+      "abs_lo": 0.4389968340923775,
+      "abs_hi": 0.43899683409238277,
+      "row_lo_0based": 7,
+      "row_hi_0based": 58,
+      "leader_0based": 58,
+      "diff_lo_minus_hi": -5.2735593669694936e-15
+    }
+  },
+  "transitions": [
+    {
+      "from": "1_post_DGEHRD_hessenberg_H_col",
+      "to": "2_post_DORGHR_orthogonal_Q_col",
+      "delta_lo": -0.3054892064412932,
+      "delta_hi": -0.3054892064412932,
+      "leader_changed": false
+    },
+    {
+      "from": "2_post_DORGHR_orthogonal_Q_col",
+      "to": "2a_post_DLAQR0_in_VR_col",
+      "delta_lo": 0.0,
+      "delta_hi": 0.0,
+      "leader_changed": false
+    },
+    {
+      "from": "2a_post_DLAQR0_in_VR_col",
+      "to": "2b_post_DLAQR0_out_schur_VR_col",
+      "delta_lo": 0.0,
+      "delta_hi": 0.0,
+      "leader_changed": false
+    },
+    {
+      "from": "2b_post_DLAQR0_out_schur_VR_col",
+      "to": "3_post_DHSEQR_schur_VR_col",
+      "delta_lo": 0.43899683409237983,
+      "delta_hi": 0.43899683409237983,
+      "leader_changed": false
+    },
+    {
+      "from": "3_post_DHSEQR_schur_VR_col",
+      "to": "4_DTREVC3_at_KI_vr_col",
+      "delta_lo": 0.0,
+      "delta_hi": 0.0,
+      "leader_changed": false
+    },
+    {
+      "from": "4_DTREVC3_at_KI_vr_col",
+      "to": "5_DTREVC3_post_DGEMM_pre_IDAMAX",
+      "delta_lo": 0.0,
+      "delta_hi": 0.0,
+      "leader_changed": false
+    },
+    {
+      "from": "5_DTREVC3_post_DGEMM_pre_IDAMAX",
+      "to": "6_DTREVC3_post_IDAMAX_normalize",
+      "delta_lo": 0.5610031659076082,
+      "delta_hi": 0.5610031659076202,
+      "leader_changed": true
+    },
+    {
+      "from": "6_DTREVC3_post_IDAMAX_normalize",
+      "to": "7_final_raw_lapack_col",
+      "delta_lo": -0.5610031659076105,
+      "delta_hi": -0.5610031659076172,
+      "leader_changed": false
+    },
+    {
+      "from": "7_final_raw_lapack_col",
+      "to": "8_final_pp_eig_col",
+      "delta_lo": 0.0,
+      "delta_hi": 0.0,
+      "leader_changed": false
+    }
+  ],
+  "first_causal_flip_vs_ref_kmax": {
+    "site": null,
+    "from_leader_0based": 58,
+    "to_leader_0based": 58,
+    "stage": null
+  },
+  "oracle_kind": "spurious_plateau_inflation",
+  "compute_patch_hint": "E3b-c: owned-fork patch at first_causal_flip site to demote row 7 spurious max-tier inflation (not tie-band env)."
+}

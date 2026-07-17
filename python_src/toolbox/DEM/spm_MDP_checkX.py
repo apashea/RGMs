@@ -108,6 +108,9 @@ def _cast_leaf_like_reference(val: Any, ref: Any) -> Any:
         return np.array([], dtype=ref.dtype)
     if sparse.issparse(ref):
         arr = _to_dense_double(val)
+        if arr.ndim > 2:
+            # MATLAB ``.mat`` may use sparse 2-D leaves only; keep dense ``ndim>=3`` tensors.
+            return arr
         if hasattr(sparse, "csc_array") and type(ref).__name__ == "csc_array":
             return sparse.csc_array(arr)
         if isinstance(ref, sparse.csr_matrix):
@@ -116,6 +119,8 @@ def _cast_leaf_like_reference(val: Any, ref: Any) -> Any:
     if isinstance(ref, np.ndarray):
         if isinstance(val, list):
             return _list_cell_to_ndarray_like_reference(val, ref)
+        if sparse.issparse(val):
+            val = _to_dense_double(val)
         if ref.dtype.kind in "iu":
             arr = np.asarray(val, dtype=ref.dtype)
             if ref.shape and arr.size == int(np.prod(ref.shape)):
@@ -157,6 +162,26 @@ def _align_nested_to_reference(val: dict[str, Any], ref: dict[str, Any]) -> dict
         if key not in out:
             out[key] = val_v
     return out
+
+
+def spm_mdp_g_dict_to_matlab_list(g: dict[Any, Any]) -> list[Any]:
+    """MATLAB cell-array order for MDP ``G`` stored as a 1-based key dict in Python."""
+    keys = sorted(g.keys(), key=lambda k: (0, int(k)) if str(k).isdigit() else (1, str(k)))
+    return [g[k] for k in keys]
+
+
+def spm_mdp_normalize_rdp_matlab_containers(rdp: dict[str, Any]) -> None:
+    """
+    In-place: nested ``G`` dict (1-based keys) → list; recurse into ``MDP`` shell.
+
+    Mechanical MATLAB cell semantics after ``spm_mdp2rdp`` (not simulation-specific).
+    """
+    nested = rdp.get("MDP")
+    if isinstance(nested, dict):
+        spm_mdp_normalize_rdp_matlab_containers(nested)
+    g = rdp.get("G")
+    if isinstance(g, dict) and g:
+        rdp["G"] = spm_mdp_g_dict_to_matlab_list(g)
 
 
 def _spm_MDP_checkX_transform_align(mdp: dict[str, Any], reference: dict[str, Any]) -> None:

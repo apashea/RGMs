@@ -1,0 +1,57 @@
+{
+  "utc": "2026-06-04T23:59:26.060212+00:00",
+  "backend": "scipy",
+  "t0_oracle_blocks": {
+    "n_blocks": 58,
+    "order_match": 51,
+    "jmax_match": 58,
+    "order_fail_hashes": [
+      "6abd2a358966b834",
+      "a03d7da5d5c09bab",
+      "2d5f8b838be81f21",
+      "7d978bc6b89bde7b",
+      "7f1469f5003eebf1",
+      "866ab1a9b2265fd6",
+      "4ab4f22de6228a3a"
+    ],
+    "known_fail_set": [
+      "2d5f8b838be81f21",
+      "4ab4f22de6228a3a",
+      "6abd2a358966b834",
+      "7d978bc6b89bde7b",
+      "7f1469f5003eebf1",
+      "866ab1a9b2265fd6",
+      "a03d7da5d5c09bab"
+    ],
+    "known_fail_matches": [
+      "2d5f8b838be81f21",
+      "4ab4f22de6228a3a",
+      "6abd2a358966b834",
+      "7d978bc6b89bde7b",
+      "7f1469f5003eebf1",
+      "866ab1a9b2265fd6",
+      "a03d7da5d5c09bab"
+    ]
+  },
+  "native_lane": {
+    "env_enable_fsl": "RGMS_FSL_RGM_NATIVE_EIG_NOBALANCE=1",
+    "runner": "fsl_backward_run_entry4_isolated.py",
+    "t0_order": "51/58",
+    "diagnostic_only_until_58_58": true,
+    "engine_probe": "solver_gap_matlab_eig_required (eig.md \u00a728)"
+  },
+  "validation_ceiling": {
+    "env_enable": "RGMS_EIG_NOBALANCE_PRINCIPAL_FIXTURE=1",
+    "expected_order_match": 58,
+    "test": "test_eig_nobalance_58_58_with_principal_fixture"
+  },
+  "blockers": [
+    "solver_vendor: SciPy/OpenBLAS and vendored reference dgeevx both 51/58 order",
+    "principal_column_absv_ulps on seven high-tie symmetric blocks",
+    "post_process_closed: live MATLAB eig + same policy is 58/58 (\u00a728)"
+  ],
+  "toolchain_next": [
+    "MKL or MATLAB-linked LAPACK with geevx balanc=N (see notes/entry4_eig_toolchain_research.md)",
+    "Do not add utils sort/heuristic/hash patches"
+  ]
+}

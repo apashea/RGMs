@@ -1,0 +1,94 @@
+{
+  "utc": "2026-06-06T14:02:28.590367+00:00",
+  "eig_md_section": "4.1 E3b",
+  "sub_hash": "866ab1a9b2265fd6",
+  "backend": "lapack_vendored",
+  "n": 63,
+  "jmax": 62,
+  "kmax_ref": 58,
+  "kmax_py": 58,
+  "kmax_match": true,
+  "plateau_ref": [
+    28,
+    58
+  ],
+  "plateau_py": [
+    7,
+    28,
+    52,
+    58
+  ],
+  "spurious_py_plateau": [
+    7,
+    52
+  ],
+  "missing_py_plateau": [],
+  "oracle_kind": "spurious_plateau_inflation",
+  "row_table": [
+    {
+      "index": 7,
+      "abs_ref": 0.4389968340923684,
+      "abs_py": 0.4389968340923775,
+      "delta_py_minus_ref": 9.103828801926284e-15,
+      "on_plateau_ref": false,
+      "on_plateau_py": true,
+      "min_demote_delta_for_kmax_58": 0.0
+    },
+    {
+      "index": 28,
+      "abs_ref": 0.4389968340923707,
+      "abs_py": 0.4389968340923775,
+      "delta_py_minus_ref": 6.772360450213455e-15,
+      "on_plateau_ref": true,
+      "on_plateau_py": true,
+      "min_demote_delta_for_kmax_58": 0.0
+    },
+    {
+      "index": 52,
+      "abs_ref": 0.4389968340923684,
+      "abs_py": 0.4389968340923775,
+      "delta_py_minus_ref": 9.103828801926284e-15,
+      "on_plateau_ref": false,
+      "on_plateau_py": true,
+      "min_demote_delta_for_kmax_58": 0.0
+    },
+    {
+      "index": 58,
+      "abs_ref": 0.4389968340923798,
+      "abs_py": 0.43899683409238277,
+      "delta_py_minus_ref": 2.9976021664879227e-15,
+      "on_plateau_ref": true,
+      "on_plateau_py": true,
+      "min_demote_delta_for_kmax_58": 3.997602166487923e-15
+    }
+  ],
+  "replay_demote": [
+    {
+      "demote_indices": [
+        7
+      ],
+      "replay_kmax": 58
+    },
+    {
+      "demote_indices": [
+        7,
+        52
+      ],
+      "replay_kmax": 58
+    },
+    {
+      "demote_indices": [
+        7,
+        28,
+        52
+      ],
+      "replay_kmax": 58
+    }
+  ],
+  "replay_leader_58_demote_set": [
+    7,
+    28,
+    52
+  ],
+  "compute_patch_hint": "Demote rows 7/28/52 from false max-tier before DTREVC3 IDAMAX; causal site TBD (E3b-b row-pair ladder 7 vs 58)."
+}

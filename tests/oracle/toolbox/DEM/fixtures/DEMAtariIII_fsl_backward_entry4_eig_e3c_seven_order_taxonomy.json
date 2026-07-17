@@ -1,0 +1,218 @@
+{
+  "utc": "2026-06-06T19:03:08.854631+00:00",
+  "eig_md_section": "4.1 E3c-b-a",
+  "backend": "lapack_vendored",
+  "post_k76": true,
+  "summary": {
+    "seven_fail_count": 7,
+    "order_ok_default": 1,
+    "order_ok_tie_band": 5,
+    "graft_fixable_count": 0,
+    "full_column_drift_count": 0,
+    "tie_band_fixable_count": 4
+  },
+  "rows": [
+    {
+      "sub_hash": "2d5f8b838be81f21",
+      "n": 90,
+      "jmax_match": true,
+      "kmax_ref": 44,
+      "kmax_got": 44,
+      "kmax_match": true,
+      "order_ok_default": false,
+      "order_ok_tie_band": true,
+      "order_mismatch_count_default": 86,
+      "order_mismatch_count_tie_band": 86,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "tier_reorder_tie_band_fixable",
+      "absv_diff": {
+        "max_abs_diff": 2.7478019859472624e-15,
+        "mean_abs_diff": 3.191001417433726e-16,
+        "n_rows_gt_1e-15": 13,
+        "n_rows_gt_1e-14": 0,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 48,
+        "idx_got": 13,
+        "absv_ref": 0.22122683078232674,
+        "absv_got": 0.2212268307823286,
+        "absv_diff": 1.8596235662471372e-15,
+        "absv_equal_at_ulp": true
+      }
+    },
+    {
+      "sub_hash": "4ab4f22de6228a3a",
+      "n": 54,
+      "jmax_match": true,
+      "kmax_ref": 2,
+      "kmax_got": 2,
+      "kmax_match": true,
+      "order_ok_default": true,
+      "order_ok_tie_band": true,
+      "order_mismatch_count_default": 0,
+      "order_mismatch_count_tie_band": 48,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "order_ok",
+      "absv_diff": {
+        "max_abs_diff": 8.770761894538737e-15,
+        "mean_abs_diff": 3.3512287595166763e-16,
+        "n_rows_gt_1e-15": 4,
+        "n_rows_gt_1e-14": 0,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": null
+    },
+    {
+      "sub_hash": "6abd2a358966b834",
+      "n": 108,
+      "jmax_match": true,
+      "kmax_ref": 60,
+      "kmax_got": 60,
+      "kmax_match": true,
+      "order_ok_default": false,
+      "order_ok_tie_band": true,
+      "order_mismatch_count_default": 49,
+      "order_mismatch_count_tie_band": 49,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "tier_reorder_tie_band_fixable",
+      "absv_diff": {
+        "max_abs_diff": 3.885780586188048e-16,
+        "mean_abs_diff": 2.6557389333292723e-17,
+        "n_rows_gt_1e-15": 0,
+        "n_rows_gt_1e-14": 0,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": {
+        "rank": 58,
+        "idx_ref": 105,
+        "idx_got": 1,
+        "absv_ref": 1.1102230246251565e-16,
+        "absv_got": 7.075511931046548e-17,
+        "absv_diff": 4.026718315205018e-17,
+        "absv_equal_at_ulp": true
+      }
+    },
+    {
+      "sub_hash": "7d978bc6b89bde7b",
+      "n": 81,
+      "jmax_match": true,
+      "kmax_ref": 13,
+      "kmax_got": 13,
+      "kmax_match": true,
+      "order_ok_default": false,
+      "order_ok_tie_band": true,
+      "order_mismatch_count_default": 72,
+      "order_mismatch_count_tie_band": 70,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "tier_reorder_tie_band_fixable",
+      "absv_diff": {
+        "max_abs_diff": 8.326672684688674e-16,
+        "mean_abs_diff": 9.31879336379815e-17,
+        "n_rows_gt_1e-15": 0,
+        "n_rows_gt_1e-14": 0,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 23,
+        "idx_got": 25,
+        "absv_ref": 0.3268126918432574,
+        "absv_got": 0.3268126918432575,
+        "absv_diff": 1.1102230246251565e-16,
+        "absv_equal_at_ulp": true
+      }
+    },
+    {
+      "sub_hash": "7f1469f5003eebf1",
+      "n": 72,
+      "jmax_match": true,
+      "kmax_ref": 51,
+      "kmax_got": 51,
+      "kmax_match": true,
+      "order_ok_default": false,
+      "order_ok_tie_band": true,
+      "order_mismatch_count_default": 66,
+      "order_mismatch_count_tie_band": 64,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "tier_reorder_tie_band_fixable",
+      "absv_diff": {
+        "max_abs_diff": 1.1102230246251565e-15,
+        "mean_abs_diff": 9.384253001762595e-17,
+        "n_rows_gt_1e-15": 1,
+        "n_rows_gt_1e-14": 0,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 30,
+        "idx_got": 37,
+        "absv_ref": 0.3711968769588864,
+        "absv_got": 0.37119687695888687,
+        "absv_diff": 4.440892098500626e-16,
+        "absv_equal_at_ulp": true
+      }
+    },
+    {
+      "sub_hash": "866ab1a9b2265fd6",
+      "n": 63,
+      "jmax_match": true,
+      "kmax_ref": 58,
+      "kmax_got": 58,
+      "kmax_match": true,
+      "order_ok_default": false,
+      "order_ok_tie_band": false,
+      "order_mismatch_count_default": 59,
+      "order_mismatch_count_tie_band": 59,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "tie_plateau_reorder",
+      "absv_diff": {
+        "max_abs_diff": 2.986499936241671e-14,
+        "mean_abs_diff": 1.0457366109843455e-15,
+        "n_rows_gt_1e-15": 8,
+        "n_rows_gt_1e-14": 1,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": {
+        "rank": 1,
+        "idx_ref": 28,
+        "idx_got": 7,
+        "absv_ref": 0.4389968340923707,
+        "absv_got": 0.4389968340923775,
+        "absv_diff": 6.772360450213455e-15,
+        "absv_equal_at_ulp": true
+      }
+    },
+    {
+      "sub_hash": "a03d7da5d5c09bab",
+      "n": 99,
+      "jmax_match": true,
+      "kmax_ref": 57,
+      "kmax_got": 57,
+      "kmax_match": true,
+      "order_ok_default": false,
+      "order_ok_tie_band": false,
+      "order_mismatch_count_default": 89,
+      "order_mismatch_count_tie_band": 91,
+      "graft_ref_absv_order_ok": true,
+      "oracle_kind": "tie_plateau_reorder",
+      "absv_diff": {
+        "max_abs_diff": 1.8041124150158794e-15,
+        "mean_abs_diff": 2.88585526633737e-16,
+        "n_rows_gt_1e-15": 12,
+        "n_rows_gt_1e-14": 0,
+        "n_rows_gt_1e-13": 0
+      },
+      "first_mismatch_default": {
+        "rank": 3,
+        "idx_ref": 83,
+        "idx_got": 13,
+        "absv_ref": 0.17471807970479036,
+        "absv_got": 0.17471807970479197,
+        "absv_diff": 1.609823385706477e-15,
+        "absv_equal_at_ulp": true
+      }
+    }
+  ]
+}

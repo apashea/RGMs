@@ -13,6 +13,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,25 @@ ENTRY12_ATARI_CALL3_RDP_MAT = "DEMAtariIII_XXX_12_rgms_atari_call3_rdp.mat"
 ENTRY12_ATARI_CALL4_TAG = "rgms_atari_call4"
 ENTRY12_ATARI_CALL4_RDP_MAT = "DEMAtariIII_XXX_12_rgms_atari_call4_rdp.mat"
 
+# OPTIM1FULL Product B — VB calls **2** / **3** / **4** (lane tags; fixtures under ``optim1full/fixtures/``).
+ENTRY12_OPTIM1FULL_PRODUCT_B_CALL2_TAG = "rgms_atari_optim1full_call2"
+ENTRY12_OPTIM1FULL_PRODUCT_B_CALL3_TAG = "rgms_atari_optim1full_call3"
+ENTRY12_OPTIM1FULL_PRODUCT_B_CALL4_TAG = "rgms_atari_optim1full_call4"
+ENTRY12_OPTIM1FULL_PRODUCT_B_VB_TAGS: tuple[str, ...] = (
+    ENTRY12_OPTIM1FULL_PRODUCT_B_CALL2_TAG,
+    ENTRY12_OPTIM1FULL_PRODUCT_B_CALL3_TAG,
+    ENTRY12_OPTIM1FULL_PRODUCT_B_CALL4_TAG,
+)
+
+# OPTIM1FULL Phase C — ledger ``MDP_pre`` NR game **1** (~``DEM_AtariIII.m`` 254–268, § **11.7.4**).
+ENTRY12_OPTIM1FULL_NR_G01_TAG = "rgms_atari_optim1full_nr_g01"
+ENTRY12_OPTIM1FULL_NR_G01_RDP_MAT = "DEMAtariIII_XXX_12_rgms_atari_optim1full_nr_g01_rdp.mat"
+ENTRY12_OPTIM1FULL_NR_G01_TAG_LEGACY = "rgms_optim1full_nr_g01"
+
+# OPTIM1FULL NR loop call-2 games **2–32** (§ **11.7.1**).
+ENTRY12_ATARI_CALL2_GAME_TAG_RE = re.compile(r"^rgms_atari_call2_g(\d{2})$")
+ENTRY12_ATARI_CALL2_NR_GAMES = 32
+
 # Registered Atari VB oracle tags (multi-tag regression gate).
 ENTRY12_ATARI_VB_TAGS: tuple[str, ...] = (
     ENTRY12_ATARI_CALL1_TAG,
@@ -55,23 +75,78 @@ ENTRY12_SUBENTRY_BAND_CODES: tuple[str, ...] = tuple(f"12{c}" for c in "ABCDEFGH
 ENTRY12_SIGNOFF_MANIFEST_SCHEMA = 2
 
 
+def entry12_atari_call2_game_tag(game: int) -> str:
+    """Entry **12** tag for NR-loop call-2 game ``1..32`` (OPTIM1FULL § **11.7.1**)."""
+    g = int(game)
+    if g < 1 or g > ENTRY12_ATARI_CALL2_NR_GAMES:
+        raise ValueError(
+            f"call-2 game index must be 1..{ENTRY12_ATARI_CALL2_NR_GAMES}, got {g}"
+        )
+    if g == 1:
+        return ENTRY12_ATARI_CALL2_TAG
+    return f"rgms_atari_call2_g{g:02d}"
+
+
+def entry12_parse_call2_game_index(tag: str) -> int | None:
+    """Return NR game index ``1..32`` for call-2 tags, else ``None``."""
+    t = str(tag).strip()
+    if t == ENTRY12_ATARI_CALL2_TAG:
+        return 1
+    m = ENTRY12_ATARI_CALL2_GAME_TAG_RE.match(t)
+    if m:
+        return int(m.group(1))
+    return None
+
+
+def entry12_is_call2_game_tag(tag: str) -> bool:
+    return entry12_parse_call2_game_index(tag) is not None
+
+
+def entry12_is_optim1full_product_b_vb_tag(tag: str) -> bool:
+    return str(tag).strip() in ENTRY12_OPTIM1FULL_PRODUCT_B_VB_TAGS
+
+
+def entry12_normalize_tag(tag: str) -> str:
+    """Canonical Entry **12** tag (legacy OPTIM1FULL aliases → lane names)."""
+    t = str(tag).strip()
+    if t == ENTRY12_OPTIM1FULL_NR_G01_TAG_LEGACY:
+        return ENTRY12_OPTIM1FULL_NR_G01_TAG
+    return t
+
+
+def entry12_is_optim1full_nr_g01_tag(tag: str) -> bool:
+    return entry12_normalize_tag(tag) == ENTRY12_OPTIM1FULL_NR_G01_TAG
+
+
 def entry12_fixtures_dir() -> Path:
-    raw = str(os.getenv("RGMS_ENTRY12_CAPTURE_OUT_DIR", "")).strip()
-    if raw:
-        return Path(raw).expanduser().resolve()
-    return rgms_repo_root() / "tests" / "oracle" / "toolbox" / "DEM" / "fixtures"
+    raw_out = str(os.getenv("RGMS_ENTRY12_CAPTURE_OUT_DIR", "")).strip()
+    if raw_out:
+        return Path(raw_out).expanduser().resolve()
+    raw_opt = str(os.getenv("RGMS_OPTIM1FULL_FIXTURES_DIR", "")).strip()
+    if raw_opt:
+        return Path(raw_opt).expanduser().resolve()
+    from tests.demo1.demo1_paths import demo1_fixtures_dir
+
+    return demo1_fixtures_dir()
 
 
 def entry12_atari_call_rdp_mat_path(tag: str) -> Path:
     """Absolute path to input ``RDP`` ``.mat`` for a registered call ``tag``."""
+    tag = entry12_normalize_tag(tag)
     if tag in (ENTRY12_ATARI_CALL1_TAG, ENTRY12_CANONICAL_RUN_TAG):
         name = ENTRY12_ATARI_CALL1_RDP_MAT
     elif tag == ENTRY12_ATARI_CALL2_TAG:
         name = ENTRY12_ATARI_CALL2_RDP_MAT
+    elif entry12_is_call2_game_tag(tag):
+        name = f"DEMAtariIII_XXX_12_{tag}_rdp.mat"
     elif tag == ENTRY12_ATARI_CALL3_TAG:
         name = ENTRY12_ATARI_CALL3_RDP_MAT
     elif tag == ENTRY12_ATARI_CALL4_TAG:
         name = ENTRY12_ATARI_CALL4_RDP_MAT
+    elif tag == ENTRY12_OPTIM1FULL_NR_G01_TAG:
+        name = ENTRY12_OPTIM1FULL_NR_G01_RDP_MAT
+    elif entry12_is_optim1full_product_b_vb_tag(tag):
+        name = f"DEMAtariIII_XXX_12_{tag}_rdp.mat"
     else:
         raise KeyError(f"unknown Entry 12 Atari call tag: {tag!r}")
     return entry12_fixtures_dir() / name
@@ -79,6 +154,7 @@ def entry12_atari_call_rdp_mat_path(tag: str) -> Path:
 
 def entry12_atari_call_pdp_artifact_paths(tag: str) -> dict[str, Path]:
     """Paired ``.mat`` / ``.pkl`` paths for script **3** / **4** (tag-specific PDP)."""
+    tag = entry12_normalize_tag(tag)
     fix = entry12_fixtures_dir()
     if tag in (ENTRY12_ATARI_CALL1_TAG, ENTRY12_CANONICAL_RUN_TAG):
         return {
@@ -92,7 +168,8 @@ def entry12_atari_call_pdp_artifact_paths(tag: str) -> dict[str, Path]:
         ENTRY12_ATARI_CALL2_TAG,
         ENTRY12_ATARI_CALL3_TAG,
         ENTRY12_ATARI_CALL4_TAG,
-    ):
+        ENTRY12_OPTIM1FULL_NR_G01_TAG,
+    ) or entry12_is_call2_game_tag(tag) or entry12_is_optim1full_product_b_vb_tag(tag):
         return {
             "rdp_mat": fix / entry12_atari_call_rdp_mat_path(tag).name,
             "rdp_pkl": fix / f"DEMAtariIII_XXX_12_{tag}_rdp.pkl",
@@ -133,7 +210,7 @@ def entry12_signoff_artifact_paths(tag: str | None = None) -> dict[str, Path]:
     ``spm_MDP_VB_XXX`` (checkX again on copy). Script **4** compares input ``RDP`` pickle
     vs this ``.mat`` through the validation lane (checkX + transform align).
     """
-    tag_use = (tag or entry12_resolve_run_tag()).strip()
+    tag_use = entry12_normalize_tag(tag or entry12_resolve_run_tag())
     from python_src.toolbox.DEM.entry12_matlab_capture import default_entry12_vb_rand_k_mat_path
 
     base = entry12_atari_call_pdp_artifact_paths(tag_use)
@@ -145,7 +222,7 @@ def entry12_signoff_artifact_paths(tag: str | None = None) -> dict[str, Path]:
 
 def entry12_signoff_manifest_path(tag: str | None = None) -> Path:
     """Path to per-tag sign-off manifest written by MATLAB script **1b**."""
-    tag_use = (tag or entry12_resolve_run_tag()).strip()
+    tag_use = entry12_normalize_tag(tag or entry12_resolve_run_tag())
     return entry12_fixtures_dir() / f"entry12_signoff_manifest_{tag_use}.json"
 
 
@@ -183,7 +260,12 @@ def _manifest_subentry_dict(checksums: dict[str, Any], key: str) -> dict[str, st
     for code, hex_val in block.items():
         if not isinstance(hex_val, str) or not hex_val:
             raise TypeError(f"manifest {key}[{code!r}] must be a non-empty sha256 hex string")
-        out[str(code)] = hex_val
+        norm = str(code)
+        if len(norm) == 4 and norm.startswith("x") and norm[1:4].upper() in {
+            "12A", "12B", "12C", "12D", "12E", "12F", "12G", "12H", "12I",
+        }:
+            norm = norm[1:]
+        out[norm] = hex_val
     return out
 
 
@@ -324,7 +406,7 @@ def entry12_refresh_manifest_script3_checksums(tag: str | None = None) -> Path:
 
 def entry12_load_signoff_manifest(tag: str | None = None) -> dict[str, Any]:
     """Load per-tag sign-off manifest JSON written by script **1b**."""
-    tag_use = (tag or entry12_resolve_run_tag()).strip()
+    tag_use = entry12_normalize_tag(tag or entry12_resolve_run_tag())
     p = entry12_signoff_manifest_path(tag_use)
     if not p.is_file():
         raise FileNotFoundError(
@@ -564,7 +646,7 @@ def entry12_write_preflight_k(tag: str | None = None) -> tuple[int, Path]:
     """Run script **1a** for ``tag``: count draws, write ``entry12_vb_rand_K[_<tag>].mat``."""
     from scipy.io import savemat
 
-    tag_use = (tag or entry12_resolve_run_tag()).strip()
+    tag_use = entry12_normalize_tag(tag or entry12_resolve_run_tag())
     rdp = load_entry12_rdp_for_tag(tag_use)
     k = count_vb_rand_draws_on_rdp(rdp)
     out = entry12_signoff_artifact_paths(tag_use)["rand_k"]

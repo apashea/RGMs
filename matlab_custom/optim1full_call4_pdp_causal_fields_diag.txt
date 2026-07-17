@@ -1,0 +1,10 @@
+RDP=DEMAtariIII_optim1full_call4_rdp.pkl  MATLAB_PDP=DEMAtariIII_optim1full_dem_with_compression_rgb_matlab_pdp.mat
+vb_call4 start=202432 k=4096  lane=optim
+PDP.F max abs = 1.4210854715202004e-14
+diverging top-level/Q fields (VB compute order): 0
+--- trajectory first-col divergence (s/o/u/X/O) ---
+  s: equal (or incomparable)
+  o: equal (or incomparable)
+  u: equal (or incomparable)
+  X: equal (or incomparable)
+  O: equal (or incomparable)

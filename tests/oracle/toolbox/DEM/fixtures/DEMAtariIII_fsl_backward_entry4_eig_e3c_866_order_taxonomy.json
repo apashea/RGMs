@@ -1,0 +1,245 @@
+{
+  "utc": "2026-06-06T16:51:55.747592+00:00",
+  "eig_md_section": "4.1 E3c-a",
+  "sub_hash": "866ab1a9b2265fd6",
+  "backend": "lapack_vendored",
+  "n": 63,
+  "jmax": 62,
+  "kmax_ref": 58,
+  "kmax_got": 58,
+  "kmax_match": true,
+  "order_ok_default": false,
+  "order_ok_tie_band": false,
+  "order_mismatch_count_default": 59,
+  "order_mismatch_count_tie_band": 59,
+  "first_mismatch_default": {
+    "rank": 1,
+    "idx_ref": 28,
+    "idx_got": 7,
+    "absv_ref": 0.4389968340923707,
+    "absv_got": 0.4389968340923775,
+    "absv_diff": 6.772360450213455e-15
+  },
+  "first_mismatch_tie_band": {
+    "rank": 1,
+    "idx_ref": 28,
+    "idx_got": 7,
+    "absv_ref": 0.4389968340923707,
+    "absv_got": 0.4389968340923775,
+    "absv_diff": 6.772360450213455e-15
+  },
+  "plateau_ref": [
+    28,
+    58
+  ],
+  "plateau_py": [
+    7,
+    28,
+    52,
+    58
+  ],
+  "spurious_py_plateau": [
+    7,
+    52
+  ],
+  "rank_head_default": [
+    {
+      "rank": 0,
+      "idx_ref": 58,
+      "idx_got": 58,
+      "match": true
+    },
+    {
+      "rank": 1,
+      "idx_ref": 28,
+      "idx_got": 7,
+      "match": false
+    },
+    {
+      "rank": 2,
+      "idx_ref": 1,
+      "idx_got": 28,
+      "match": false
+    },
+    {
+      "rank": 3,
+      "idx_ref": 7,
+      "idx_got": 52,
+      "match": false
+    },
+    {
+      "rank": 4,
+      "idx_ref": 52,
+      "idx_got": 1,
+      "match": false
+    },
+    {
+      "rank": 5,
+      "idx_ref": 9,
+      "idx_got": 5,
+      "match": false
+    },
+    {
+      "rank": 6,
+      "idx_ref": 40,
+      "idx_got": 9,
+      "match": false
+    },
+    {
+      "rank": 7,
+      "idx_ref": 54,
+      "idx_got": 3,
+      "match": false
+    },
+    {
+      "rank": 8,
+      "idx_ref": 16,
+      "idx_got": 16,
+      "match": true
+    },
+    {
+      "rank": 9,
+      "idx_ref": 3,
+      "idx_got": 40,
+      "match": false
+    },
+    {
+      "rank": 10,
+      "idx_ref": 56,
+      "idx_got": 54,
+      "match": false
+    },
+    {
+      "rank": 11,
+      "idx_ref": 60,
+      "idx_got": 56,
+      "match": false
+    },
+    {
+      "rank": 12,
+      "idx_ref": 5,
+      "idx_got": 60,
+      "match": false
+    },
+    {
+      "rank": 13,
+      "idx_ref": 59,
+      "idx_got": 2,
+      "match": false
+    },
+    {
+      "rank": 14,
+      "idx_ref": 53,
+      "idx_got": 4,
+      "match": false
+    },
+    {
+      "rank": 15,
+      "idx_ref": 55,
+      "idx_got": 6,
+      "match": false
+    }
+  ],
+  "rank_head_tie_band": [
+    {
+      "rank": 0,
+      "idx_ref": 58,
+      "idx_got": 58,
+      "match": true
+    },
+    {
+      "rank": 1,
+      "idx_ref": 28,
+      "idx_got": 7,
+      "match": false
+    },
+    {
+      "rank": 2,
+      "idx_ref": 1,
+      "idx_got": 28,
+      "match": false
+    },
+    {
+      "rank": 3,
+      "idx_ref": 7,
+      "idx_got": 52,
+      "match": false
+    },
+    {
+      "rank": 4,
+      "idx_ref": 52,
+      "idx_got": 1,
+      "match": false
+    },
+    {
+      "rank": 5,
+      "idx_ref": 9,
+      "idx_got": 3,
+      "match": false
+    },
+    {
+      "rank": 6,
+      "idx_ref": 40,
+      "idx_got": 5,
+      "match": false
+    },
+    {
+      "rank": 7,
+      "idx_ref": 54,
+      "idx_got": 9,
+      "match": false
+    },
+    {
+      "rank": 8,
+      "idx_ref": 16,
+      "idx_got": 16,
+      "match": true
+    },
+    {
+      "rank": 9,
+      "idx_ref": 3,
+      "idx_got": 40,
+      "match": false
+    },
+    {
+      "rank": 10,
+      "idx_ref": 56,
+      "idx_got": 54,
+      "match": false
+    },
+    {
+      "rank": 11,
+      "idx_ref": 60,
+      "idx_got": 56,
+      "match": false
+    },
+    {
+      "rank": 12,
+      "idx_ref": 5,
+      "idx_got": 60,
+      "match": false
+    },
+    {
+      "rank": 13,
+      "idx_ref": 59,
+      "idx_got": 0,
+      "match": false
+    },
+    {
+      "rank": 14,
+      "idx_ref": 53,
+      "idx_got": 2,
+      "match": false
+    },
+    {
+      "rank": 15,
+      "idx_ref": 55,
+      "idx_got": 4,
+      "match": false
+    }
+  ],
+  "max_absv_diff": 2.986499936241671e-14,
+  "mean_absv_diff": 1.0457366109843455e-15,
+  "oracle_kind": "full_column_absv_drift",
+  "compute_patch_hint": "866 order needs column-wide absv parity (plateau + tail), not rank-1 tier demote alone; tie-band does not fix (K73)."
+}

@@ -15,11 +15,9 @@ def dem_eng_entry12(eng):
     Defined here so Entry 12 tests do not need to import other entry-scoped test modules.
     """
     repo = Path(__file__).resolve().parents[4]
-    dem_path = repo / "matlab_src" / "toolbox" / "DEM"
-    eng.addpath(str(repo), nargout=0)
-    eng.addpath(str(repo / "matlab_src"), nargout=0)
-    eng.addpath(str(dem_path), nargout=0)
-    eng.addpath("c:/Users/andre/Documents/MATLAB/spm-main/toolbox/DEM", nargout=0)
+    from tests.demo1.demo1_matlab_engine import configure_dem_matlab_engine
+
+    dem_path = configure_dem_matlab_engine(eng, repo)
     old_cd = eng.pwd(nargout=1)
     eng.cd(str(dem_path), nargout=0)
     try:

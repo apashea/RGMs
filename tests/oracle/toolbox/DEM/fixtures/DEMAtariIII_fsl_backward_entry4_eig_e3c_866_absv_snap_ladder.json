@@ -1,0 +1,383 @@
+{
+  "utc": "2026-06-06T18:49:04.698571+00:00",
+  "eig_md_section": "4.1 E3c-b-b1",
+  "sub_hash": "866ab1a9b2265fd6",
+  "backend": "lapack_vendored",
+  "n": 63,
+  "jmax": 62,
+  "order_mismatch_count_default": 59,
+  "first_mismatch_default": {
+    "rank": 1,
+    "idx_ref": 28,
+    "idx_got": 7,
+    "absv_ref": 0.4389968340923707,
+    "absv_got": 0.4389968340923775,
+    "absv_diff": 6.772360450213455e-15
+  },
+  "plateau_ref": [
+    28,
+    58
+  ],
+  "plateau_py": [
+    7,
+    28,
+    52,
+    58
+  ],
+  "spurious_py_plateau": [
+    7,
+    52
+  ],
+  "absv_diff": {
+    "max_abs_diff": 2.986499936241671e-14,
+    "mean_abs_diff": 1.0457366109843455e-15,
+    "n_rows_gt_1e-15": 8,
+    "n_rows_gt_1e-14": 1,
+    "n_rows_gt_1e-13": 0
+  },
+  "graft_ref_absv_self_consistent": true,
+  "hybrid_ref_absv_mismatch_count": 0,
+  "greedy_snap_ladder": {
+    "greedy_close_snap_count": 33,
+    "greedy_snap_order": [
+      1,
+      7,
+      52,
+      28,
+      58,
+      5,
+      3,
+      9,
+      16,
+      60,
+      40,
+      59,
+      56,
+      2,
+      54,
+      53,
+      55,
+      57,
+      50,
+      51,
+      49,
+      4,
+      6,
+      47,
+      48,
+      8,
+      10,
+      11,
+      12,
+      14,
+      13,
+      15,
+      17
+    ],
+    "ladder_steps": [
+      {
+        "snap_count": 1,
+        "row": 1,
+        "drift": 2.986499936241671e-14,
+        "mismatch_count": 59
+      },
+      {
+        "snap_count": 2,
+        "row": 7,
+        "drift": 9.103828801926284e-15,
+        "mismatch_count": 58
+      },
+      {
+        "snap_count": 3,
+        "row": 52,
+        "drift": 9.103828801926284e-15,
+        "mismatch_count": 55
+      },
+      {
+        "snap_count": 4,
+        "row": 28,
+        "drift": 6.772360450213455e-15,
+        "mismatch_count": 55
+      },
+      {
+        "snap_count": 5,
+        "row": 58,
+        "drift": 2.9976021664879227e-15,
+        "mismatch_count": 55
+      },
+      {
+        "snap_count": 6,
+        "row": 5,
+        "drift": 2.3037127760972e-15,
+        "mismatch_count": 54
+      },
+      {
+        "snap_count": 7,
+        "row": 3,
+        "drift": 1.817990202823694e-15,
+        "mismatch_count": 55
+      },
+      {
+        "snap_count": 8,
+        "row": 9,
+        "drift": 1.3739009929736312e-15,
+        "mismatch_count": 55
+      },
+      {
+        "snap_count": 9,
+        "row": 16,
+        "drift": 9.43689570931383e-16,
+        "mismatch_count": 55
+      },
+      {
+        "snap_count": 33,
+        "row": 17,
+        "drift": 5.635296950137639e-116,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 34,
+        "row": 30,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 35,
+        "row": 31,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 36,
+        "row": 27,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 37,
+        "row": 25,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 38,
+        "row": 26,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 39,
+        "row": 29,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 40,
+        "row": 23,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 41,
+        "row": 19,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 42,
+        "row": 22,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 43,
+        "row": 21,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 44,
+        "row": 20,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 45,
+        "row": 18,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 46,
+        "row": 0,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 47,
+        "row": 24,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 48,
+        "row": 32,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 49,
+        "row": 46,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 50,
+        "row": 45,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 51,
+        "row": 44,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 52,
+        "row": 43,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 53,
+        "row": 41,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 54,
+        "row": 42,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 55,
+        "row": 38,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 56,
+        "row": 39,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 57,
+        "row": 35,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 58,
+        "row": 34,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 59,
+        "row": 37,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 60,
+        "row": 36,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 61,
+        "row": 33,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 62,
+        "row": 61,
+        "drift": 0.0,
+        "mismatch_count": 0
+      },
+      {
+        "snap_count": 63,
+        "row": 62,
+        "drift": 0.0,
+        "mismatch_count": 0
+      }
+    ]
+  },
+  "replay_demote": [
+    {
+      "replay": "demote_rows_7_52_eps_5e-15",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "demote_rows_7_52_eps_1e-14",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "demote_rows_7_52_eps_1.2e-14",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "demote_rows_7_52_eps_1.5e-14",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "demote_rows_7_52_eps_2e-14",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "demote_rows_7_52_eps_3e-14",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "demote_rows_7_52_eps_5e-14",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "snap_rows_7_52_to_ref",
+      "mismatch_count": 58,
+      "kmax_got": 58
+    },
+    {
+      "replay": "snap_all_rows_drift_gt_1e-15",
+      "mismatch_count": 55,
+      "kmax_got": 58,
+      "rows": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        28,
+        52,
+        58
+      ]
+    },
+    {
+      "replay": "full_ref_absv_hybrid",
+      "mismatch_count": 0,
+      "kmax_got": 58
+    }
+  ],
+  "compute_patch_hint": "866 order needs >=33 coupled per-row absv snaps (greedy drift order); plateau-head demote/snap alone leaves 55\u201358/63 mismatches; postprocess does not change drift (LAPACK column fidelity)."
+}

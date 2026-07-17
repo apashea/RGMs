@@ -158,9 +158,13 @@ def mat_nested_rdp_from_loadmat(raw: dict[str, Any], *, tag: str | None = None) 
     if "RDP" not in raw:
         raise KeyError("expected variable RDP in loadmat payload")
     rdp = mat_nested_to_py(raw["RDP"])
-    if tag in ("rgms_atari_call2", "rgms_atari_call3", "rgms_atari_call4") and isinstance(
-        rdp, dict
-    ):
+    if tag in (
+        "rgms_atari_call2",
+        "rgms_atari_call3",
+        "rgms_atari_call4",
+        "rgms_atari_optim1full_nr_g01",
+        "rgms_optim1full_nr_g01",
+    ) and isinstance(rdp, dict):
         restore_entry12_call2_gp_dtypes(rdp)
     return rdp
 

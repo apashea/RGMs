@@ -1,0 +1,13 @@
+[optim1full_vb_profile_call4] script=optim1full_vb_profile_call4
+[optim1full_vb_profile_call4] matlab_release=24.2.0.3157250 (R2024b) Update 8
+[optim1full_vb_profile_call4] rdp_mat=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_XXX_12_rgms_atari_optim1full_call4_rdp.mat
+[optim1full_vb_profile_call4] rng=2 monitoring=false dump_subentries=false
+[optim1full_vb_profile_call4] spm_MDP_VB_XXX wall_s=14.000206
+[optim1full_vb_profile_call4] wrote top-40 table: C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_vb_profile_call4_top.txt
+[optim1full_vb_profile_call4] top-5 functions by TotalTime:
+  [1] total_s=14.039659 self_s=14.039659 ncalls=1  run
+  [2] total_s=14.038708 self_s=14.038708 ncalls=1  optim1full_vb_profile_call4
+  [3] total_s=13.715080 self_s=13.715080 ncalls=129  spm_MDP_VB_XXX
+  [4] total_s=6.481274 self_s=6.481274 ncalls=384  spm_MDP_VB_XXX>spm_forwards
+  [5] total_s=3.248609 self_s=3.248609 ncalls=384  spm_VBX
+[optim1full_vb_profile_call4] wrote profile HTML: C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_vb_profile_call4_html

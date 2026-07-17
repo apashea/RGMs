@@ -1,0 +1,216 @@
+{
+  "utc": "2026-06-06T21:54:13.678384+00:00",
+  "eig_md_section": "4.2 E3c-b-b4-b",
+  "sub_hash": "a03d7da5d5c09bab",
+  "backend": "lapack_vendored",
+  "row_pair_0based": [
+    83,
+    13
+  ],
+  "mismatch_rank": 3,
+  "fortran_dbg_col": 2,
+  "raw_col_for_jref_0based": 1,
+  "j_ref_0based": 98,
+  "n": 99,
+  "order_mismatch_count": 89,
+  "greedy_close_snap_count": 91,
+  "first_mismatch_default": {
+    "rank": 3,
+    "idx_ref": 83,
+    "idx_got": 13,
+    "absv_ref": 0.17471807970479036,
+    "absv_got": 0.17471807970479197,
+    "absv_diff": 1.609823385706477e-15
+  },
+  "kmax_ref": 57,
+  "kmax_got": 57,
+  "kmax_match": true,
+  "ref_pair_at_jmax": {
+    "abs_lo": 0.17471807970479036,
+    "abs_hi": 0.17471807970479017,
+    "row_lo_0based": 83,
+    "row_hi_0based": 13,
+    "leader_0based": 83,
+    "diff_lo_minus_hi": 1.942890293094024e-16
+  },
+  "py_pair_at_jmax": {
+    "abs_lo": 0.17471807970478997,
+    "abs_hi": 0.17471807970479197,
+    "row_lo_0based": 83,
+    "row_hi_0based": 13,
+    "leader_0based": 13,
+    "diff_lo_minus_hi": -1.9984014443252818e-15
+  },
+  "pipeline_ladder_mismatch_pair": {
+    "1_post_DGEHRD": {
+      "abs_lo": 0.16371624686222347,
+      "abs_hi": 0.16371624686222347,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 83,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2_post_DORGHR": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2a_post_DLAQR0_in_VR_col": {
+      "abs_lo": 0.0,
+      "abs_hi": 0.0,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": null,
+      "diff_lo_minus_hi": 0.0
+    },
+    "2b_post_DLAQR0_out_schur_VR_col": {
+      "abs_lo": 0.17471807970478992,
+      "abs_hi": 0.17471807970479192,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 13,
+      "diff_lo_minus_hi": -1.9984014443252818e-15
+    },
+    "3_post_DHSEQR": {
+      "abs_lo": 0.17471807970478992,
+      "abs_hi": 0.17471807970479192,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 13,
+      "diff_lo_minus_hi": -1.9984014443252818e-15
+    },
+    "4_DTREVC3_pre_IDAMAX": {
+      "abs_lo": 0.17471807970478992,
+      "abs_hi": 0.17471807970479192,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 13,
+      "diff_lo_minus_hi": -1.9984014443252818e-15
+    },
+    "5_DTREVC3_post_normalize": {
+      "abs_lo": 0.7665457000207834,
+      "abs_hi": 0.7665457000207921,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 13,
+      "diff_lo_minus_hi": -8.770761894538737e-15
+    },
+    "6_final_pp": {
+      "abs_lo": 0.17471807970478997,
+      "abs_hi": 0.17471807970479197,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 13,
+      "diff_lo_minus_hi": -1.9984014443252818e-15
+    }
+  },
+  "first_leader_flip_py": {
+    "site": "2b_post_DLAQR0_out_schur_VR_col",
+    "from_leader_0based": 83,
+    "to_leader_0based": 13,
+    "ref_leader_0based": 83,
+    "matches_ref": false
+  },
+  "first_abs_divergence_from_ref_final": {
+    "site": "2b_post_DLAQR0_out_schur_VR_col",
+    "delta_diff_minus_ref_final": -2.192690473634684e-15,
+    "stage": {
+      "abs_lo": 0.17471807970478992,
+      "abs_hi": 0.17471807970479192,
+      "row_lo_0based": 83,
+      "row_hi_0based": 13,
+      "leader_0based": 13,
+      "diff_lo_minus_hi": -1.9984014443252818e-15
+    }
+  },
+  "dhseqr_causal_class": false,
+  "order_row_table": [
+    {
+      "index": 83,
+      "abs_ref": 0.17471807970479036,
+      "abs_py": 0.17471807970478997,
+      "delta_py_minus_ref": -3.885780586188048e-16
+    },
+    {
+      "index": 13,
+      "abs_ref": 0.17471807970479017,
+      "abs_py": 0.17471807970479197,
+      "delta_py_minus_ref": 1.8041124150158794e-15
+    },
+    {
+      "index": 57,
+      "abs_ref": 0.22792911068453287,
+      "abs_py": 0.2279291106845331,
+      "delta_py_minus_ref": 2.220446049250313e-16
+    },
+    {
+      "index": 37,
+      "abs_ref": 0.22792911068453262,
+      "abs_py": 0.22792911068453303,
+      "delta_py_minus_ref": 4.163336342344337e-16
+    },
+    {
+      "index": 73,
+      "abs_ref": 0.2279291106845326,
+      "abs_py": 0.22792911068453248,
+      "delta_py_minus_ref": -1.1102230246251565e-16
+    },
+    {
+      "index": 38,
+      "abs_ref": 0.0,
+      "abs_py": 8.664712839627477e-86,
+      "delta_py_minus_ref": 8.664712839627477e-86
+    },
+    {
+      "index": 58,
+      "abs_ref": 0.0,
+      "abs_py": 1.4286730337720872e-171,
+      "delta_py_minus_ref": 1.4286730337720872e-171
+    },
+    {
+      "index": 74,
+      "abs_ref": 0.0,
+      "abs_py": 0.0,
+      "delta_py_minus_ref": 0.0
+    }
+  ],
+  "replay_oracles": [
+    {
+      "replay": "live_py",
+      "mismatch_count": 89,
+      "rank3_got": 13,
+      "rank3_ref": 83,
+      "rank1_got": 37,
+      "rank1_ref": 37
+    },
+    {
+      "replay": "snap_pair_83_13_to_ref",
+      "mismatch_count": 89,
+      "rank3_got": 17,
+      "rank3_ref": 83,
+      "rank1_got": 37,
+      "rank1_ref": 37
+    },
+    {
+      "replay": "snap_order_rows_to_ref",
+      "mismatch_count": 89,
+      "rank3_got": 17,
+      "rank3_ref": 83,
+      "rank1_got": 37,
+      "rank1_ref": 37
+    },
+    {
+      "replay": "full_ref_absv_hybrid",
+      "mismatch_count": 0,
+      "rank3_got": 83,
+      "rank3_ref": 83,
+      "rank1_got": 37,
+      "rank1_ref": 37
+    }
+  ],
+  "oracle_kind": "tie_plateau_reorder",
+  "compute_patch_hint": "K89: first mismatch rank-3 pair 83/13; compare causal site to 866/7f1469 DHSEQR class; kmax green (K74)."
+}

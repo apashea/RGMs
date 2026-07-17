@@ -1,0 +1,21 @@
+OPTIM1FULL call4 extended boundary compare
+tag=rgms_atari_optim1full_call4
+extra keys=['out_t10', 'out_t20', 'out_t30']
+
+=== band 12D ===
+12D.out_t10 align skipped: all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size 4 and the array at index 1 has size 10
+12D.out_t20 align skipped: all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size 4 and the array at index 1 has size 10
+12D.out_t30 align skipped: all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size 4 and the array at index 1 has size 10
+=== band 12E ===
+=== band 12F ===
+12F.out_t10 witness: t=10 MDP.F py=-37.1063 mat=-37.1063 diff=-7.10543e-15 [OK]
+12F.out_t10 align skipped: all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size 4 and the array at index 1 has size 10
+12F.out_t20 witness: t=20 MDP.F py=-0.0110856 mat=-0.0110856 diff=-6.66134e-16 [OK]
+12F.out_t20 align skipped: all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size 4 and the array at index 1 has size 10
+12F.out_t30 witness: t=30 MDP.F py=-2.24486 mat=-2.24486 diff=0 [OK]
+12F.out_t30 align skipped: all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size 4 and the array at index 1 has size 10
+
+=== summary ===
+Primary bisection witness: 12F parent MDP.F on each probe snap (align/causal on mid-horizon snaps may be skipped — not sign-off script 4).
+witness/causal reds: 0
+  all extended probe boundaries OK on causal witness

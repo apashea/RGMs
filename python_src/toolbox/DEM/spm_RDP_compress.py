@@ -25,20 +25,20 @@ def spm_RDP_compress(MDP, R, OPT=None):
                 top["A"][g - 1] = [spm_dir_norm(a_g @ r_mat)]
 
     ns = int(r_mat.shape[1])
-    b1 = np.asarray(_unwrap_cell(top["b"][0]), dtype=np.float64)
-    nu = int(b1.shape[2]) if b1.ndim > 2 else 1
-    b_new = np.zeros((ns, ns, nu), dtype=np.float64)
-
     try:
+        b1 = _as_b_3d(top["b"][0])
+        nu = int(b1.shape[2])
+        b_new = np.zeros((ns, ns, nu), dtype=np.float64)
         for u in range(nu):
-            b_new[:, :, u] = r_mat.T @ np.asarray(_unwrap_cell(top["b"][0]), dtype=np.float64)[:, :, u] @ r_mat
+            b_new[:, :, u] = r_mat.T @ b1[:, :, u] @ r_mat
         u_mask = np.any(b_new, axis=(0, 1))
         top["b"][0] = [b_new[:, :, u_mask]]
-    except Exception:
+    except (KeyError, IndexError, TypeError):
+        b1 = _as_b_3d(top["B"][0])
+        nu = int(b1.shape[2])
+        b_new = np.zeros((ns, ns, nu), dtype=np.float64)
         for u in range(nu):
-            b_new[:, :, u] = spm_dir_norm(
-                r_mat.T @ np.asarray(_unwrap_cell(top["B"][0]), dtype=np.float64)[:, :, u] @ r_mat
-            )
+            b_new[:, :, u] = spm_dir_norm(r_mat.T @ b1[:, :, u] @ r_mat)
         u_mask = np.any(b_new, axis=(0, 1))
         top["B"][0] = [b_new[:, :, u_mask]]
 
@@ -58,15 +58,17 @@ def spm_RDP_compress(MDP, R, OPT=None):
                 for f in range(1, len(mdp_prev["id"]["D"]) + 1):
                     if g in set(_as_int_list(mdp_prev["id"]["D"][f - 1])):
                         ns_f = int(r_loc.shape[1])
-                        b_f = np.asarray(_unwrap_cell(mdp_prev["b"][f - 1]), dtype=np.float64)
-                        nu_f = int(b_f.shape[2]) if b_f.ndim > 2 else 1
-                        b_comp = np.zeros((ns_f, ns_f, nu_f), dtype=np.float64)
                         try:
+                            b_f = _as_b_3d(mdp_prev["b"][f - 1])
+                            nu_f = int(b_f.shape[2])
+                            b_comp = np.zeros((ns_f, ns_f, nu_f), dtype=np.float64)
                             for u in range(nu_f):
                                 b_comp[:, :, u] = r_loc.T @ b_f[:, :, u] @ r_loc
                             mdp_prev["b"][f - 1] = [b_comp]
-                        except Exception:
-                            b_f = np.asarray(_unwrap_cell(mdp_prev["B"][f - 1]), dtype=np.float64)
+                        except (KeyError, IndexError, TypeError):
+                            b_f = _as_b_3d(mdp_prev["B"][f - 1])
+                            nu_f = int(b_f.shape[2])
+                            b_comp = np.zeros((ns_f, ns_f, nu_f), dtype=np.float64)
                             for u in range(nu_f):
                                 b_comp[:, :, u] = spm_dir_norm(r_loc.T @ b_f[:, :, u] @ r_loc)
                             mdp_prev["B"][f - 1] = [b_comp]
@@ -78,16 +80,18 @@ def spm_RDP_compress(MDP, R, OPT=None):
                 for f in range(1, len(mdp_prev["id"]["E"]) + 1):
                     if g in set(_as_int_list(mdp_prev["id"]["E"][f - 1])):
                         nu_f = int(r_loc.shape[1])
-                        b_f = np.asarray(_unwrap_cell(mdp_prev["b"][f - 1]), dtype=np.float64)
-                        ns_f = int(b_f.shape[1])
-                        b_comp = np.zeros((ns_f, ns_f, nu_f), dtype=np.float64)
                         try:
+                            b_f = _as_b_3d(mdp_prev["b"][f - 1])
+                            ns_f = int(b_f.shape[1])
+                            b_comp = np.zeros((ns_f, ns_f, nu_f), dtype=np.float64)
                             b_perm = np.transpose(b_f, (0, 2, 1))
                             for s in range(ns_f):
                                 b_comp[:, s, :] = b_perm[:, :, s] @ r_loc
                             mdp_prev["b"][f - 1] = [b_comp]
-                        except Exception:
-                            b_f = np.asarray(_unwrap_cell(mdp_prev["B"][f - 1]), dtype=np.float64)
+                        except (KeyError, IndexError, TypeError):
+                            b_f = _as_b_3d(mdp_prev["B"][f - 1])
+                            ns_f = int(b_f.shape[1])
+                            b_comp = np.zeros((ns_f, ns_f, nu_f), dtype=np.float64)
                             b_perm = np.transpose(b_f, (0, 2, 1))
                             for s in range(ns_f):
                                 b_comp[:, s, :] = b_perm[:, :, s] @ r_loc
@@ -100,6 +104,14 @@ def _unwrap_cell(x):
     if isinstance(x, list) and len(x) == 1:
         return x[0]
     return x
+
+
+def _as_b_3d(x) -> np.ndarray:
+    """``B(:,:,u)`` slice access when MATLAB stores ``Nu=1`` as 2-D ``[n n]``."""
+    b = np.asarray(_unwrap_cell(x), dtype=np.float64)
+    if b.ndim == 2:
+        b = np.reshape(b, (b.shape[0], b.shape[1], 1), order="F")
+    return b
 
 
 def _cell_scalar_int(x) -> int:

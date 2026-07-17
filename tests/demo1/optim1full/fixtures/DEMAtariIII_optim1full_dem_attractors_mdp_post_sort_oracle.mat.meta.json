@@ -1,0 +1,11 @@
+{
+  "matlab_pdp": {
+    "mtime_ns": 1784206794190528700,
+    "name": "DEMAtariIII_optim1full_dem_attractors_mdp_post_sort_matlab_payload.mat",
+    "nbytes": 7648,
+    "path_rel": "tests/demo1/optim1full/fixtures/DEMAtariIII_optim1full_dem_attractors_mdp_post_sort_matlab_payload.mat"
+  },
+  "oracle_source": "capture_optim1full_plot_fence",
+  "schema": "optim1full_oracle_v1",
+  "site_id": "dem_attractors_mdp_post_sort"
+}

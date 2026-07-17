@@ -1,0 +1,34 @@
+{
+  "purpose": "Entry 4 spm_rgm_group eig(nobalance) dump registry",
+  "paths": {
+    "input_mat_pre_entry10": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_MDP_pre_entry10.mat",
+    "input_pkl_pre_entry4": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_MDP_pre_entry4.pkl",
+    "matlab_eig_records_mat": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_matlab_eig_records.mat",
+    "python_engine_probe_pkl": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_python_engine_probe.pkl",
+    "eig_oracle_blocks_pkl": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_oracle_blocks.pkl",
+    "eig_diagnosis_json": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_diagnosis.json",
+    "eig_diagnosis_granular_json": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_diagnosis_granular.json",
+    "eig_inspection_deep_json": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_inspection_deep.json",
+    "eig_failure_index_json": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_failure_index.json",
+    "eig_failure_replay_pkl": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_failure_replay.pkl"
+  },
+  "exists": {
+    "input_mat_pre_entry10": true,
+    "input_pkl_pre_entry4": true,
+    "matlab_eig_records_mat": true,
+    "python_engine_probe_pkl": true,
+    "eig_oracle_blocks_pkl": true,
+    "eig_diagnosis_json": true,
+    "eig_diagnosis_granular_json": true,
+    "eig_inspection_deep_json": true,
+    "eig_failure_index_json": true,
+    "eig_failure_replay_pkl": true
+  },
+  "run": {
+    "deep_inspection_utc": "2026-06-04T18:52:32.569283+00:00",
+    "n_fail": 8,
+    "inspection_deep_json": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_inspection_deep.json",
+    "failure_index_json": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_failure_index.json",
+    "failure_replay_pkl": "C:\\Users\\andre\\.cursor\\RGMs\\tests\\oracle\\toolbox\\DEM\\fixtures\\DEMAtariIII_fsl_backward_entry4_rgm_spectral_eig_failure_replay.pkl"
+  }
+}

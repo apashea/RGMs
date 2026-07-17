@@ -1,0 +1,211 @@
+{
+  "utc": "2026-06-06T13:30:53.095781+00:00",
+  "eig_md_section": "4.1 E3b-b3",
+  "sub_hash": "866ab1a9b2265fd6",
+  "n": 63,
+  "j_ref_0based": 62,
+  "j_py_0based": 62,
+  "jmax_match": true,
+  "raw_jmax_0based": 1,
+  "raw_col_for_jref_0based": 1,
+  "fortran_ki_for_jref": 2,
+  "fortran_ki_raw_jmax": 2,
+  "ki_jref_eq_raw_jmax": true,
+  "perm_ascending_abs_w": [
+    0,
+    60,
+    61,
+    62,
+    59,
+    58,
+    57,
+    56,
+    55,
+    54,
+    52,
+    53,
+    50,
+    51,
+    49,
+    48,
+    47,
+    46,
+    45,
+    44,
+    43,
+    42,
+    41,
+    40,
+    39,
+    36,
+    37,
+    38,
+    35,
+    34,
+    32,
+    33,
+    31,
+    30,
+    28,
+    29,
+    27,
+    26,
+    24,
+    25,
+    15,
+    16,
+    22,
+    23,
+    10,
+    9,
+    21,
+    4,
+    5,
+    19,
+    20,
+    14,
+    18,
+    13,
+    12,
+    11,
+    17,
+    3,
+    8,
+    6,
+    7,
+    2,
+    1
+  ],
+  "v_check_col_match": true,
+  "column_map_note": "j_ref is index after ascending-|w| reorder; DGEEVX set_col = raw_col_for_jref+1. Do not index raw v with j_ref.",
+  "ref_row_table": {
+    "label": "matlab_ref_pp",
+    "kmax_0based": 58,
+    "max_abs": 0.4389968340923798,
+    "rows": [
+      {
+        "index": 7,
+        "abs": 0.4389968340923684,
+        "on_plateau": false,
+        "delta_from_max": -1.1379786002407855e-14
+      },
+      {
+        "index": 28,
+        "abs": 0.4389968340923707,
+        "on_plateau": true,
+        "delta_from_max": -9.048317650695026e-15
+      },
+      {
+        "index": 52,
+        "abs": 0.4389968340923684,
+        "on_plateau": false,
+        "delta_from_max": -1.1379786002407855e-14
+      },
+      {
+        "index": 58,
+        "abs": 0.4389968340923798,
+        "on_plateau": true,
+        "delta_from_max": 0.0
+      }
+    ]
+  },
+  "py_row_table": {
+    "label": "vendored_pp",
+    "kmax_0based": 7,
+    "max_abs": 0.4389968340923798,
+    "rows": [
+      {
+        "index": 7,
+        "abs": 0.4389968340923798,
+        "on_plateau": true,
+        "delta_from_max": 0.0
+      },
+      {
+        "index": 28,
+        "abs": 0.4389968340923798,
+        "on_plateau": true,
+        "delta_from_max": 0.0
+      },
+      {
+        "index": 52,
+        "abs": 0.4389968340923798,
+        "on_plateau": true,
+        "delta_from_max": 0.0
+      },
+      {
+        "index": 58,
+        "abs": 0.4389968340923798,
+        "on_plateau": true,
+        "delta_from_max": 0.0
+      }
+    ]
+  },
+  "spurious_py_plateau": [
+    7,
+    52
+  ],
+  "kmax_ref": 58,
+  "kmax_py": 7,
+  "pipeline_ladder_ki_jref": {
+    "ladder": {
+      "1_post_DGEHRD": {
+        "abs_lo": 0.3054892064412932,
+        "abs_hi": 0.3054892064412932,
+        "leader_0based": 7,
+        "diff_lo_minus_hi": 0.0
+      },
+      "2_post_DORGHR": {
+        "abs_lo": 0.0,
+        "abs_hi": 0.0,
+        "leader_0based": null,
+        "diff_lo_minus_hi": 0.0
+      },
+      "2a_DLAQR0_in": {
+        "abs_lo": 0.0,
+        "abs_hi": 0.0,
+        "leader_0based": null,
+        "diff_lo_minus_hi": 0.0
+      },
+      "2b_DLAQR0_out": {
+        "abs_lo": 0.0,
+        "abs_hi": 0.0,
+        "leader_0based": null,
+        "diff_lo_minus_hi": 0.0
+      },
+      "3_post_DHSEQR": {
+        "abs_lo": 0.43899683409237983,
+        "abs_hi": 0.43899683409237983,
+        "leader_0based": 7,
+        "diff_lo_minus_hi": 0.0
+      },
+      "4_DTREVC3_at_KI": {
+        "abs_lo": 0.43899683409237983,
+        "abs_hi": 0.43899683409237983,
+        "leader_0based": 7,
+        "diff_lo_minus_hi": 0.0
+      },
+      "5_DTREVC3_pre_IDAMAX": {
+        "abs_lo": 0.43899683409237983,
+        "abs_hi": 0.43899683409237983,
+        "leader_0based": 7,
+        "diff_lo_minus_hi": 0.0
+      },
+      "6_DTREVC3_post_IDAMAX": {
+        "abs_lo": 1.0,
+        "abs_hi": 1.0,
+        "leader_0based": 7,
+        "diff_lo_minus_hi": 0.0
+      },
+      "7_final_raw_lapack_col": {
+        "abs_lo": 0.4389968340923798,
+        "abs_hi": 0.4389968340923798,
+        "leader_0based": 7,
+        "diff_lo_minus_hi": 0.0
+      }
+    },
+    "first_tied_max_leader_7": "1_post_DGEHRD"
+  },
+  "pipeline_dual_ladder": null,
+  "first_informative_site": "1_post_DGEHRD",
+  "compute_patch_hint": "E3b-c: demote spurious plateau rows at or before first_informative_site (rows [7, 52]); oracle replay demote {7,28,52}."
+}

@@ -1,0 +1,749 @@
+{
+  "utc": "2026-06-06T04:25:30.932617+00:00",
+  "eig_md_section": "4.1 O3 E2d",
+  "mode_b_hashes": [
+    "2d5f8b838be81f21",
+    "866ab1a9b2265fd6"
+  ],
+  "plateau_rtol": 1e-14,
+  "live_plateau": {
+    "2d5f8b838be81f21": {
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.22122683078232674
+    },
+    "866ab1a9b2265fd6": {
+      "n_at_plateau": 2,
+      "plateau_indices": [
+        28,
+        58
+      ],
+      "absv_max": 0.4389968340923798
+    }
+  },
+  "plateau_member_abs": {
+    "2d5f8b838be81f21": {
+      "vendored_matlab_pp": {
+        "absv_max": 0.2212268307823295,
+        "tol": 1e-14,
+        "members": [
+          {
+            "index": 13,
+            "abs": 0.2212268307823286,
+            "delta_from_max": -8.881784197001252e-16,
+            "on_plateau": true
+          },
+          {
+            "index": 23,
+            "abs": 0.22122683078232835,
+            "delta_from_max": -1.1379786002407855e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 25,
+            "abs": 0.22122683078232835,
+            "delta_from_max": -1.1379786002407855e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 29,
+            "abs": 0.22122683078232774,
+            "delta_from_max": -1.7486012637846216e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 42,
+            "abs": 0.2212268307823274,
+            "delta_from_max": -2.0816681711721685e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 44,
+            "abs": 0.2212268307823295,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          },
+          {
+            "index": 48,
+            "abs": 0.2212268307823271,
+            "delta_from_max": -2.3869795029440866e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 55,
+            "abs": 0.22122683078232677,
+            "delta_from_max": -2.7200464103316335e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 57,
+            "abs": 0.22122683078232666,
+            "delta_from_max": -2.831068712794149e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 61,
+            "abs": 0.22122683078232666,
+            "delta_from_max": -2.831068712794149e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 63,
+            "abs": 0.2212268307823263,
+            "delta_from_max": -3.191891195797325e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 68,
+            "abs": 0.22122683078232597,
+            "delta_from_max": -3.524958103184872e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 70,
+            "abs": 0.221226830782326,
+            "delta_from_max": -3.497202527569243e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 74,
+            "abs": 0.22122683078232597,
+            "delta_from_max": -3.524958103184872e-15,
+            "on_plateau": true
+          }
+        ]
+      },
+      "scipy_apply_matlab_pp": {
+        "absv_max": 0.22122683078233038,
+        "tol": 1e-14,
+        "members": [
+          {
+            "index": 13,
+            "abs": 0.22122683078232666,
+            "delta_from_max": -3.7192471324942744e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 23,
+            "abs": 0.22122683078232672,
+            "delta_from_max": -3.6637359812630166e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 25,
+            "abs": 0.22122683078232672,
+            "delta_from_max": -3.6637359812630166e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 29,
+            "abs": 0.2212268307823264,
+            "delta_from_max": -3.969047313034935e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 42,
+            "abs": 0.22122683078232666,
+            "delta_from_max": -3.7192471324942744e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 44,
+            "abs": 0.22122683078232686,
+            "delta_from_max": -3.524958103184872e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 48,
+            "abs": 0.2212268307823269,
+            "delta_from_max": -3.469446951953614e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 55,
+            "abs": 0.22122683078232663,
+            "delta_from_max": -3.747002708109903e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 57,
+            "abs": 0.2212268307823264,
+            "delta_from_max": -3.969047313034935e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 61,
+            "abs": 0.2212268307823265,
+            "delta_from_max": -3.885780586188048e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 63,
+            "abs": 0.22122683078232722,
+            "delta_from_max": -3.164135620181696e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 68,
+            "abs": 0.22122683078232686,
+            "delta_from_max": -3.524958103184872e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 70,
+            "abs": 0.22122683078232666,
+            "delta_from_max": -3.7192471324942744e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 74,
+            "abs": 0.22122683078233038,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          }
+        ]
+      },
+      "live_matlab": {
+        "absv_max": 0.22122683078232674,
+        "tol": 1e-14,
+        "members": [
+          {
+            "index": 13,
+            "abs": 0.22122683078232647,
+            "delta_from_max": -2.7755575615628914e-16,
+            "on_plateau": true
+          },
+          {
+            "index": 23,
+            "abs": 0.22122683078232647,
+            "delta_from_max": -2.7755575615628914e-16,
+            "on_plateau": true
+          },
+          {
+            "index": 25,
+            "abs": 0.22122683078232647,
+            "delta_from_max": -2.7755575615628914e-16,
+            "on_plateau": true
+          },
+          {
+            "index": 29,
+            "abs": 0.22122683078232647,
+            "delta_from_max": -2.7755575615628914e-16,
+            "on_plateau": true
+          },
+          {
+            "index": 42,
+            "abs": 0.22122683078232647,
+            "delta_from_max": -2.7755575615628914e-16,
+            "on_plateau": true
+          },
+          {
+            "index": 44,
+            "abs": 0.22122683078232674,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          },
+          {
+            "index": 48,
+            "abs": 0.22122683078232674,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          },
+          {
+            "index": 55,
+            "abs": 0.22122683078232674,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          },
+          {
+            "index": 57,
+            "abs": 0.22122683078232674,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          },
+          {
+            "index": 61,
+            "abs": 0.22122683078232672,
+            "delta_from_max": -2.7755575615628914e-17,
+            "on_plateau": true
+          },
+          {
+            "index": 63,
+            "abs": 0.22122683078232672,
+            "delta_from_max": -2.7755575615628914e-17,
+            "on_plateau": true
+          },
+          {
+            "index": 68,
+            "abs": 0.22122683078232672,
+            "delta_from_max": -2.7755575615628914e-17,
+            "on_plateau": true
+          },
+          {
+            "index": 70,
+            "abs": 0.22122683078232672,
+            "delta_from_max": -2.7755575615628914e-17,
+            "on_plateau": true
+          },
+          {
+            "index": 74,
+            "abs": 0.22122683078232674,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          }
+        ]
+      }
+    },
+    "866ab1a9b2265fd6": {
+      "vendored_matlab_pp": {
+        "absv_max": 0.4389968340923798,
+        "tol": 1e-14,
+        "members": [
+          {
+            "index": 28,
+            "abs": 0.4389968340923798,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          },
+          {
+            "index": 58,
+            "abs": 0.4389968340923798,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          }
+        ]
+      },
+      "scipy_apply_matlab_pp": {
+        "absv_max": 0.43899683409239304,
+        "tol": 1e-14,
+        "members": [
+          {
+            "index": 28,
+            "abs": 0.43899683409230456,
+            "delta_from_max": -8.848477506262498e-14,
+            "on_plateau": false
+          },
+          {
+            "index": 58,
+            "abs": 0.43899683409238505,
+            "delta_from_max": -7.993605777301127e-15,
+            "on_plateau": true
+          }
+        ]
+      },
+      "live_matlab": {
+        "absv_max": 0.4389968340923798,
+        "tol": 1e-14,
+        "members": [
+          {
+            "index": 28,
+            "abs": 0.4389968340923707,
+            "delta_from_max": -9.048317650695026e-15,
+            "on_plateau": true
+          },
+          {
+            "index": 58,
+            "abs": 0.4389968340923798,
+            "delta_from_max": 0.0,
+            "on_plateau": true
+          }
+        ]
+      }
+    }
+  },
+  "rows": [
+    {
+      "label": "scipy_raw",
+      "backend": "scipy",
+      "jmax": 0,
+      "jmax_match_ref": false,
+      "kmax_abs_entry": 74,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.58046925441613e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.22122683078233032,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "vendored_raw",
+      "backend": "lapack_vendored",
+      "jmax": 1,
+      "jmax_match_ref": false,
+      "kmax_abs_entry": 44,
+      "kmax_match_live": true,
+      "order_ok": false,
+      "max_absv_diff": 2.7478019859472624e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.2212268307823295,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "vendored_matlab_pp",
+      "backend": "lapack_vendored",
+      "jmax": 89,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 44,
+      "kmax_match_live": true,
+      "order_ok": false,
+      "max_absv_diff": 2.7478019859472624e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.2212268307823295,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "scipy_asc_w",
+      "backend": "scipy",
+      "jmax": 89,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 74,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.58046925441613e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.22122683078233032,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "scipy_asc_canon",
+      "backend": "scipy",
+      "jmax": 89,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 74,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.635980405647388e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.22122683078233038,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "scipy_full_pp",
+      "backend": "scipy",
+      "jmax": 89,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 74,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.635980405647388e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.22122683078233038,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "scipy_apply_matlab_pp",
+      "backend": "scipy",
+      "jmax": 89,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 74,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.635980405647388e-15,
+      "col_cosine_vs_dump": 1.0000000000000002,
+      "n_at_plateau": 14,
+      "plateau_indices": [
+        13,
+        23,
+        25,
+        29,
+        42,
+        44,
+        48,
+        55,
+        57,
+        61,
+        63,
+        68,
+        70,
+        74
+      ],
+      "absv_max": 0.22122683078233038,
+      "sub_hash": "2d5f8b838be81f21",
+      "live_kmax_abs_entry": 44,
+      "live_kmax_matlab_1based": 45
+    },
+    {
+      "label": "scipy_raw",
+      "backend": "scipy",
+      "jmax": 0,
+      "jmax_match_ref": false,
+      "kmax_abs_entry": 1,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 6.616929226765933e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        1,
+        7,
+        52,
+        58
+      ],
+      "absv_max": 0.43899683409239304,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    },
+    {
+      "label": "vendored_raw",
+      "backend": "lapack_vendored",
+      "jmax": 1,
+      "jmax_match_ref": false,
+      "kmax_abs_entry": 7,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.2862601528904634e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        7,
+        28,
+        52,
+        58
+      ],
+      "absv_max": 0.4389968340923798,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    },
+    {
+      "label": "vendored_matlab_pp",
+      "backend": "lapack_vendored",
+      "jmax": 62,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 7,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 3.2862601528904634e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        7,
+        28,
+        52,
+        58
+      ],
+      "absv_max": 0.4389968340923798,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    },
+    {
+      "label": "scipy_asc_w",
+      "backend": "scipy",
+      "jmax": 62,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 1,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 6.616929226765933e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        1,
+        7,
+        52,
+        58
+      ],
+      "absv_max": 0.43899683409239304,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    },
+    {
+      "label": "scipy_asc_canon",
+      "backend": "scipy",
+      "jmax": 62,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 1,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 6.616929226765933e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        1,
+        7,
+        52,
+        58
+      ],
+      "absv_max": 0.43899683409239304,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    },
+    {
+      "label": "scipy_full_pp",
+      "backend": "scipy",
+      "jmax": 62,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 1,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 6.616929226765933e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        1,
+        7,
+        52,
+        58
+      ],
+      "absv_max": 0.43899683409239304,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    },
+    {
+      "label": "scipy_apply_matlab_pp",
+      "backend": "scipy",
+      "jmax": 62,
+      "jmax_match_ref": true,
+      "kmax_abs_entry": 1,
+      "kmax_match_live": false,
+      "order_ok": false,
+      "max_absv_diff": 6.616929226765933e-14,
+      "col_cosine_vs_dump": 1.0,
+      "n_at_plateau": 4,
+      "plateau_indices": [
+        1,
+        7,
+        52,
+        58
+      ],
+      "absv_max": 0.43899683409239304,
+      "sub_hash": "866ab1a9b2265fd6",
+      "live_kmax_abs_entry": 58,
+      "live_kmax_matlab_1based": 59
+    }
+  ]
+}

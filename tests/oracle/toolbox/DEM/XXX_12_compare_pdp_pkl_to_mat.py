@@ -45,7 +45,6 @@ if str(_ROOT) not in sys.path:
 
 from python_src.toolbox.DEM.entry12_matlab_capture import (
     ENTRY12_CANONICAL_RUN_TAG,
-    ENTRY12_CAUSAL_BOUNDARY_STEPS,
     entry12_align_12C_workspace_to_mat,
     entry12_align_entry12_workspace_to_mat,
     entry12_align_mdp_to_mat_workspace,
@@ -53,6 +52,7 @@ from python_src.toolbox.DEM.entry12_matlab_capture import (
     entry12_mat_pdp_for_value_assert,
     entry12_align_py_rdp_to_validation_lane,
     entry12_assert_causal_def_boundaries,
+    entry12_causal_boundary_steps_for_tag,
     entry12_print_phase_log_diagnostics,
     entry12_print_qo_ab_diagnostics,
     entry12_print_y_ab_diagnostics,
@@ -216,15 +216,16 @@ def _run_entry12_causal_boundary_gate(
     coerce_sparse: bool,
 ) -> bool | None:
     """
-    Print the 15-step causal plan and run value asserts (12D→12E→12F per boundary).
+    Print the causal plan and run value asserts (12D→12E→12F per boundary).
 
     Returns ``True`` if any causal step failed, ``False`` if all pass, ``None`` if skipped.
     """
+    steps = entry12_causal_boundary_steps_for_tag(tag)
     print(
         "[XXX 12 validation] --- causal 12D→12E→12F boundaries (first in run) ---",
         file=sys.stderr,
     )
-    for code, sub in ENTRY12_CAUSAL_BOUNDARY_STEPS:
+    for code, sub in steps:
         print(f"  {code}.{sub}", file=sys.stderr)
     loaded = _load_entry12_causal_band_workspaces(tag, out_dir)
     if loaded is None:
@@ -240,11 +241,12 @@ def _run_entry12_causal_boundary_gate(
         py_def,
         mat_def,
         densify=_densify_sparse_leaves if coerce_sparse else None,
+        steps=steps,
     )
     if failures:
         print(
             f"[XXX 12 validation] FAIL: causal 12D→12E→12F boundaries "
-            f"({len(failures)}/{len(ENTRY12_CAUSAL_BOUNDARY_STEPS)} steps red)",
+            f"({len(failures)}/{len(steps)} steps red)",
             file=sys.stderr,
         )
         for i, msg in enumerate(failures, start=1):
@@ -262,7 +264,7 @@ def _run_entry12_causal_boundary_gate(
         return True
     print(
         "[XXX 12 validation] OK: causal 12D→12E→12F boundaries "
-        f"({len(ENTRY12_CAUSAL_BOUNDARY_STEPS)} steps)",
+        f"({len(steps)} steps)",
         file=sys.stderr,
     )
     return False
@@ -521,7 +523,15 @@ def _execute_validation(args: Namespace) -> int:
 
     if tag != ENTRY12_CANONICAL_RUN_TAG or str(os.getenv("RGMS_ENTRY12_CAPTURE_RUN_TAG", "")).strip():
         try:
-            entry12_assert_signoff_chain_ready(tag, require_rand_buf=False)
+            _gate = str(os.getenv("RGMS_FSL_ENTRY11_GATE_COMPARE", "")).strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
+            entry12_assert_signoff_chain_ready(
+                tag, require_rand_buf=False, require_script3_pkls=not _gate
+            )
             entry12_assert_buf_k_coherent(tag)
         except (FileNotFoundError, ValueError) as exc:
             print(f"[XXX 12 validation] error: {exc}", file=sys.stderr)

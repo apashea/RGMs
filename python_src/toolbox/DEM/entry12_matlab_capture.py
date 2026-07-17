@@ -1,7 +1,7 @@
 """Load Entry 12 MATLAB subentry checkpoint ``.mat`` files (``DEMAtariIII_entry12_<tag>_12X.mat``).
 
 Built by ``matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m`` (writes **12A**–**12I** in one run).
-Uses ``scipy.io.loadmat`` **MAT-format v7** (not v7.3 HDF5) — MATLAB ``save(..., '-v7')``.
+Uses ``scipy.io.loadmat`` for **MAT v7** and **v7.3** (HDF5) boundary bands **12D–12F**.
 
 Does **not** import any ``tests/oracle`` Entry 1–11 modules.
 """
@@ -35,6 +35,19 @@ ENTRY12_CANONICAL_RUN_TAG = (
 # Lean 12D/12E/12F boundary keys (``spm_MDP_VB_XXX_entry12_dump.m`` / Python dump mirror).
 ENTRY12_LEAN_BOUNDARY_KEYS = ("in", "out_t1", "out_t2", "out_t3", "out_tT")
 
+# OPTIM1FULL call4 — same causal lane as ``ENTRY12_LEAN_BOUNDARY_KEYS`` plus mid-horizon boundaries.
+ENTRY12_OPTIM1FULL_CALL4_TAG = "rgms_atari_optim1full_call4"
+ENTRY12_CALL4_LEAN_BOUNDARY_KEYS: tuple[str, ...] = (
+    "in",
+    "out_t1",
+    "out_t2",
+    "out_t3",
+    "out_t10",
+    "out_t20",
+    "out_t30",
+    "out_tT",
+)
+
 # Probe rollups on lean snaps (``entry12_Yfill`` / ``entry12_VBX`` diagnostics); not causal compute gates.
 ENTRY12_INSPECTION_ONLY_SNAP_KEYS = frozenset({
     "nested_y_summary",
@@ -63,6 +76,26 @@ ENTRY12_CAUSAL_BOUNDARY_STEPS: tuple[tuple[str, str], ...] = tuple(
     for band in ("12D", "12E", "12F")
 )
 
+
+def entry12_lean_boundary_keys_for_tag(tag: str | None = None) -> tuple[str, ...]:
+    """Lean boundary keys for Validation **12** causal gate (call4 includes ``out_t10/20/30``)."""
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_resolve_run_tag
+
+    t = (tag or entry12_resolve_run_tag()).strip()
+    if t == ENTRY12_OPTIM1FULL_CALL4_TAG:
+        return ENTRY12_CALL4_LEAN_BOUNDARY_KEYS
+    return ENTRY12_LEAN_BOUNDARY_KEYS
+
+
+def entry12_causal_boundary_steps_for_tag(tag: str | None = None) -> tuple[tuple[str, str], ...]:
+    """Causal **12D→12E→12F** steps for ``tag`` (call4: **24** steps; default tags: **15**)."""
+    return tuple(
+        (band, sub)
+        for sub in entry12_lean_boundary_keys_for_tag(tag)
+        for band in ("12D", "12E", "12F")
+    )
+
+
 # ``spm_MDP_checkX`` / structure-learning ``ss`` blocks: MATLAB ``cell(4,4)`` per field.
 _ENTRY12_SS_BLOCK_KEYS = ("D", "E", "ID", "IE")
 
@@ -73,11 +106,10 @@ def rgms_repo_root() -> Path:
 
 
 def default_entry12_mat_output_dir() -> Path:
-    """Default Entry 12 capture dir (``tests/oracle/toolbox/DEM/fixtures``; override with env)."""
-    raw = str(os.getenv("RGMS_ENTRY12_CAPTURE_OUT_DIR", "")).strip()
-    if raw:
-        return Path(raw).expanduser().resolve()
-    return rgms_repo_root() / "tests" / "oracle" / "toolbox" / "DEM" / "fixtures"
+    """Default Entry 12 capture dir (``demo1_fixtures_dir``; override with env)."""
+    from tests.demo1.demo1_paths import demo1_fixtures_dir
+
+    return demo1_fixtures_dir()
 
 
 def entry12_capture_run_tag() -> str:
@@ -184,6 +216,149 @@ def entry12_rdp_for_validation_from_mat_nested(mat_nested_rdp: dict[str, Any]) -
     type_ref = _entry12_type_ref_for_transform(rdp, mat_nested_rdp)
     _spm_MDP_checkX_transform_align(rdp, type_ref)
     return rdp
+
+
+def _align_index_vectors_to_vb_template(py_val: Any, ref_val: Any, *, path: str) -> Any:
+    """``sA``/``sC``/``sB`` list → ``ndarray`` when MATLAB VB template uses vectors."""
+    import numpy as np
+
+    if isinstance(py_val, list) and isinstance(ref_val, np.ndarray):
+        flat = np.asarray(
+            [int(x) for x in py_val],
+            dtype=ref_val.dtype if ref_val.dtype != object else np.int64,
+        )
+        if flat.shape != ref_val.shape:
+            flat = flat.reshape(ref_val.shape)
+        if not np.array_equal(flat, ref_val):
+            raise ValueError(f"{path} values differ from MATLAB VB template")
+        return np.asarray(flat, dtype=ref_val.dtype)
+    return py_val
+
+
+def _align_mdp_subtree_to_vb_template(py_m: dict[str, Any], ref_m: dict[str, Any], *, path: str) -> None:
+    import numpy as np
+
+    from python_src.toolbox.DEM.spm_MDP_checkX import spm_mdp_g_dict_to_matlab_list
+
+    g_py, g_ref = py_m.get("G"), ref_m.get("G")
+    if isinstance(g_py, dict) and isinstance(g_ref, list):
+        py_m["G"] = spm_mdp_g_dict_to_matlab_list(g_py)
+    elif isinstance(g_py, dict) and isinstance(g_ref, np.ndarray):
+        vec = spm_mdp_g_dict_to_matlab_list(g_py)
+        flat = np.concatenate(
+            [np.asarray(x, dtype=np.float64).ravel(order="F") for x in vec],
+            axis=0,
+        )
+        if not np.allclose(flat, np.asarray(g_ref, dtype=np.float64).ravel(order="F"), rtol=0.0, atol=1e-12):
+            raise ValueError(f"{path}.G values differ from MATLAB VB template")
+        py_m["G"] = np.asarray(g_ref, dtype=g_ref.dtype).copy()
+    for key in ("sA", "sB", "sC"):
+        if key in py_m and key in ref_m:
+            py_m[key] = _align_index_vectors_to_vb_template(
+                py_m[key], ref_m[key], path=f"{path}.{key}"
+            )
+    u_py, u_ref = py_m.get("U"), ref_m.get("U")
+    if isinstance(u_py, np.ndarray) and isinstance(u_ref, np.ndarray) and u_py.shape != u_ref.shape:
+        flat = np.asarray(u_py, dtype=u_ref.dtype).ravel(order="F")
+        if flat.size != u_ref.size:
+            raise ValueError(f"{path}.U size {flat.size} != template {u_ref.size}")
+        if not np.array_equal(flat, u_ref.ravel(order="F")):
+            raise ValueError(f"{path}.U values differ from MATLAB VB template")
+        py_m["U"] = flat.reshape(u_ref.shape).copy()
+
+
+def align_rdp_containers_to_vb_template(py: dict[str, Any], template: dict[str, Any]) -> None:
+    """
+    Align checkX'd Python ``RDP`` containers to the MATLAB-derived VB template.
+
+    ``template`` is ``entry12_rdp_for_vb_from_mat_nested(loadmat ...['RDP'])`` — same lane as
+    script **3**, not a Python FSL assembly object.
+    """
+    import numpy as np
+    import scipy.sparse as sp
+
+    for key in ("sA", "sC"):
+        if key in py and key in template:
+            py[key] = _align_index_vectors_to_vb_template(py[key], template[key], path=f"RDP.{key}")
+    id_py, id_ref = py.get("id"), template.get("id")
+    if isinstance(id_py, dict) and isinstance(id_ref, dict):
+        for key in ("cid", "hid"):
+            if key in id_py and key in id_ref:
+                id_py[key] = _align_index_vectors_to_vb_template(
+                    id_py[key], id_ref[key], path=f"RDP.id.{key}"
+                )
+
+    h_py, h_ref = py.get("H"), template.get("H")
+    if isinstance(h_py, list) and sp.issparse(h_ref):
+        stacked = np.concatenate(
+            [np.asarray(cell, dtype=np.float64).ravel(order="F") for cell in h_py],
+            axis=0,
+        )
+        ref_dense = np.asarray(h_ref.todense(), dtype=np.float64).ravel(order="F")
+        if stacked.size != ref_dense.size:
+            raise ValueError(
+                f"RDP.H list ravel len {stacked.size} != MATLAB template len {ref_dense.size}"
+            )
+        if not np.allclose(stacked, ref_dense, rtol=0.0, atol=1e-12, equal_nan=True):
+            raise ValueError("RDP.H values differ from MATLAB VB template after ravel")
+        ref_arr = np.asarray(h_ref.todense(), dtype=np.float64)
+        py["H"] = sp.csc_array(stacked.reshape(ref_arr.shape))
+
+    mdp_py, mdp_ref = py.get("MDP"), template.get("MDP")
+    if isinstance(mdp_py, dict) and isinstance(mdp_ref, dict):
+        _align_mdp_subtree_to_vb_template(mdp_py, mdp_ref, path="RDP.MDP")
+    if not isinstance(mdp_py, dict) or not isinstance(mdp_ref, dict):
+        return
+    a_py, a_ref = mdp_py.get("A"), mdp_ref.get("A")
+    if not isinstance(a_py, dict) or not isinstance(a_ref, dict):
+        return
+    for key in a_py:
+        if key not in a_ref:
+            continue
+        va = np.asarray(a_py[key], dtype=np.float64)
+        vb = np.asarray(a_ref[key], dtype=np.float64)
+        if va.ndim == 2 and va.shape[1] == 1 and vb.ndim == 1 and va.shape[0] == vb.shape[0]:
+            flat = va.reshape(-1)
+            if not np.allclose(flat, vb, rtol=0.0, atol=1e-12, equal_nan=True):
+                raise ValueError(f"RDP.MDP.A[{key!r}] values differ from MATLAB VB template")
+            a_py[key] = flat.copy()
+
+
+def rdp_for_vb_from_python_assembly(
+    rdp_assembly: dict[str, Any],
+    *,
+    tag: str = "rgms_canonical",
+    align_to_mat_template: bool | None = None,
+) -> dict[str, Any]:
+    """
+    ``DEM_AtariIII`` / FSL Entry **11**: ``entry12_rdp_for_vb_from_mat_nested`` on Python-built ``RDP``.
+
+    Default (``align_to_mat_template=False``): checkX + ``spm_mdp_normalize_rdp_matlab_containers``
+    from ``spm_mdp2rdp`` must match script **3** ``load_entry12_rdp_for_tag`` on ``rgms_canonical``.
+
+    Set ``align_to_mat_template=True`` (or env ``RGMS_RDP_ALIGN_TO_MAT_VB_TEMPLATE=1``) to run
+    ``align_rdp_containers_to_vb_template`` against ``XXX_12_rdp.mat`` — diagnostic / legacy only.
+    """
+    import copy
+    import os
+
+    from python_src.toolbox.DEM.entry12_atari_calls import entry12_atari_call_rdp_mat_path
+    from tests.oracle.toolbox.DEM.entry12_loadmat_convert import load_entry12_rdp_mat_nested_for_tag
+
+    py = entry12_rdp_for_vb_from_mat_nested(copy.deepcopy(rdp_assembly))
+    if align_to_mat_template is None:
+        raw = str(os.getenv("RGMS_RDP_ALIGN_TO_MAT_VB_TEMPLATE", "")).strip().lower()
+        align_to_mat_template = raw in ("1", "true", "yes")
+    if not align_to_mat_template:
+        return py
+
+    mat_p = entry12_atari_call_rdp_mat_path(tag)
+    if not mat_p.is_file():
+        raise FileNotFoundError(f"missing RDP mat for tag {tag!r}: {mat_p}")
+    mat_nested = load_entry12_rdp_mat_nested_for_tag(tag, mat_p)
+    template = entry12_rdp_for_vb_from_mat_nested(copy.deepcopy(mat_nested))
+    align_rdp_containers_to_vb_template(py, template)
+    return py
 
 
 def entry12_align_entry12_workspace_to_mat(
@@ -1720,11 +1895,41 @@ def _sanitize_run_tag(run_tag: str) -> str:
     return safe or "default"
 
 
+def _load_mat_via_engine_export_v7(path: Path) -> dict[str, Any]:
+    """Load MAT v7.3 (or any Engine-readable ``.mat``) via round-trip ``save(...,'-v7')``."""
+    import matlab.engine
+    from scipy.io import loadmat
+
+    from tests.demo1.demo1_matlab_engine import configure_dem_matlab_engine
+    from tests.demo1.demo1_paths import demo1_repo_root
+
+    repo = demo1_repo_root()
+    tmp = repo / "matlab_custom" / "_entry12_v73_export.mat"
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    eng = matlab.engine.start_matlab()
+    try:
+        configure_dem_matlab_engine(eng, repo)
+        posix = str(path.resolve()).replace("\\", "/")
+        tmp_posix = str(tmp.resolve()).replace("\\", "/")
+        eng.eval(f"S = load('{posix}'); fn = fieldnames(S);", nargout=0)
+        eng.eval(
+            f"save('{tmp_posix}', fn{{:}}, '-struct', 'S', '-v7');",
+            nargout=0,
+        )
+        raw = loadmat(str(tmp), simplify_cells=True)
+        return {k: v for k, v in raw.items() if k not in _MATLAB_META_KEYS}
+    finally:
+        eng.quit()
+
+
 def load_entry12_subentry_mat(path: Path | str) -> dict[str, Any]:
     """Load a MATLAB ``.mat`` file and return user variables (no ``__header__`` / ``__version__``).
 
     Nested MATLAB structs arrive as ``numpy`` structured arrays / objects depending on
     ``scipy`` version; callers performing oracle compares should normalize further as needed.
+
+    Supports MAT **v7.3** boundary sidecars (``*_12F_in.mat``) and Engine round-trip when
+    ``h5py`` is unavailable.
     """
     from scipy.io import loadmat
 
@@ -1738,8 +1943,16 @@ def load_entry12_subentry_mat(path: Path | str) -> dict[str, Any]:
         mat = loadmat(str(p), **kw)
     except TypeError:
         mat = loadmat(str(p))
+    except NotImplementedError:
+        mat = _load_mat_via_engine_export_v7(p)
 
-    return {k: v for k, v in mat.items() if k not in _MATLAB_META_KEYS}
+    out = {k: v for k, v in mat.items() if k not in _MATLAB_META_KEYS}
+    in_sidecar = p.parent / f"{p.stem}_in.mat"
+    if "in" not in out and in_sidecar.is_file():
+        side = load_entry12_subentry_mat(in_sidecar)
+        if "in" in side:
+            out["in"] = side["in"]
+    return out
 
 
 def load_entry12_subentry_mat_from_env(code: str) -> dict[str, Any]:
@@ -2192,12 +2405,13 @@ def entry12_assert_causal_def_boundaries(
     mat_by_code: dict[str, dict[str, Any]],
     *,
     densify: Any | None = None,
+    steps: tuple[tuple[str, str], ...] | None = None,
 ) -> list[str]:
     """
-    Value-assert **12D → 12E → 12F** at each boundary in ``ENTRY12_CAUSAL_BOUNDARY_STEPS``.
+    Value-assert **12D → 12E → 12F** at each boundary in ``steps`` (default: ``ENTRY12_CAUSAL_BOUNDARY_STEPS``).
 
     Compares **causal payloads** (correct witnesses per band), not whole lean snaps.
-    Evaluates all **15** steps in one call. Returns failure messages (empty if all pass).
+    Evaluates all steps in one call. Returns failure messages (empty if all pass).
     Fix compute using the **first** list entry (causal order).
     """
     from tests.oracle.toolbox.DEM.test_spm_mdp2rdp import _assert_nested_rdp_equal
@@ -2207,8 +2421,9 @@ def entry12_assert_causal_def_boundaries(
         "12E": entry12_align_12E_snap_to_mat,
         "12F": entry12_align_12F_snap_to_mat,
     }
+    steps_use = ENTRY12_CAUSAL_BOUNDARY_STEPS if steps is None else steps
     failures: list[str] = []
-    for code, sub in ENTRY12_CAUSAL_BOUNDARY_STEPS:
+    for code, sub in steps_use:
         label = f"{code}.{sub}"
         mat_ws = mat_by_code[code]
         py_ws = py_by_code[code]
@@ -3188,9 +3403,13 @@ def entry12_print_phase_log_diagnostics(
 __all__ = [
     "Entry12CompareLaneError",
     "ENTRY12_CAUSAL_BOUNDARY_STEPS",
+    "ENTRY12_CALL4_LEAN_BOUNDARY_KEYS",
     "ENTRY12_CANONICAL_RUN_TAG",
     "ENTRY12_LEAN_BOUNDARY_KEYS",
+    "ENTRY12_OPTIM1FULL_CALL4_TAG",
     "entry12_assert_causal_def_boundaries",
+    "entry12_causal_boundary_steps_for_tag",
+    "entry12_lean_boundary_keys_for_tag",
     "entry12_print_qo_ab_diagnostics",
     "entry12_print_y_ab_diagnostics",
     "entry12_print_forwards_diagnostics",

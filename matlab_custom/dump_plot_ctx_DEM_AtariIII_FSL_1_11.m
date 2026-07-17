@@ -7,7 +7,12 @@
 % Use when DEMAtariIII_fsl_1_11_rdp.mat already exists and only plot inputs are missing.
 % Full FSL dump (RDP + plot_ctx) remains dump_rdp_DEM_AtariIII_FSL_1_11.m.
 %
-% Output: tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_1_11_plot_ctx.mat
+% Output: <DEMO1 fixture root>/DEMAtariIII_fsl_1_11_plot_ctx.mat
+
+thisDir = fileparts(mfilename('fullpath'));
+repoRoot = fileparts(thisDir);
+addpath(genpath(fullfile(repoRoot, 'matlab_custom', 'demo1')), '-begin');
+demo1_add_matlab_src(repoRoot);
 
 rng(2)
 
@@ -32,12 +37,7 @@ S(4,:) = [1 1 1];
 MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);
 Nm  = numel(MDP);
 
-thisDir = fileparts(mfilename('fullpath'));
-repoRoot = fileparts(thisDir);
-outDir = fullfile(repoRoot,'tests','oracle','toolbox','DEM','fixtures');
-if ~exist(outDir,'dir')
-    mkdir(outDir);
-end
+outDir = demo1_fixtures_dir(repoRoot);
 plotCtxMat = fullfile(outDir,'DEMAtariIII_fsl_1_11_plot_ctx.mat');
 
 plot_meta = struct();

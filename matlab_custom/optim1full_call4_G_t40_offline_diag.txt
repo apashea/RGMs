@@ -1,0 +1,26 @@
+snap=optim1full_call4_py_vs_mat_pdp_snap.pkl
+PDP.G shapes py=(128, 4) mat=(128, 4)
+nested MDP.G list lens py=4 mat=4
+G bad rows (0-based indices): [40]
+using diverge index i=40 as stacked-G row / u index
+  MATLAB 1-based t interpretation: if row0=t=1 then MATLAB t=41; if row index==MATLAB t (0 unused) unused — check MDP.G cells
+--- per-policy delta at diverge row ---
+  G_py  = [-26.55729055047906, -29.36532157385193, -29.36532157381481, -29.36532157385193]
+  G_mat = [-36.7786396005819, -29.602188814778557, -29.602188814604503, -29.602188814778557]
+  dG    = [10.221349050102837, 0.23686724092662814, 0.23686724078969235, 0.23686724092662814]
+  abs_dG= [10.221349050102837, 0.23686724092662814, 0.23686724078969235, 0.23686724092662814]
+  policy0 dominates: abs_d0=10.221349 vs max others=0.236867
+--- u / P / R at nearby indices ---
+  t_idx=38 u py/mat=2.0/2.0 G_dmax=2.84217e-13
+  t_idx=39 u py/mat=4.0/4.0 G_dmax=4.26326e-13
+  t_idx=40 u py/mat=1.0/3.0 G_dmax=10.2213
+  t_idx=41 u py/mat=3.0/3.0 G_dmax=2.79968e-08
+  t_idx=42 u py/mat=1.0/1.0 G_dmax=4.12115e-13
+--- nested MDP field reds ---
+  n_reds=1
+  MDP.Q: MDP.Q.E: max abs diff=9.61484303938525
+X shapes (184, 128) (184, 128); s shapes (128,) (128,)
+X bad_t count=0 maxabs_all=5.22771e-10 at_diverge_i=3.87741e-26
+s 1d first diverge idx=41 n=87
+NOTE: final X match all-t while s/u flip is NOT evidence that forwards inputs at the diverge step already differed — Phase B must dump beliefs into spm_forwards.
+RESULT Phase A: OFFLINE COMPLETE - diverge cell idx 40 = MATLAB t=41; policy0 dG~10; nested reds downstream only

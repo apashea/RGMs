@@ -41,9 +41,12 @@ def spm_RDP_sort(
     ----------
     eig :
         Optional ``(B,) -> (w, V)`` matching :func:`numpy.linalg.eig` layout
-        (1-D eigenvalues, columns of ``V`` are eigenvectors). For MATLAB-oracle
-        work only, pass an Engine-backed ``eig(B,'nobalance')`` bridge; default
-        ``None`` uses :func:`numpy.linalg.eig`.
+        (1-D eigenvalues, columns of ``V`` are eigenvectors). **FSL backward Entry 10 sign-off**
+        injects MATLAB ``eig(B,'nobalance')`` here; native default does not match MATLAB at full
+        Atari FSL scale (see ``Atari_example.md`` § Entry 10 eigen limitation). When omitted,
+        uses :func:`matlab_compat.resolve_spm_RDP_sort_eig` (LAPACK ``geevx``
+        ``balanc='N'`` when linked, else ``numpy.linalg.eig``; override via
+        ``RGMS_SPM_RDP_SORT_EIG_BACKEND``; balanced ``dgeev`` diagnostic only).
     """
     mdp = copy.deepcopy(MDP)
     end = mdp[-1]
@@ -58,9 +61,20 @@ def spm_RDP_sort(
     B = spm_RDP_sort_flow_B(mdp)
     ns = int(B.shape[0])
 
-    _eig = eig if eig is not None else np.linalg.eig
+    if eig is not None:
+        _eig = eig
+    else:
+        from matlab_compat import resolve_spm_RDP_sort_eig
+
+        _eig = resolve_spm_RDP_sort_eig()
+    # Pass-1 default (kept for audit; restore with RGMS_SPM_RDP_SORT_EIG_BACKEND=numpy):
+    # _eig = np.linalg.eig
     w, V = _eig(B)
-    j_eig = int(np.argmax(np.real(w)))
+    from matlab_compat import principal_eig_column_index
+
+    j_eig = principal_eig_column_index(w)
+    # Pass-1 principal column (legacy; restore with RGMS_SPM_RDP_SORT_PRINCIPAL=argmax):
+    # j_eig = int(np.argmax(np.real(w)))
     vec = np.abs(V[:, j_eig])
     p_col = spm_dir_norm(np.reshape(vec, (-1, 1), order="F"))
     p = np.asarray(p_col, dtype=np.float64).ravel(order="F")

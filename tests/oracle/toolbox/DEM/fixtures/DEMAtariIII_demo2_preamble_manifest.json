@@ -1,0 +1,125 @@
+{
+  "schema": "demo2_preamble_manifest_v1",
+  "created_utc": "2026-06-13T00:00:05.247749+00:00",
+  "ledger_boundary": "run_dem_atariiii(entry_stop=12) \u2014 DEM_AtariIII.m after first illustrate VB; before Active inference (GDP attach)",
+  "primary_ctx_pkl": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_demo2_preamble_ctx.pkl",
+  "native_python_rng": {
+    "path": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_demo2_preamble_native_rand.mat",
+    "K_py": 67264,
+    "producer": "demo2_preamble_ctx.capture_native_scalar_rand during preamble dump",
+    "role": "Scalar np.random.rand() log for native lane-A preamble \u2014 audit / future replay; not Entry 12 vb_rand_buf",
+    "patch_targets": [
+      "numpy.random.rand",
+      "python_src.toolbox.DEM.spm_MDP_generate.np.random.rand",
+      "python_src.toolbox.DEM.spm_MDP_pong.np.random.rand"
+    ]
+  },
+  "rng_matlab_ledger": {
+    "dem_atari_through_entry11": {
+      "path": "tests/oracle/toolbox/DEM/fixtures/dem_atari_rand_buf_through_entry11.mat",
+      "producer": "matlab_custom/fsl_backward/capture_dem_atari_rand_buf_through_entry11.m",
+      "fields": [
+        "dem_atari_rand_buf",
+        "K_11",
+        "RDP_reference",
+        "meta"
+      ],
+      "role": "MATLAB rng(2) scalar rand() through Entry 11 \u2014 FSL backward replay",
+      "replay_code": "tests/oracle/toolbox/DEM/fsl_backward_rand.py",
+      "replay_env": "RGMS_FSL_BACKWARD_REPLAY_MATLAB_DRAWS=1"
+    },
+    "dem_atari_through_entry12": {
+      "path": "tests/oracle/toolbox/DEM/fixtures/dem_atari_rand_buf_through_entry12.mat",
+      "producer": "matlab_custom/fsl_backward/capture_dem_atari_rand_buf_through_entry12.m",
+      "status": "lane_b_run_matlab_producer_before_signoff",
+      "role": "FSL dem_atari_rand_buf through Entry 12 preamble (ends before call-1 VB); distinct from vb_rand_buf"
+    },
+    "entry12_vb_call1_rgms_canonical": {
+      "K_mat": "tests/oracle/toolbox/DEM/fixtures/entry12_vb_rand_K.mat",
+      "buf_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_entry12_vb_matlab_rand_buf.mat",
+      "rdp_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_XXX_12_rdp.mat",
+      "pdp_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_XXX_12_pdp.mat",
+      "producer_1a": "tests/oracle/toolbox/DEM/entry12_preflight_vb_rand_k.py",
+      "producer_1b": "matlab_custom/entry12/DEMAtariIII_entry12_dump_all_subentries.m",
+      "tag": "rgms_canonical",
+      "role": "Entry 12 first VB \u2014 vb_rand_buf replay (not dem_atari_rand_buf)",
+      "replay_code": "python_src/toolbox/DEM/entry12_atari_calls.py + spm_MDP_VB_XXX reuse_matlab_draws",
+      "compare_script": "tests/oracle/toolbox/DEM/XXX_12_compare_pdp_pkl_to_mat.py"
+    }
+  },
+  "structure_learning_entry4": {
+    "matlab_authority_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_backward_MDP_pre_entry10.mat",
+    "producer": "matlab_custom/fsl_backward/dump_MDP_pre_entry10.m",
+    "key_fields": [
+      "MDP_pre_entry5",
+      "PDP_O",
+      "PDP_o",
+      "GDP_id_reward",
+      "GDP_id_contraint",
+      "C",
+      "Ne",
+      "Nm",
+      "meta"
+    ],
+    "ledger_line": "MDP = spm_faster_structure_learning(PDP.O(:,1:1000),S,Sc);",
+    "python_module": "python_src/toolbox/DEM/spm_faster_structure_learning.py",
+    "python_ledger": "python_src/toolbox/DEM/dem_atariiii_entry4.py",
+    "oracle_tests": [
+      "tests/oracle/toolbox/DEM/test_spm_faster_structure_learning.py",
+      "tests/oracle/toolbox/DEM/fsl_backward_compare_entry4_pkl_to_mat.py"
+    ],
+    "ctx_keys_carrying_inputs": [
+      "PDP",
+      "GDP",
+      "S",
+      "MDP"
+    ],
+    "note": "Primary ctx PKL holds post-preamble MDP; Entry 4 authority mat holds PDP.O columns + MDP_pre_entry5 on rng(2) ledger for paired oracle"
+  },
+  "structure_learning_merge_loops": {
+    "matlab_authority_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_backward_MDP_pre_entry10.mat",
+    "fields": [
+      "MDP_pre_entry7",
+      "MDP_pre_entry9",
+      "MDP_pre_entry10",
+      "PDP_O",
+      "PDP_o"
+    ],
+    "matlab_lines": "DEM_AtariIII.m 131 (Entry 7), 153 (Entry 8/9 basin loop)",
+    "python_merge": "python_src/toolbox/DEM/spm_merge_structure_learning.py",
+    "oracle": "tests/oracle/toolbox/DEM/test_spm_merge_structure_learning.py"
+  },
+  "structure_learning_entry10_sort": {
+    "matlab_authority_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_fsl_backward_MDP_pre_entry11.mat",
+    "producer": "matlab_custom/fsl_backward/dump_MDP_pre_entry11.m",
+    "field": "MDP_pre_entry11",
+    "matlab_line": "DEM_AtariIII.m 181 spm_RDP_sort",
+    "note": "Entry 10 NESS sort boundary before call 1 assembly"
+  },
+  "structure_learning_post12_nr_loop": {
+    "matlab_lines": "DEM_AtariIII.m 303 \u2014 spm_merge_structure_learning(O(:,t+s),MDP) per NR game",
+    "input_source": "PDP.Q.O{1} from each spm_MDP_VB_XXX in NR loop \u2014 not training PDP.O",
+    "planned_authority_mat": "tests/oracle/toolbox/DEM/fixtures/DEMAtariIII_demo2_MDP_pre_call3_post_nr.mat",
+    "planned_producer": "matlab_custom/demo2/dump_MDP_pre_call3_post_nr.m",
+    "status": "lane_b_run_matlab_producer_before_signoff",
+    "partial_oracle": "tests/oracle/toolbox/DEM/test_demo2_post_nr_rdp_assembly.py (NR=1 smoke)",
+    "entry12_inline_nr": "DEMAtariIII_entry12_dump_all_subentries capture_call3/call4 runs full NR=32 in one rng(2) session before call 3/4 VB capture"
+  },
+  "rng_whole_script_policy": {
+    "matlab_seed_line": "DEM_AtariIII.m line 53 rng(2) \u2014 single seed for entire script",
+    "dem_atari_lane": "FSL rand.m shadow \u2014 essentially spm_MDP_generate (line 86); no re-seed post-12",
+    "vb_lane": "entry12 rand.m shadow \u2014 per script-level VB tag; NR games 2-32 VB not individually buffered",
+    "structure_learning_uses_rand": false
+  },
+  "demo2_full_script_gaps": [
+    "lane B preamble dem_atari replay compare through Entry 12 (TBD script)"
+  ],
+  "demo2_post12_vb_tags": {
+    "call2": "rgms_atari_call2",
+    "call3": "rgms_atari_call3",
+    "call4": "rgms_atari_call4",
+    "registry": "python_src/toolbox/DEM/entry12_atari_calls.py",
+    "note": "Each tag has its own entry12_vb_rand_K_<tag>.mat + vb_matlab_rand_buf_<tag>.mat after 1b"
+  },
+  "policy": "Dump full ctx + native rand log + this manifest in one bundle after every verified full-scale preamble run. Do not rely on ctx alone for MATLAB paired DEMO2 validation."
+}

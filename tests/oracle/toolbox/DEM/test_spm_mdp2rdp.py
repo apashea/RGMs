@@ -36,9 +36,55 @@ def _norm_leaf(x: Any) -> Any:
     return x
 
 
+def _unwrap_g_dict_for_compare(g: dict) -> Any:
+    """Flatten Python MDP ``G`` dict to a numeric vector (values already match MATLAB)."""
+    keys = sorted(g.keys(), key=lambda k: (0, int(k)) if str(k).isdigit() else (1, str(k)))
+    parts: list[np.ndarray] = []
+    for k in keys:
+        v = g[k]
+        while isinstance(v, list) and len(v) == 1:
+            v = v[0]
+        parts.append(np.asarray(v, dtype=np.float64).ravel(order="F"))
+    if not parts:
+        return np.asarray([], dtype=np.float64)
+    if len(parts) == 1:
+        return parts[0]
+    return np.concatenate(parts)
+
+
+def _g_dict_to_matlab_list(g: dict) -> list:
+    from python_src.toolbox.DEM.spm_MDP_checkX import spm_mdp_g_dict_to_matlab_list
+
+    return spm_mdp_g_dict_to_matlab_list(g)
+
+
+def _coerce_rdp_compare_pair(py: Any, mat: Any, path: str) -> tuple[Any, Any]:
+    """Align common MATLAB pull vs Python MDP container shapes before strict type check."""
+    leaf = path.rsplit(".", 1)[-1]
+    if leaf == "G":
+        if isinstance(py, dict) and isinstance(mat, np.ndarray):
+            return _unwrap_g_dict_for_compare(py), mat
+        if isinstance(py, np.ndarray) and isinstance(mat, dict):
+            return py, _unwrap_g_dict_for_compare(mat)
+        if isinstance(py, dict) and isinstance(mat, list):
+            return _g_dict_to_matlab_list(py), mat
+        if isinstance(py, list) and isinstance(mat, dict):
+            return py, _g_dict_to_matlab_list(mat)
+    if isinstance(py, list) and isinstance(mat, np.ndarray):
+        if not py and mat.size == 0:
+            return np.asarray([], dtype=np.float64), mat
+        if py and all(isinstance(x, (int, float, np.integer, np.floating)) for x in py):
+            return np.asarray(py, dtype=np.float64), mat
+    if isinstance(py, list) and isinstance(mat, (int, float, np.integer, np.floating)):
+        if len(py) == 1:
+            return py[0], mat
+    return py, mat
+
+
 def _assert_nested_rdp_equal(py: Any, mat: Any, path: str) -> None:
     py = _norm_leaf(py)
     mat = _norm_leaf(mat)
+    py, mat = _coerce_rdp_compare_pair(py, mat, path)
     if isinstance(py, np.ndarray) and isinstance(mat, list):
         mat = _norm_leaf(mat)
     if isinstance(mat, np.ndarray) and isinstance(py, list):

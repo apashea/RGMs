@@ -1,0 +1,9 @@
+OPTIM1FULL — MI-429: compare Python ``spm_RDP_MI`` + ``np`` vs MATLAB authority.
+
+**Report:** ``C:\Users\andre\.cursor\RGMs\matlab_custom\optim1full_compare_mi429_output.txt``
+
+[OPTIM1FULL MI-429] PKL=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_mi429_post.pkl
+[OPTIM1FULL MI-429] MAT MDP=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_MDP_post_mi429.mat
+[OPTIM1FULL MI-429] MAT np=C:\Users\andre\.cursor\RGMs\tests\demo1\optim1full\fixtures\DEMAtariIII_optim1full_np_mi429.mat
+[OPTIM1FULL MI-429] levels py=2 mat=2
+OK: MDP + np parity (OPTIM1FULL MI-429, np=8677)

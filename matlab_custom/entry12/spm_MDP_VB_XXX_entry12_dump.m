@@ -2350,8 +2350,20 @@ S = bundle;
 S.OPTIONS = OPTIONS;
 S.meta = meta;
 fname = fullfile(dumpSpec.outDir, sprintf('DEMAtariIII_entry12_%s_%s.mat', dumpSpec.runTag, code));
+% Lean boundary ``in`` can exceed 2GB under ``-v7``; sidecar ``*_in.mat`` (v7.3).
+sidecarIn = [];
+if any(strcmp(code, {'12D', '12E', '12F'})) && isfield(S, 'in')
+    sidecarIn = S.in;
+    S = rmfield(S, 'in');
+end
 save(fname, '-struct', 'S', '-v7');
 fprintf(1, '[entry12 dump] wrote %s\n', fname);
+if ~isempty(sidecarIn)
+    inPath = [fname(1:end-4) '_in.mat'];
+    in = sidecarIn; %#ok<NASGU>
+    save(inPath, 'in', '-v7.3');
+    fprintf(1, '[entry12 dump] wrote %s (in sidecar, v7.3)\n', inPath);
+end
 
 
 function [G,P,F,id,Pa] = spm_forwards(O,P,A,B,C,H,K,W,I,t,T,N,m,id,pA,qa)
