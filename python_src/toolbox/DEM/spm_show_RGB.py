@@ -41,7 +41,7 @@ def spm_show_RGB(
 
     Nm = len(O)
     fig = plt.gcf()
-    _ensure_figure_size(fig)
+    _ensure_figure_size(fig, Nt=Nt)
 
     gs = _build_gridspec(fig, Nm=Nm, Nt=Nt)
 
@@ -133,6 +133,7 @@ def spm_show_RGB(
     movie_row_gen = Nm + 2
     movie_pred_axes = [fig.add_subplot(gs[movie_row_pred, c]) for c in range(Nt)]
     movie_gen_axes = [fig.add_subplot(gs[movie_row_gen, c]) for c in range(Nt)]
+    movie_title_kw = {"fontsize": 8} if Nt >= 8 else {}
     for t in range(1, T + 1):
         if not MOVIE and t > Nt:
             return _stack_frames_list(frames_j), _stack_frames_list(frames_k)
@@ -146,15 +147,15 @@ def spm_show_RGB(
         ax_pred = movie_pred_axes[t_col]
         plt.sca(ax_pred)
         spm_imshow(p_rgb)
-        ax_pred.set_title(f"Predicted: t = {t}")
+        ax_pred.set_title(f"Predicted: t = {t}", **movie_title_kw)
 
         ax_gen = movie_gen_axes[t_col]
         plt.sca(ax_gen)
         spm_imshow(x_rgb)
         if isinstance(mdp, dict) and "S" in mdp:
-            ax_gen.set_title("Stimulus")
+            ax_gen.set_title("Stimulus", **movie_title_kw)
         else:
-            ax_gen.set_title("Generated")
+            ax_gen.set_title("Generated", **movie_title_kw)
 
         _hide_image_axis_ticks(ax_pred)
         _hide_image_axis_ticks(ax_gen)
@@ -171,11 +172,12 @@ def spm_show_RGB(
     return _stack_frames_list(frames_j), _stack_frames_list(frames_k)
 
 
-def _ensure_figure_size(fig: Any) -> None:
+def _ensure_figure_size(fig: Any, *, Nt: int) -> None:
     """MATLAB ``saveas`` scale (~1059×1526 px at 100 dpi) — avoid default 640×480 crush."""
     w, h = fig.get_size_inches()
-    if w < 9.0 or h < 13.0:
-        fig.set_size_inches(10.6, 15.2)
+    min_width = max(10.6, 1.75 * int(Nt))
+    if w < min_width or h < 15.2:
+        fig.set_size_inches(max(w, min_width), max(h, 15.2))
 
 
 def _build_gridspec(fig: Any, *, Nm: int, Nt: int) -> GridSpec:

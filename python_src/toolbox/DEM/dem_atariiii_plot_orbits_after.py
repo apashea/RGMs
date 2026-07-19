@@ -21,12 +21,10 @@ def dem_atariiii_plot_orbits_after(
     ness_order: Optional[Callable[[np.ndarray, int], np.ndarray]] = None,
     eng: Any = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Optional[Path]]:
-    """After-compression Orbits: subplot ``(2,2,2)`` + paths ``(2,2,4)``."""
+    """After-compression Orbits + paths in a standalone side-by-side figure."""
     return dem_atariiii_plot_orbits_figure(
         pdp,
         plot_ctx,
-        orbits_subplot=2,
-        paths_subplot=4,
         paths_title="Paths to hits (after)",
         save_png=save_png,
         png_path=png_path,

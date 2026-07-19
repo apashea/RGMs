@@ -42,8 +42,6 @@ def dem_atariiii_plot_orbits_figure(
     pdp: Mapping[str, Any],
     plot_ctx: Optional[dict[str, Any]] = None,
     *,
-    orbits_subplot: int,
-    paths_subplot: int,
     paths_title: str,
     save_png: bool = False,
     png_path: Optional[Path] = None,
@@ -63,9 +61,9 @@ def dem_atariiii_plot_orbits_figure(
 
     spm_figure("GetWin", _FIGURE_TITLE)
     spm_figure_clf(_FIGURE_TITLE)
-    plt.gcf().set_size_inches(12.0, 12.0)
+    plt.gcf().set_size_inches(14.0, 6.5)
 
-    ax_orb = plt.subplot(2, 2, int(orbits_subplot), projection="3d")
+    ax_orb = plt.subplot(1, 2, 1, projection="3d")
     plt.sca(ax_orb)
     u = spm_dir_orbits(
         b1,
@@ -84,7 +82,7 @@ def dem_atariiii_plot_orbits_figure(
     I = dem_atariiii_paths_to_hits_P(B_mask, hid, _PATHS_NT)
     HID = hid.copy()
 
-    ax = plt.subplot(2, 2, int(paths_subplot))
+    ax = plt.subplot(1, 2, 2)
     ax.imshow(I, aspect="auto", origin="upper", interpolation="nearest", cmap="gray")
     if HID.size:
         ax.plot(
