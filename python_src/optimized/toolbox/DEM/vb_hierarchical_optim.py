@@ -93,9 +93,15 @@ def _vb_hierarchical_q_O_ng_t_hstack_optim(
     old: Any,
     new_rows: list[list[np.ndarray]],
 ) -> list[list[np.ndarray]]:
-    """Optim ``Q.O`` row append — array copies only."""
+    """
+    Optim ``Q.O`` row append — MATLAB ``[mdp.Q.O{L} mdp.O]`` (~1238).
+
+    Retain prior cell array references (no historical recopy). New columns come
+    from ``_vb_hierarchical_O_field_to_ng_t_rows``, which already copies leaves
+    off the live child ``mdp.O``. Matches ``Q.Y``/``j``/``i`` ot-nested hstack.
+    """
     if old is None:
-        return [[np.asarray(x, dtype=np.float64).copy() for x in row] for row in new_rows]
+        return [list(row) for row in new_rows]
     if isinstance(old, np.ndarray):
         ng_guess = len(new_rows)
         old_rows = _hf._vb_hierarchical_O_field_to_ng_t_rows(
@@ -110,12 +116,9 @@ def _vb_hierarchical_q_O_ng_t_hstack_optim(
         for g in range(ng):
             row_old = list(old[g]) if g < len(old) else []
             row_new = list(new_rows[g]) if g < len(new_rows) else []
-            out.append(
-                [np.asarray(x, dtype=np.float64).copy() for x in row_old]
-                + [np.asarray(x, dtype=np.float64).copy() for x in row_new]
-            )
+            out.append(row_old + row_new)
         return out
-    return [[np.asarray(x, dtype=np.float64).copy() for x in row] for row in new_rows]
+    return [list(row) for row in new_rows]
 
 
 def _vb_hierarchical_q_append_level_optim(
