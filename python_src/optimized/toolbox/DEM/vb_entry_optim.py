@@ -342,14 +342,16 @@ def run_optim_vb(
     via ``vb_lifecycle_optim``. No runtime monkey-patches on fidelity (**4-X-1**).
     """
     _inst._vb_timing_enter()
-    if _inst._VB_TIMING_DEPTH == 1 and _inst._vb_capture_y_probe_active():
+    if _inst._VB_TIMING_DEPTH == 1:
+        # Never carry inspection records across top-level calls. Resolve dump
+        # state before probe activation so explicit Entry-12 captures retain
+        # diagnostics while ordinary native calls leave them disabled.
         _inst._ENTRY12_VBX_ACC = {}
-    if _inst._VB_TIMING_DEPTH == 1 and dump_subentries:
-        _inst._ENTRY12_PHASE_ACC = {}
+        _inst._VB_DUMP_SPEC = _inst._vb_dump_resolve_spec() if dump_subentries else None
+        if dump_subentries:
+            _inst._ENTRY12_PHASE_ACC = {}
     if monitoring and _inst._VB_TIMING_DEPTH == 1:
         _inst._VB_MONITOR_REQUESTED = True
-    if dump_subentries and _inst._VB_TIMING_DEPTH == 1:
-        _inst._VB_DUMP_SPEC = _inst._vb_dump_resolve_spec()
     try:
         with VbRandContext(reuse_matlab_draws=reuse_matlab_draws):
             return _vb_run_compute_pipeline(

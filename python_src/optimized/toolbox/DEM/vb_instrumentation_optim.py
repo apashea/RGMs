@@ -86,9 +86,11 @@ _ENTRY12_PHASE_ACC: dict[str, list[dict[str, Any]]] = {}
 
 
 def _vb_capture_y_probe_active() -> bool:
-    """Fill-time / VBX probes (parent and nested child VB). Default on; set env to 0 to disable."""
-    v = str(os.getenv("RGMS_ENTRY12_CAPTURE_Y_PROBE", "1")).strip().lower()
-    return v not in ("0", "false", "no")
+    """Entry-12 inspection probes: explicit env override, otherwise dump-only."""
+    raw = os.getenv("RGMS_ENTRY12_CAPTURE_Y_PROBE")
+    if raw is not None and str(raw).strip():
+        return str(raw).strip().lower() not in ("0", "false", "no")
+    return bool(_VB_DUMP_SPEC and _VB_DUMP_SPEC.get("enabled"))
 
 
 def _entry12_vec_peak(v: Any) -> tuple[int | None, float | None]:
@@ -147,6 +149,8 @@ def _entry12_record_vbx_probe(
 
 
 def _entry12_attach_vbx_to_model(models: list[dict[str, Any]], mi: int, t_1b: int) -> None:
+    if not _vb_capture_y_probe_active():
+        return
     key = f"m{mi + 1}t{t_1b}"
     if key in _ENTRY12_VBX_ACC:
         models[mi]["entry12_VBX"] = copy.deepcopy(_ENTRY12_VBX_ACC[key])

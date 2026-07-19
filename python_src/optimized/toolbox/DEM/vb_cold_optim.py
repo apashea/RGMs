@@ -12,6 +12,7 @@ import numpy as np
 
 from python_src.toolbox.DEM import spm_MDP_VB_XXX as _vb_fidelity
 from python_src.toolbox.DEM.spm_parents import spm_parents
+from python_src.optimized.toolbox.DEM import vb_instrumentation_optim as _inst
 from python_src.optimized.toolbox.DEM.vb_cold_native_optim import (
     vb_native_init_qxsp_outcomes_and_process,
     vb_native_refresh_qxsp_priors_only,
@@ -68,7 +69,7 @@ def vb_cold_teardown_12g(
     """12G: backwards replay, learning, ``Y``, ``X/S`` layout, neural responses."""
     _vb_fidelity._vb_optional_backwards_replay(models, bundle, opts)
     _vb_fidelity._vb_accumulate_dirichlet_parameter_learning(models, bundle, hp)
-    _vb_fidelity._vb_posterior_predictive_Y(models, bundle, opts)
+    vb_posterior_predictive_Y_child_optim(models, bundle, opts)
     _vb_fidelity._vb_reorganize_X_S_from_QP(bundle)
     _vb_fidelity._vb_options_N_neural_simulated_responses(models, bundle, opts)
 
@@ -298,7 +299,7 @@ def vb_posterior_predictive_Y_child_optim(
     bundle: dict[str, Any],
     opts: dict[str, Any],
 ) -> None:
-    """MATLAB ~1591–1606 on nested child path — native ``forwards_dot_A_qj``; Entry12 Yfill probe when active."""
+    """MATLAB ~1591–1606 predictive ``Y`` for top-level and child optimized paths."""
     if int(opts.get("Y", 0)) == 0:
         return
     nm = int(bundle["Nm"])
@@ -336,7 +337,8 @@ def vb_posterior_predictive_Y_child_optim(
                     if o_int < 1 or o_int > ng_m:
                         continue
                     md["Y"][o_int - 1][t_idx] = pred.copy()
-    _vb_fidelity._entry12_probe_y_fill_all(models, bundle, opts)
+    if _inst._vb_capture_y_probe_active():
+        _vb_fidelity._entry12_probe_y_fill_all(models, bundle, opts)
 
 
 def vb_cold_teardown_child_kernel_native(
