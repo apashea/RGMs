@@ -27,7 +27,6 @@ from python_src.optimized.toolbox.DEM.vb_workspace_optim import (
 )
 from python_src.optimized.toolbox.DEM import vb_instrumentation_optim as _inst
 from python_src.optimized.toolbox.DEM import vb_primitives_optim as _prim
-from python_src.optimized.toolbox.DEM.vb_optim_deepcopy import vb_optim_deepcopy
 from python_src.spm_dot import spm_dot
 from python_src.toolbox.DEM.spm_MDP_size import spm_MDP_size
 from python_src.toolbox.DEM.spm_VBX import _a_colon_s_coerce_likelihood_
@@ -201,6 +200,28 @@ def _vb_hierarchical_q_append_level_optim(
         else:
             qv[li] = _hf._vb_hierarchical_q_ot_nested_hstack(qv[li], new_nested)
         return
+    # MATLAB ``[mdp.Q.E{L} mdp.F]`` appends every scalar in the numeric F
+    # vector. Do not wrap that vector as one cell; that changes Q.E growth
+    # once parent and child share the same Q record.
+    if ck == "F":
+        new_m = np.asarray(child_upd[ck], dtype=np.float64).ravel(order="F")
+        if new_m.size == 0:
+            return
+        if qv[li] is None:
+            qv[li] = np.asfortranarray(new_m.copy())
+            return
+        old = qv[li]
+        if isinstance(old, list):
+            parts = [np.asarray(x, dtype=np.float64).ravel(order="F") for x in old if x is not None]
+            old_m = (
+                np.concatenate(parts)
+                if parts
+                else np.zeros((0,), dtype=np.float64, order="F")
+            )
+        else:
+            old_m = np.asarray(old, dtype=np.float64).ravel(order="F")
+        qv[li] = np.asfortranarray(np.concatenate([old_m, new_m]))
+        return
     new_cells = _hf._vb_hierarchical_q_field_to_cell_row(child_upd[ck], t_child=t_child, kind=ck)
     if qv[li] is None:
         qv[li] = new_cells
@@ -217,8 +238,9 @@ def _vb_hierarchical_update_parent_Q_from_child_optim(
     """
     **MATLAB lines 1226–1255:** append into ``mdp.Q`` at level ``L``; ``MDP(m).Q = mdp.Q``.
 
-    Child ``Q`` is an isolated copy from prep (``vb_optim_deepcopy`` / fidelity ~4239); append in place then
-    assign to parent — same semantics as deleted Q-record pool without ping-pong fill.
+    Child and parent share ``Q`` exactly as MATLAB's ``mdp.Q = MDP(m).Q`` handoff.
+    Nested VB does not append this record; the post-return block appends in place
+    and writes the same record back to both structures.
     """
     parent_q = parent.get("Q")
     if "Q" in child_upd and isinstance(child_upd.get("Q"), dict):
@@ -474,9 +496,10 @@ def vb_hierarchical_subordinate_outcomes_optim(
                 child["u"][f, 0] = float(_vb_spm_sample_column(child["E"][f]))
                 child["s"][f, 0] = float(_vb_spm_sample_column(child["D"][f]))
 
-        # Isolated child ``Q`` — matches fidelity lane for ``3f`` (``.m`` aliases; fidelity ~4239 deepcopy).
+        # MATLAB ~1163–1165 aliases ``mdp.Q = MDP(m).Q``. Nested VB does not
+        # append this record; the post-return record block below owns growth.
         if "Q" in parent:
-            child["Q"] = vb_optim_deepcopy(parent["Q"])
+            child["Q"] = parent["Q"]
 
         child.pop("O", None)
         child.pop("o", None)
