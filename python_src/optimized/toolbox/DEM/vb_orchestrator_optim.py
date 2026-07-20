@@ -55,6 +55,29 @@ _spm_hnorm = _prim._spm_hnorm
 _vb_workspace_A_like_mdp_shape = _prim._vb_workspace_A_like_mdp_shape
 
 
+def _prior_qp_transition_from_BP(
+    Bmf: Any,
+    P_prev: Any,
+) -> np.ndarray:
+    """MATLAB-faithful ``spm_dot(B,{P})`` for prior_qp when ``B`` is ``(Ns,Ns,Nu)``.
+
+    Equivalent to ``np.asarray(spm_dot(Bmf, [P_prev]), dtype=np.float64)`` for the
+    generative transition mix used at ``.m`` ~819–842 (``Nu>1`` branch).
+
+    Fast path: F-order page mix via BLAS ``(Ns*Ns, Nu) @ (Nu,)`` then reshape to
+    ``(Ns, Ns)``. Fallback: generic ``spm_dot`` for any other layout.
+    """
+    B = np.asarray(Bmf, dtype=np.float64)
+    P = np.asarray(P_prev, dtype=np.float64).reshape(-1)
+    if B.ndim == 3 and B.shape[0] == B.shape[1] and int(B.shape[2]) == int(P.size):
+        ns = int(B.shape[0])
+        nu = int(B.shape[2])
+        # Column-major pages match MATLAB / in-situ F-contiguous B.
+        flat = np.reshape(B, (ns * ns, nu), order="F")
+        return np.reshape(flat @ P, (ns, ns), order="F")
+    return np.asarray(spm_dot(Bmf, [P_prev]), dtype=np.float64)
+
+
 def _orch_assign_o_slot(
     bundle: dict[str, Any],
     mi: int,
@@ -116,7 +139,8 @@ def _prior_qp_paths_states_one_model(
         Bmf = B_t[mi][f_idx]
         if nu_mf > 1:
             P_prev = ws_p_cell(ws, mi, f_idx, t_idx - 1, bundle)
-            tp = np.asarray(spm_dot(Bmf, [P_prev]), dtype=np.float64)
+            # C4m: F-order page-mix GEMM when B is (Ns,Ns,Nu); else spm_dot.
+            tp = _prior_qp_transition_from_BP(Bmf, P_prev)
             Q_new = tp @ Q_prev
         else:
             Bm = np.asarray(_unwrap_gp_elem(Bmf), dtype=np.float64)
