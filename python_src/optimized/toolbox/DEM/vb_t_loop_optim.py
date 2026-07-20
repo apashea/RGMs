@@ -18,7 +18,11 @@ from typing import Any
 import numpy as np
 
 import python_src.optimized.toolbox.DEM.vb_instrumentation_optim as _inst
-from python_src.optimized.toolbox.DEM.vb_forwards_optim import _forwards_ws
+from python_src.optimized.toolbox.DEM.vb_forwards_optim import (
+    _forwards_ws,
+    policy_ctx_attach,
+    policy_ctx_clear,
+)
 from python_src.optimized.toolbox.DEM.vb_workspace_optim import ws_get, ws_to_bundle
 from python_src.optimized.toolbox.DEM.vb_orchestrator_optim import (
     vb_orchestrator_active_learning_in_loop,
@@ -48,6 +52,8 @@ def _vb_run_partial_t_loop_optim(
     M_upd = bundle["M_update"]
     t_int = int(bundle["T"])
     n_depth = int(bundle["N_policy_depth"])
+    # C4l: one PolicyExecutionContext for this VB invocation (parent or child).
+    policy_ctx = policy_ctx_attach(bundle)
     if _inst._vb_dump_active():
         bundle["entry12_D"] = {
             "in": _inst._entry12_snap_12d(models, bundle, 0, M_upd[0, :]),
@@ -97,6 +103,8 @@ def _vb_run_partial_t_loop_optim(
                 t_int,
             )
         vb_orchestrator_fill_BP_IP_at_t(bundle, t_idx)
+        # Path-factor BP/IP just rebuilt — invalidate propagator pack (not likelihood).
+        policy_ctx.mark_propagator_dirty()
         t_m = t_idx + 1
         n_horiz = int(min(t_int, t_m + n_depth))
         qa_b = bundle.get("qa")
@@ -134,6 +142,7 @@ def _vb_run_partial_t_loop_optim(
                 bundle["id"],
                 bundle["pA"],
                 qa_b,
+                _run_ctx=policy_ctx,
             )
             if _inst._vb_dump_active():
                 _inst._entry12_record_phase(
@@ -144,6 +153,8 @@ def _vb_run_partial_t_loop_optim(
                 mi, bundle, t_m, t_idx, np.asarray(G_m, dtype=np.float64), float(alpha)
             )
             vb_orchestrator_active_learning_in_loop(mi, models, bundle, t_idx, t_m)
+            # Learning may mutate A/W/K/B — invalidate likelihood pack for next forwards.
+            policy_ctx.mark_likelihood_dirty()
             vb_orchestrator_ensure_per_t_traces(models, mi, t_int)
             models[mi]["F"][t_idx] = float(F_elbo)
             if _inst._vb_dump_active():
@@ -180,3 +191,4 @@ def _vb_run_partial_t_loop_optim(
         if t_idx + 1 == t_int:
             vb_orchestrator_trim_mdp_o_s_u_at_terminal_horizon(models, bundle)
         _inst._vb_timing_add_12f(time.perf_counter() - t_iter)
+    policy_ctx_clear(bundle)

@@ -33,6 +33,9 @@ loops (no ``spm_dot`` shortcut â€” e2 lesson).
 
 **ENDGAME-1 tranche 2 (2026-07-06):** ``vb_policy_engine_optim.policy_engine_step`` â€” unified VBX+induction+``G``; ``B_fk_stacked`` hoisted in model static.
 
+**C4l (2026-07-19):** ``PolicyExecutionContext`` owned for one VB invocation; likelihood vs
+propagator packs with dirty gens; propagator build deferred past VBX early-exit.
+
 Gate: ``--vb-optim-tier3f`` during dev.
 """
 from __future__ import annotations
@@ -72,10 +75,13 @@ from python_src.toolbox.DEM.spm_parents import spm_parents
 
 _EXP_NEG8 = np.exp(-8.0)
 
+# Bundle key for the VB-lifetime policy context (C4l).
+POLICY_CTX_BUNDLE_KEY = "_vb_policy_execution_ctx"
+
 
 @dataclass
 class _ForwardsModelStatic:
-    """Per-model tensors and id lists â€” invariant across ``t`` within one VB run."""
+    """Per-model tensors and id lists — likelihood + propagator packs (C4l)."""
 
     nf: int
     nk: int
@@ -92,8 +98,10 @@ class _ForwardsModelStatic:
     B_fk_stacked: dict[int, np.ndarray]
     B_fp0: dict[int, np.ndarray]
     I_fk: dict[int, list[np.ndarray]]
+    I_fk_stacked: dict[int, np.ndarray]
     ge_set: set[int] | None
     ind_static: Any
+    gi_rows: list[np.ndarray] | None = None
 
 
 @dataclass
@@ -104,17 +112,58 @@ class _ForwardsDriver:
 
 
 @dataclass
-class _ForwardsRunCtx:
-    """Shared state for one top-level ``spm_forwards`` invocation (incl. EFE recursion)."""
+class PolicyExecutionContext:
+    """One context for the lifetime of one VB invocation (parent or child) — C4l.
+
+    Likelihood pack rebuilds when ``mark_likelihood_dirty`` runs (after active learning).
+    Propagator pack rebuilds when ``mark_propagator_dirty`` runs (after ``fill_BP_IP``).
+    """
 
     memo: dict[tuple[Any, ...], np.ndarray] = field(default_factory=dict)
     static_by_mi: dict[int, _ForwardsModelStatic] = field(default_factory=dict)
     driver: _ForwardsDriver = field(default_factory=_ForwardsDriver)
     induction_cache: dict[tuple[Any, ...], tuple[Any, Any]] = field(default_factory=dict)
+    likelihood_gen: int = 0
+    propagator_gen: int = 0
+    likelihood_built_gen: dict[int, int] = field(default_factory=dict)
+    propagator_built_gen: dict[int, int] = field(default_factory=dict)
+
+    def mark_likelihood_dirty(self) -> None:
+        self.likelihood_gen += 1
+
+    def mark_propagator_dirty(self) -> None:
+        self.propagator_gen += 1
+
+
+# Backward-compatible alias — existing imports keep working.
+_ForwardsRunCtx = PolicyExecutionContext
+
+
+def policy_ctx_attach(bundle: dict[str, Any], ctx: PolicyExecutionContext | None = None) -> PolicyExecutionContext:
+    """Attach (or reuse) a VB-lifetime policy context on ``bundle``."""
+    if ctx is None:
+        existing = bundle.get(POLICY_CTX_BUNDLE_KEY)
+        if isinstance(existing, PolicyExecutionContext):
+            return existing
+        ctx = PolicyExecutionContext()
+    bundle[POLICY_CTX_BUNDLE_KEY] = ctx
+    return ctx
+
+
+def policy_ctx_get(bundle: dict[str, Any] | None) -> PolicyExecutionContext | None:
+    if bundle is None:
+        return None
+    ctx = bundle.get(POLICY_CTX_BUNDLE_KEY)
+    return ctx if isinstance(ctx, PolicyExecutionContext) else None
+
+
+def policy_ctx_clear(bundle: dict[str, Any] | None) -> None:
+    if bundle is not None:
+        bundle.pop(POLICY_CTX_BUNDLE_KEY, None)
 
 
 def _forwards_efe_subcall_g(
-    _run_ctx: _ForwardsRunCtx,
+    _run_ctx: PolicyExecutionContext,
     *,
     use_ws: bool,
     ws: VbWorkspace | None,
@@ -171,7 +220,7 @@ def _forwards_efe_subcall_g(
         driver.t_stack.pop()
 
 
-def _forwards_model_static(
+def _forwards_likelihood_pack(
     mi: int,
     A: list[Any],
     B: list[Any],
@@ -179,9 +228,9 @@ def _forwards_model_static(
     H: list[Any],
     K: list[Any],
     W: list[Any],
-    I: list[Any],
     idm: dict[str, Any],
 ) -> _ForwardsModelStatic:
+    """Likelihood / id pack — independent of path-factor ``BP``/``IP`` (C4l)."""
     B_slice = B[mi]
     H_slice = H[mi]
     nf = len(B_slice)
@@ -201,21 +250,6 @@ def _forwards_model_static(
         fi = int(f) - 1
         Hf = np.asarray(H_slice[fi], dtype=np.float64).reshape(-1, 1, order="F")
         log_hf[fi] = _prim._spm_log(Hf)
-
-    B_fk: dict[int, list[np.ndarray]] = {}
-    for f in id_fu_list:
-        fi = int(f) - 1
-        B_fk[fi] = [np.asarray(B_slice[fi][k], dtype=np.float64) for k in range(nk)]
-
-    I_fk: dict[int, list[np.ndarray]] = {}
-    for f in id_iI_list:
-        fi = int(f) - 1
-        I_fk[fi] = [np.asarray(I[mi][fi][k], dtype=np.float64) for k in range(nk)]
-
-    B_fk_stacked: dict[int, np.ndarray] = {}
-    for f in id_fu_list:
-        fi = int(f) - 1
-        B_fk_stacked[fi] = np.stack(B_fk[fi], axis=0)
 
     ng_a = len(A[mi])
     a_f64: list[np.ndarray | None] = [None] * ng_a
@@ -243,12 +277,19 @@ def _forwards_model_static(
     if "ge" in idm:
         ge_set = set(int(x) for x in np.asarray(idm["ge"], dtype=np.int64).ravel().tolist())
 
-    B_fp0: dict[int, np.ndarray] = {}
-    for f in id_fp_list:
-        fi = int(f) - 1
-        B_fp0[fi] = np.asarray(B_slice[fi][0], dtype=np.float64)
-
-    ind_static = induction_model_static(B_slice, H_slice, idm, nk)
+    # Covert ``gi`` rows (idm-only) — hoist once with likelihood pack.
+    Ni = len(idm["g"])
+    gi_rows: list[np.ndarray] = []
+    for i_cov in range(Ni):
+        gi = idm["g"][i_cov]
+        if ge_set is not None:
+            gi = np.array(
+                [x for x in np.atleast_1d(np.asarray(gi).ravel()) if int(x) in ge_set],
+                dtype=np.int64,
+            )
+        else:
+            gi = np.atleast_1d(np.asarray(gi, dtype=np.int64).ravel())
+        gi_rows.append(gi)
 
     return _ForwardsModelStatic(
         nf=nf,
@@ -262,13 +303,120 @@ def _forwards_model_static(
         k_f64=k_f64,
         w_f64=w_f64,
         log_hf=log_hf,
-        B_fk=B_fk,
-        B_fk_stacked=B_fk_stacked,
-        B_fp0=B_fp0,
-        I_fk=I_fk,
+        B_fk={},
+        B_fk_stacked={},
+        B_fp0={},
+        I_fk={},
+        I_fk_stacked={},
         ge_set=ge_set,
-        ind_static=ind_static,
+        ind_static=None,
+        gi_rows=gi_rows,
     )
+
+
+def _forwards_fill_propagator(
+    mstat: _ForwardsModelStatic,
+    mi: int,
+    B: list[Any],
+    H: list[Any],
+    I: list[Any],
+    idm: dict[str, Any],
+) -> None:
+    """Fill BP/IP-dependent propagator + induction static into ``mstat`` (C4l)."""
+    B_slice = B[mi]
+    H_slice = H[mi]
+    nk = mstat.nk
+
+    B_fk: dict[int, list[np.ndarray]] = {}
+    for f in mstat.id_fu_list:
+        fi = int(f) - 1
+        B_fk[fi] = [np.asarray(B_slice[fi][k], dtype=np.float64) for k in range(nk)]
+
+    I_fk: dict[int, list[np.ndarray]] = {}
+    for f in mstat.id_iI_list:
+        fi = int(f) - 1
+        I_fk[fi] = [np.asarray(I[mi][fi][k], dtype=np.float64) for k in range(nk)]
+
+    B_fk_stacked: dict[int, np.ndarray] = {}
+    for f in mstat.id_fu_list:
+        fi = int(f) - 1
+        B_fk_stacked[fi] = np.stack(B_fk[fi], axis=0)
+
+    I_fk_stacked: dict[int, np.ndarray] = {}
+    for f in mstat.id_iI_list:
+        fi = int(f) - 1
+        I_fk_stacked[fi] = np.stack(I_fk[fi], axis=0)
+
+    B_fp0: dict[int, np.ndarray] = {}
+    for f in mstat.id_fp_list:
+        fi = int(f) - 1
+        B_fp0[fi] = np.asarray(B_slice[fi][0], dtype=np.float64)
+
+    mstat.B_fk = B_fk
+    mstat.B_fk_stacked = B_fk_stacked
+    mstat.B_fp0 = B_fp0
+    mstat.I_fk = I_fk
+    mstat.I_fk_stacked = I_fk_stacked
+    mstat.ind_static = induction_model_static(B_slice, H_slice, idm, nk)
+    # nf/nk track B structure; refresh if BP shape changed under dirty rebuild.
+    mstat.nf = len(B_slice)
+    mstat.nk = len(B_slice[0])
+
+
+def _forwards_ensure_full_static(
+    run_ctx: PolicyExecutionContext,
+    mi: int,
+    A: list[Any],
+    B: list[Any],
+    C: list[Any],
+    H: list[Any],
+    K: list[Any],
+    W: list[Any],
+    I: list[Any],
+    idm: dict[str, Any],
+) -> _ForwardsModelStatic:
+    """Ensure likelihood + propagator packs for full (non-early-exit) path."""
+    like_stale = (
+        mi not in run_ctx.likelihood_built_gen
+        or run_ctx.likelihood_built_gen[mi] != run_ctx.likelihood_gen
+    )
+    prop_stale = (
+        mi not in run_ctx.propagator_built_gen
+        or run_ctx.propagator_built_gen[mi] != run_ctx.propagator_gen
+    )
+    if mi in run_ctx.static_by_mi and not like_stale and not prop_stale:
+        return run_ctx.static_by_mi[mi]
+
+    if like_stale or mi not in run_ctx.static_by_mi:
+        mstat = _forwards_likelihood_pack(mi, A, B, C, H, K, W, idm)
+        run_ctx.likelihood_built_gen[mi] = run_ctx.likelihood_gen
+        prop_stale = True
+    else:
+        mstat = run_ctx.static_by_mi[mi]
+
+    if prop_stale:
+        _forwards_fill_propagator(mstat, mi, B, H, I, idm)
+        run_ctx.propagator_built_gen[mi] = run_ctx.propagator_gen
+
+    run_ctx.static_by_mi[mi] = mstat
+    return mstat
+
+
+def _forwards_model_static(
+    mi: int,
+    A: list[Any],
+    B: list[Any],
+    C: list[Any],
+    H: list[Any],
+    K: list[Any],
+    W: list[Any],
+    I: list[Any],
+    idm: dict[str, Any],
+) -> _ForwardsModelStatic:
+    """Full static builder (tests / legacy) — likelihood then propagator."""
+    mstat = _forwards_likelihood_pack(mi, A, B, C, H, K, W, idm)
+    _forwards_fill_propagator(mstat, mi, B, H, I, idm)
+    return mstat
 
 
 def _efe_memo_key(
@@ -342,7 +490,7 @@ def _fwd_belief_row_at_t(
 
 
 def _induction_cached(
-    run_ctx: _ForwardsRunCtx,
+    run_ctx: PolicyExecutionContext,
     mi: int,
     t: int,
     horizon: int,
@@ -439,14 +587,17 @@ def _forwards_ws(
     pA: list[Any],
     qa: Any | None = None,
     _efe_memo: dict[tuple[Any, ...], np.ndarray] | None = None,
-    _run_ctx: _ForwardsRunCtx | None = None,
+    _run_ctx: PolicyExecutionContext | None = None,
 ) -> tuple[np.ndarray, Any, float, list[Any], dict[int, Any]]:
-    """**4-F-1** â€” ``spm_forwards`` on ``VbWorkspace`` path beliefs (``ws.Q`` â‰¡ bundle ``Q``)."""
+    """**4-F-1** / **C4l** — ``spm_forwards`` on ``VbWorkspace``; reuse VB-lifetime ctx."""
+    if _run_ctx is None:
+        _run_ctx = policy_ctx_get(bundle)
     if _run_ctx is None:
         if _efe_memo is not None:
-            _run_ctx = _ForwardsRunCtx(memo=_efe_memo)
+            _run_ctx = PolicyExecutionContext(memo=_efe_memo)
         else:
-            _run_ctx = _ForwardsRunCtx()
+            _run_ctx = PolicyExecutionContext()
+        policy_ctx_attach(bundle, _run_ctx)
     return _forwards_compute(
         O,
         P,
@@ -494,15 +645,19 @@ def spm_forwards_optim(
     ws: VbWorkspace | None = None,
     ws_m: int | None = None,
     bundle: dict[str, Any] | None = None,
-    _run_ctx: _ForwardsRunCtx | None = None,
+    _run_ctx: PolicyExecutionContext | None = None,
 ) -> tuple[np.ndarray, Any, float, list[Any], dict[int, Any]]:
     """Patch-table entry â€” delegates to ``_forwards_ws`` when ``ws`` + ``bundle`` supplied."""
     use_ws = ws is not None and ws_m is not None and bundle is not None
+    if _run_ctx is None and bundle is not None:
+        _run_ctx = policy_ctx_get(bundle)
     if _run_ctx is None:
         if _efe_memo is not None:
-            _run_ctx = _ForwardsRunCtx(memo=_efe_memo)
+            _run_ctx = PolicyExecutionContext(memo=_efe_memo)
         else:
-            _run_ctx = _ForwardsRunCtx()
+            _run_ctx = PolicyExecutionContext()
+        if bundle is not None:
+            policy_ctx_attach(bundle, _run_ctx)
     return _forwards_compute(
         O,
         P,
@@ -545,23 +700,18 @@ def _forwards_compute(
     id_list: list[Any],
     pA: list[Any],
     qa: Any | None,
-    _run_ctx: _ForwardsRunCtx,
+    _run_ctx: PolicyExecutionContext,
     *,
     ws: VbWorkspace | None,
     ws_m: int | None,
     bundle: dict[str, Any] | None,
     use_ws: bool,
 ) -> tuple[np.ndarray, Any, float, list[Any], dict[int, Any]]:
-    """Optim lane â€” delegates hot body to **ENDGAME-1** ``policy_engine_step``."""
+    """Optim lane — C4l: defer pack build to ``policy_engine_step`` (post-VBX / post-early-exit)."""
     from python_src.optimized.toolbox.DEM.vb_policy_engine_optim import policy_engine_step
 
     mi = int(m) - 1
     idm = id_list[mi]
-    if mi not in _run_ctx.static_by_mi:
-        _run_ctx.static_by_mi[mi] = _forwards_model_static(
-            mi, A, B, C, H, K, W, I, idm
-        )
-    mstat = _run_ctx.static_by_mi[mi]
     return policy_engine_step(
         O,
         P,
@@ -582,7 +732,7 @@ def _forwards_compute(
         pA,
         qa,
         _run_ctx,
-        mstat,
+        None,
         ws=ws,
         ws_m=ws_m,
         bundle=bundle,

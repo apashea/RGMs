@@ -25,8 +25,10 @@ from python_src.optimized.toolbox.DEM.vb_contract_optim import (
 from python_src.optimized.toolbox.DEM.vb_forwards_optim import (
     _EXP_NEG8,
     _ForwardsModelStatic,
+    PolicyExecutionContext,
     _ForwardsRunCtx,
     _efe_memo_key,
+    _forwards_ensure_full_static,
     _fwd_col_vec,
     _fwd_p_row,
     _fwd_write_belief_col,
@@ -56,7 +58,7 @@ def _pf_from_q_upd(Q_upd: list[Any], nf: int) -> dict[int, np.ndarray]:
 
 
 def _policy_engine_efe_g(
-    run_ctx: _ForwardsRunCtx,
+    run_ctx: PolicyExecutionContext,
     *,
     O: list[Any],
     P: list[Any],
@@ -82,11 +84,6 @@ def _policy_engine_efe_g(
     """EFE ``t+1`` — direct ``policy_engine_step`` (no ``_forwards_compute`` wrapper)."""
     mi = int(m) - 1
     idm = id_list[mi]
-    if mi not in run_ctx.static_by_mi:
-        from python_src.optimized.toolbox.DEM.vb_forwards_optim import _forwards_model_static
-
-        run_ctx.static_by_mi[mi] = _forwards_model_static(mi, A, B, C, H, K, W, I, idm)
-    mstat = run_ctx.static_by_mi[mi]
     driver = run_ctx.driver
     driver.t_stack.append(int(t_next))
     try:
@@ -110,7 +107,7 @@ def _policy_engine_efe_g(
             pA,
             qa,
             run_ctx,
-            mstat,
+            None,
             ws=ws,
             ws_m=ws_m,
             bundle=bundle,
@@ -119,6 +116,14 @@ def _policy_engine_efe_g(
         return np.asarray(g_out, dtype=np.float64)
     finally:
         driver.t_stack.pop()
+
+
+def _as_col(x: Any) -> np.ndarray:
+    """Column view for G-loop algebra — avoid redundant asarray/reshape when already (n,1)."""
+    a = x if isinstance(x, np.ndarray) else np.asarray(x, dtype=np.float64)
+    if a.ndim == 2 and a.shape[1] == 1:
+        return a
+    return np.asarray(a, dtype=np.float64).reshape(-1, 1, order="F")
 
 
 def policy_engine_step(
@@ -140,34 +145,22 @@ def policy_engine_step(
     id_list: list[Any],
     pA: list[Any],
     qa: Any | None,
-    run_ctx: _ForwardsRunCtx,
-    mstat: _ForwardsModelStatic,
+    run_ctx: PolicyExecutionContext,
+    mstat: _ForwardsModelStatic | None,
     *,
     ws: VbWorkspace | None,
     ws_m: int | None,
     bundle: dict[str, Any] | None,
     use_ws: bool,
 ) -> tuple[np.ndarray, Any, float, list[Any], dict[int, Any]]:
-    """Unified policy engine — ``spm_forwards`` body after per-model static hoist."""
-    nf = mstat.nf
-    nk = mstat.nk
+    """Unified policy engine — C4l: VBX → early-exit → ensure packs → induction → G."""
+    # Cheap shape for VBX / early-exit — no propagator/likelihood pack required.
+    B_slice_shape = B[mi]
+    nf = len(B_slice_shape)
+    nk = len(B_slice_shape[0])
     Ni = len(idm["g"])
     G = np.zeros((nk, Ni), dtype=np.float64)
     Pa: dict[int, Any] = {}
-    id_fp_list = mstat.id_fp_list
-    id_fu_list = mstat.id_fu_list
-    id_iH_list = mstat.id_iH_list
-    id_iI_list = mstat.id_iI_list
-    a_f64 = mstat.a_f64
-    c_f64 = mstat.c_f64
-    k_f64 = mstat.k_f64
-    w_f64 = mstat.w_f64
-    log_hf = mstat.log_hf
-    B_fk = mstat.B_fk
-    B_fk_stacked = mstat.B_fk_stacked
-    B_fp0 = mstat.B_fp0
-    I_fk = mstat.I_fk
-    ge_set = mstat.ge_set
     t_col = t - 1
 
     O_row = (
@@ -241,6 +234,29 @@ def policy_engine_step(
     if t > T or (nk * Ni == 1):
         return G, P, float(F_vbx_here), id_list, Pa
 
+    # Full path — ensure likelihood + propagator packs (deferred past early-exit).
+    if mstat is None:
+        mstat = _forwards_ensure_full_static(
+            run_ctx, mi, A, B, C, H, K, W, I, idm
+        )
+    nf = mstat.nf
+    nk = mstat.nk
+    id_fp_list = mstat.id_fp_list
+    id_fu_list = mstat.id_fu_list
+    id_iH_list = mstat.id_iH_list
+    id_iI_list = mstat.id_iI_list
+    a_f64 = mstat.a_f64
+    c_f64 = mstat.c_f64
+    k_f64 = mstat.k_f64
+    w_f64 = mstat.w_f64
+    log_hf = mstat.log_hf
+    B_fk = mstat.B_fk
+    B_fk_stacked = mstat.B_fk_stacked
+    B_fp0 = mstat.B_fp0
+    I_fk = mstat.I_fk
+    I_fk_stacked = mstat.I_fk_stacked
+    ge_set = mstat.ge_set
+
     B_slice = B[mi]
     H_slice = H[mi]
     if (
@@ -312,18 +328,19 @@ def policy_engine_step(
         fi = int(f) - 1
         pmf_ii[fi] = pf_at_t[fi].reshape(1, -1, order="F")
 
-    # **XXX_matlab-3 / PASS2 step 3:** hoist covert ``gi`` rows once (not per policy ``k``).
-    gi_rows: list[np.ndarray] = []
-    for i_cov in range(Ni):
-        gi = idm["g"][i_cov]
-        if ge_set is not None:
-            gi = np.array(
-                [x for x in np.atleast_1d(np.asarray(gi).ravel()) if int(x) in ge_set],
-                dtype=np.int64,
-            )
-        else:
-            gi = np.atleast_1d(np.asarray(gi, dtype=np.int64).ravel())
-        gi_rows.append(gi)
+    gi_rows = mstat.gi_rows
+    if gi_rows is None:
+        gi_rows = []
+        for i_cov in range(Ni):
+            gi = idm["g"][i_cov]
+            if ge_set is not None:
+                gi = np.array(
+                    [x for x in np.atleast_1d(np.asarray(gi).ravel()) if int(x) in ge_set],
+                    dtype=np.int64,
+                )
+            else:
+                gi = np.atleast_1d(np.asarray(gi, dtype=np.int64).ravel())
+            gi_rows.append(gi)
 
     _probe_parent = bool(
         os.getenv("RGMS_PROBE_12F_PARENT_T1")
@@ -343,7 +360,7 @@ def policy_engine_step(
 
         for f in id_iH_list:
             fi = int(f) - 1
-            Qf = np.asarray(Qp[fi], dtype=np.float64).reshape(-1, 1, order="F")
+            Qf = _as_col(Qp[fi])
             ih_term = float((Qf.T @ (_prim._spm_log(Qf) - log_hf[fi])).reshape(-1)[0])
             G[k, :] -= ih_term
             if _probe_parent and k == 0:
@@ -352,8 +369,9 @@ def policy_engine_step(
 
         for f in id_iI_list:
             fi = int(f) - 1
-            Qf = np.asarray(Qp[fi], dtype=np.float64).reshape(-1, 1, order="F")
-            G[k, :] += float(pmf_ii[fi] @ I_fk[fi][k] @ Qf)
+            Qf = _as_col(Qp[fi])
+            Ik = I_fk_stacked[fi][k] if fi in I_fk_stacked else I_fk[fi][k]
+            G[k, :] += float(pmf_ii[fi] @ Ik @ Qf)
 
         parents_k: dict[int, tuple[Any, Any]] = {}
         qj_k: dict[tuple[int, ...], list[Any]] = {}
@@ -422,7 +440,7 @@ def policy_engine_step(
                         if callable(Amg):
                             raise NotImplementedError("spm_forwards: A{m,g} function_handle not translated")
                     qj = _qj_cached(j)
-                    qo = np.asarray(_forwards_dot_A_qj(Amg, qj), dtype=np.float64).reshape(-1, 1, order="F")
+                    qo = _as_col(_forwards_dot_A_qj(Amg, qj))
                     No[0, i_cov] += float(
                         np.asarray(
                             _prim._spm_log(np.array([[float(np.size(qo))]], dtype=np.float64)),
@@ -438,14 +456,11 @@ def policy_engine_step(
                             cg = c_cells[int(g) - 1]
                         if cg is not None and _prim._numel(cg) > 0:
                             fC = int(np.asarray(cg, dtype=np.int64).ravel()[0])
-                            U = np.asarray(
-                                _forwards_dot_vec_match(_prim._spm_log(Cmg), Qp[int(fC) - 1]),
-                                dtype=np.float64,
-                            ).reshape(-1, 1, order="F")
-                        else:
-                            U = np.asarray(_prim._spm_log(Cmg), dtype=np.float64).reshape(
-                                -1, 1, order="F"
+                            U = _as_col(
+                                _forwards_dot_vec_match(_prim._spm_log(Cmg), Qp[int(fC) - 1])
                             )
+                        else:
+                            U = _as_col(_prim._spm_log(Cmg))
                         G[k, i_cov] += float((qo.T @ U).reshape(-1)[0])
                     Kmg = k_f64[gi0]
                     if Kmg is not None:
@@ -453,7 +468,7 @@ def policy_engine_step(
                     Wmg = w_f64[gi0]
                     if Wmg is not None:
                         G[k, i_cov] += float(
-                            (qo.T @ np.asarray(_forwards_dot_A_qj(Wmg, qj), dtype=np.float64).reshape(-1, 1)).reshape(-1)[0]
+                            (qo.T @ _as_col(_forwards_dot_A_qj(Wmg, qj))).reshape(-1)[0]
                         )
                     pAg = pA[mi][int(g) - 1]
                     if _prim._numel(pAg) > 0:
@@ -465,8 +480,8 @@ def policy_engine_step(
                             np.asarray(qa[mi][int(g) - 1], dtype=np.float64) + np.asarray(da, dtype=np.float64),
                             pAg,
                         )
-                        pal = np.asarray(Pa[int(g)], dtype=np.float64).reshape(-1, 1, order="F")
-                        pgl = np.asarray(Pg, dtype=np.float64).reshape(-1, 1, order="F")
+                        pal = _as_col(Pa[int(g)])
+                        pgl = _as_col(Pg)
                         G[k, i_cov] += float((pgl.T @ (_prim._spm_log(pgl) - _prim._spm_log(pal))).reshape(-1)[0])
                     else:
                         Pa[int(g)] = {}
