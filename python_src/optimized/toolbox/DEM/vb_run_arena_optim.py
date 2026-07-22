@@ -27,6 +27,8 @@ class VbRunArena:
 
     parent_bundle: dict[str, Any] | None = None
     child_checkx_done: dict[int, bool] = field(default_factory=dict)
+    # C4n: fingerprint of child ``a``/``b``/``A``/``B`` at last checked hit (per parent_mi).
+    child_ab_fp: dict[int, tuple[Any, ...]] = field(default_factory=dict)
     child_ws_slots: dict[int, Any] = field(default_factory=dict)
     child_bundle_slots: dict[int, Any] = field(default_factory=dict)
 

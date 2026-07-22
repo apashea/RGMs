@@ -47,6 +47,51 @@ def _vb_child_mdp_checked(mdp_in: Any) -> list[dict[str, Any]]:
     return _m._vb_models_after_checkx(checked)
 
 
+def _vb_child_ab_cell_fp(value: Any) -> tuple[Any, ...]:
+    """Stable fingerprint for one ``A``/``B``/``a``/``b`` cell (shape + dtype + sum)."""
+    import numpy as np
+
+    if value is None:
+        return ("none",)
+    if isinstance(value, list):
+        if len(value) == 1 and not isinstance(value[0], list):
+            return _vb_child_ab_cell_fp(value[0])
+        return ("list", len(value), tuple(_vb_child_ab_cell_fp(x) for x in value))
+    a = np.asarray(value)
+    if a.dtype == object or a.ndim == 0:
+        return ("obj", a.shape, str(a.dtype))
+    try:
+        af = np.asarray(a, dtype=np.float64)
+        return (af.shape, str(af.dtype), float(np.sum(af)))
+    except Exception:
+        return ("fail", id(value))
+
+
+def _vb_child_ab_fp(mdp_in: Any) -> tuple[Any, ...]:
+    """Fingerprint ``a``/``b``/``A``/``B`` for C4n checked-child invalidation."""
+    if isinstance(mdp_in, dict):
+        models = [mdp_in]
+    elif isinstance(mdp_in, list):
+        models = list(mdp_in)
+    else:
+        return ("nonlist", type(mdp_in).__name__)
+    parts: list[Any] = []
+    for md in models:
+        if not isinstance(md, dict):
+            parts.append(("bad", type(md).__name__))
+            continue
+        for key in ("A", "B", "a", "b"):
+            if key not in md:
+                parts.append((key, "missing"))
+            else:
+                cell = md[key]
+                if isinstance(cell, list):
+                    parts.append((key, tuple(_vb_child_ab_cell_fp(x) for x in cell)))
+                else:
+                    parts.append((key, _vb_child_ab_cell_fp(cell)))
+    return tuple(parts)
+
+
 def _vb_nested_entry_mdp_prepare(mdp_in: Any) -> Any:
     """Legacy nested prepare — retained for non-arena fallback only."""
     if not isinstance(mdp_in, dict):
@@ -66,30 +111,48 @@ def _vb_run_child_pipeline(
     t_idx: int,
     reuse_matlab_draws: bool,
 ) -> Any:
-    """**ENDGAME-2** — nested child kernel: cached ``ws`` + slim partial teardown."""
+    """**ENDGAME-2** — nested child kernel: cached ``ws`` + slim partial teardown.
+
+    **C4n:** after the first checked shell per ``parent_mi``, skip re-checkX and use
+    D/E-only mutable refresh while ``a``/``b``/``A``/``B`` fingerprints match; invalidate
+    on change (full checkX + full mutable refresh).
+    """
     opts = _m._merge_options_vb(options)
     partial_ok = bool(int(opts.pop("_rgms_partial_ok", 0)))
     if _m._vb_has_multiple_epoch_columns(mdp_in):
         raise NotImplementedError(
             "spm_MDP_VB_XXX: multiple epochs (size(MDP,2)>1) are not translated yet"
         )
-    models = _vb_child_mdp_checked(mdp_in)
+    arena = arena_get(parent_bundle)
+    pmi = int(parent_mi)
+    ab_fp = _vb_child_ab_fp(mdp_in)
+    ab_stable = False
+    if (
+        arena is not None
+        and arena.child_checkx_done.get(pmi)
+        and arena.child_ab_fp.get(pmi) == ab_fp
+    ):
+        ab_stable = True
+        models = [mdp_in] if isinstance(mdp_in, dict) else list(mdp_in)
+    else:
+        models = _vb_child_mdp_checked(mdp_in)
     nm = len(models)
     hp = _m._vb_hyperparameters_mdp1(models[0])
     t_h = float(models[0]["T"])
-    arena = arena_get(parent_bundle)
     if arena is not None:
-        arena.child_checkx_done[int(parent_mi)] = True
+        arena.child_checkx_done[pmi] = True
+        arena.child_ab_fp[pmi] = ab_fp
         bundle = child_bundle_acquire(
             arena.child_bundle_slots,
-            int(parent_mi),
+            pmi,
             models,
             nm,
             t_h,
             opts,
             hp,
+            ab_stable=ab_stable,
         )
-        ws = child_ws_acquire(arena.child_ws_slots, int(parent_mi), models, nm, t_h, bundle)
+        ws = child_ws_acquire(arena.child_ws_slots, pmi, models, nm, t_h, bundle)
     else:
         from python_src.optimized.toolbox.DEM.vb_cold_optim import vb_cold_setup_child_12bc_native
 

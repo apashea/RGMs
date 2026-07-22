@@ -68,15 +68,21 @@ def child_bundle_acquire(
     t_h: float,
     opts: dict[str, Any],
     hp: dict[str, Any],
+    *,
+    ab_stable: bool = False,
 ) -> dict[str, Any]:
     """
     Return child cold bundle — full 12B–12C once per ``parent_mi`` signature, then refresh path.
+
+    **C4n:** ``ab_stable`` selects D/E-only mutable refresh on the cached-bundle path.
     """
     sig = child_kernel_signature(models, nm, t_h)
     key = int(parent_mi)
     slot = slots.get(key)
     if slot is not None and slot.sig == sig:
-        return vb_cold_refresh_child_12bc(models, slot.bundle, opts, hp)
+        return vb_cold_refresh_child_12bc(
+            models, slot.bundle, opts, hp, ab_stable=bool(ab_stable)
+        )
     bundle = vb_cold_setup_child_12bc_native(models, nm, t_h, opts, hp)
     slots[key] = ChildBundleSlot(sig=sig, bundle=bundle)
     return bundle

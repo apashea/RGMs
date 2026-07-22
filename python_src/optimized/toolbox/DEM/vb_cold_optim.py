@@ -272,14 +272,80 @@ def vb_refresh_child_bundle_mutable(
     _vb_reset_bundle_O_shell(bundle)
 
 
+def vb_refresh_child_bundle_de_priors_only(
+    models: list[dict[str, Any]],
+    bundle: dict[str, Any],
+) -> None:
+    """
+    **C4n** — when child ``a``/``b``/``A``/``B`` are unchanged since the last checked shell,
+    refresh only ``D``/``E`` (and ``gp`` D/E) + O-shell reset. Skips A/a/K/W and B/b/I rebuild.
+    """
+    nm = int(bundle["Nm"])
+    Nf = bundle["Nf"]
+    Ns = bundle["Ns"]
+    Nu = bundle["Nu"]
+    gp = bundle["gp"]
+    proc = bundle["process"]
+    _spm_norm = _vb_fidelity._spm_norm
+    _vb_as_float64_array = _vb_fidelity._vb_as_float64_array
+
+    for m in range(nm):
+        md = models[m]
+        gpm = gp[m]
+        nf_m = int(Nf[m])
+
+        if float(proc[m]) <= 0:
+            gpm["D"] = _vb_copy_gp_de_field(md["D"])
+            gpm["E"] = _vb_copy_gp_de_field(md["E"])
+
+        for f_idx in range(nf_m):
+            if "d" in md:
+                qd_m = md["d"][f_idx]
+                qd_m = qd_m[0] if isinstance(qd_m, list) and len(qd_m) == 1 else qd_m
+            elif "D" in md:
+                Dg = md["D"][f_idx]
+                Dg = Dg[0] if isinstance(Dg, list) and len(Dg) == 1 else Dg
+                qd_m = _vb_as_float64_array(Dg) * 512.0
+            else:
+                qd_m = np.ones((int(Ns[m, f_idx]), 1), dtype=np.float64)
+
+            bundle["qd"][m][f_idx] = qd_m
+            bundle["pd"][m][f_idx] = qd_m
+            bundle["D"][m][f_idx] = _spm_norm(qd_m)
+
+            if "e" in md:
+                qe_m = md["e"][f_idx]
+                qe_m = qe_m[0] if isinstance(qe_m, list) and len(qe_m) == 1 else qe_m
+            elif "E" in md:
+                Eg = md["E"][f_idx]
+                Eg = Eg[0] if isinstance(Eg, list) and len(Eg) == 1 else Eg
+                qe_m = _vb_as_float64_array(Eg) * 512.0
+            else:
+                qe_m = np.ones((int(Nu[m, f_idx]), 1), dtype=np.float64)
+
+            bundle["qe"][m][f_idx] = qe_m
+            bundle["pe"][m][f_idx] = qe_m
+            bundle["E"][m][f_idx] = _spm_norm(qe_m)
+
+    _vb_reset_bundle_O_shell(bundle)
+
+
 def vb_cold_refresh_child_12bc(
     models: list[dict[str, Any]],
     bundle: dict[str, Any],
     opts: dict[str, Any],
     hp: dict[str, Any],
+    *,
+    ab_stable: bool = False,
 ) -> dict[str, Any]:
-    """**ENDGAME-2 tranche 2** — mutable tensor refresh + in-place Q/X/S/P + 12C on cached bundle."""
-    vb_refresh_child_bundle_mutable(models, bundle)
+    """**ENDGAME-2 tranche 2** — mutable tensor refresh + in-place Q/X/S/P + 12C on cached bundle.
+
+    **C4n:** when ``ab_stable``, use D/E-only mutable refresh (stable A/B/a/b path).
+    """
+    if ab_stable:
+        vb_refresh_child_bundle_de_priors_only(models, bundle)
+    else:
+        vb_refresh_child_bundle_mutable(models, bundle)
     vb_native_refresh_qxsp_priors_only(models, bundle, opts, float(hp["chi"]))
     return vb_cold_setup_12c(models, bundle, opts, hp)
 
