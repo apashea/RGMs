@@ -78,6 +78,31 @@ def _prior_qp_transition_from_BP(
     return np.asarray(spm_dot(Bmf, [P_prev]), dtype=np.float64)
 
 
+def _belief_after_ll_from_B_Qt_Qtm1(Bmf: Any, Qt: Any, Qtm1: Any) -> np.ndarray:
+    """MATLAB L1342 ``spm_dot(spm_dot(B, Q_t), Q_{t-1})`` for belief_after Nu>1.
+
+    Same F-order page packing as ``_prior_qp_transition_from_BP`` (C4m sibling / C4o):
+    ``LL = reshape(B, Ns*Ns, Nu, 'F')' * reshape(Q_t * Q_{t-1}', Ns*Ns, 1, 'F')``.
+    Falls back to nested ``spm_dot`` for unexpected shapes.
+    """
+    B = np.asarray(Bmf, dtype=np.float64)
+    Qt_c = np.asarray(Qt, dtype=np.float64).reshape(-1, 1)
+    Qtm1_c = np.asarray(Qtm1, dtype=np.float64).reshape(-1, 1)
+    if (
+        B.ndim == 3
+        and B.shape[0] == B.shape[1]
+        and int(B.shape[0]) == int(Qt_c.size)
+        and int(B.shape[0]) == int(Qtm1_c.size)
+    ):
+        ns = int(B.shape[0])
+        nu = int(B.shape[2])
+        outer = Qt_c @ Qtm1_c.T
+        flat = np.reshape(B, (ns * ns, nu), order="F")
+        vec = np.reshape(outer, (ns * ns, 1), order="F")
+        return (flat.T @ vec).reshape(nu, 1)
+    return np.asarray(spm_dot(spm_dot(Bmf, Qt), Qtm1), dtype=np.float64)
+
+
 def _orch_assign_o_slot(
     bundle: dict[str, Any],
     mi: int,
@@ -670,7 +695,8 @@ def vb_orchestrator_belief_after_forwards(
                 Qt = ws_q_cell(ws, mi, f_idx, t_idx, bundle)
                 Qtm1 = ws_q_cell(ws, mi, f_idx, t_idx - 1, bundle)
                 LP = np.asarray(_spm_log(ws_p_cell(ws, mi, f_idx, t_idx - 1, bundle)), dtype=np.float64).reshape(-1, 1)
-                LL = np.asarray(spm_dot(spm_dot(Bmf, Qt), Qtm1), dtype=np.float64)
+                # C4o: F-order LL specialize (same algebra as nested spm_dot; MATLAB L1342).
+                LL = _belief_after_ll_from_B_Qt_Qtm1(Bmf, Qt, Qtm1)
                 LL = np.asarray(_spm_log(LL), dtype=np.float64).reshape(-1, 1)
                 post = np.asarray(spm_softmax(LL + LP), dtype=np.float64).reshape(-1, 1)
                 ws_set_p_column(ws, mi, f_idx, t_idx - 1, post)
